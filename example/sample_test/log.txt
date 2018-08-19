@@ -1,0 +1,1043 @@
+Test 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test>cd test1 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test1>call run 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test1>set PYPATH=C:\Users\vaio6\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test1>set PYPATH=C:\Users\neutral\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test1>set LDM=..\..\..\all_build\x64\Release 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test1>copy ..\..\..\..\third_party\bin\*.dll 
+..\..\..\..\third_party\bin\libiomp5md.dll
+..\..\..\..\third_party\bin\mkl_avx.dll
+..\..\..\..\third_party\bin\mkl_avx2.dll
+..\..\..\..\third_party\bin\mkl_core.dll
+..\..\..\..\third_party\bin\mkl_intel_thread.dll
+..\..\..\..\third_party\bin\mkl_rt.dll
+        6 個のファイルをコピーしました。
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test1>..\..\..\all_build\x64\Release\test1.exe
+Device 0 has compute capability 2.1.(GeForce GT 540M)
+linear_equation START
+=== -- ===
+3 x 1
+0.000000 
+0.000000 
+0.000000 
+
+info:0
+3 x 3
+1.000000 0.000000 0.000000 
+0.000000 1.000000 0.000000 
+0.000000 0.000000 1.000000 
+
+linear_equation END
+
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test1>del *.dll 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test1>cd .. 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test>cd test2 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test2>call run 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test2>set PYPATH=C:\Users\vaio6\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test2>set PYPATH=C:\Users\neutral\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test2>set LDM=..\..\..\all_build\x64\Release 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test2>copy ..\..\..\..\third_party\bin\*.dll 
+..\..\..\..\third_party\bin\libiomp5md.dll
+..\..\..\..\third_party\bin\mkl_avx.dll
+..\..\..\..\third_party\bin\mkl_avx2.dll
+..\..\..\..\third_party\bin\mkl_core.dll
+..\..\..\..\third_party\bin\mkl_intel_thread.dll
+..\..\..\..\third_party\bin\mkl_rt.dll
+        6 個のファイルをコピーしました。
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test2>..\..\..\all_build\x64\Release\test2.exe
+Device 0 has compute capability 2.1.(GeForce GT 540M)
+eigenvalues START
+4 x 4
+16.000000 -1.000000 1.000000 2.000000 
+2.000000 12.000000 1.000000 -1.000000 
+1.000000 3.000000 -24.000000 2.000000 
+4.000000 -2.000000 1.000000 20.000000 
+
+info=0
+1 x 4
+21.579345 14.338219 12.230956 -24.148521 
+
+1 x 4
+0.000000 0.000000 0.000000 0.000000 
+
+value:21.579345 + 0.000000I
+vector:
+(  0.35,   0.00) ( -0.02,   0.00) (  0.05,   0.00) (  0.94,   0.00) 
+check=4 x 1
+-0.000000 
+0.000000 
+-0.000000 
+-0.000000 
+
+value:14.338219 + 0.000000I
+vector:
+(  0.67,   0.00) (  0.70,   0.00) (  0.06,   0.00) ( -0.24,   0.00) 
+check=4 x 1
+-0.000000 
+-0.000000 
+-0.000000 
+0.000000 
+
+value:12.230956 + 0.000000I
+vector:
+(  0.15,   0.00) (  0.97,   0.00) (  0.09,   0.00) (  0.16,   0.00) 
+check=4 x 1
+-0.000000 
+-0.000000 
+-0.000000 
+0.000000 
+
+value:-24.148521 + 0.000000I
+vector:
+( -0.02,   0.00) ( -0.03,   0.00) (  1.00,   0.00) ( -0.02,   0.00) 
+check=4 x 1
+0.000000 
+0.000000 
+-0.000000 
+0.000000 
+
+eigenvalues END
+
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test2>del *.dll 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test2>cd .. 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test>cd test3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test3>call run 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test3>set PYPATH=C:\Users\vaio6\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test3>set PYPATH=C:\Users\neutral\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test3>set LDM=..\..\..\all_build\x64\Release 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test3>copy ..\..\..\..\third_party\bin\*.dll 
+..\..\..\..\third_party\bin\libiomp5md.dll
+..\..\..\..\third_party\bin\mkl_avx.dll
+..\..\..\..\third_party\bin\mkl_avx2.dll
+..\..\..\..\third_party\bin\mkl_core.dll
+..\..\..\..\third_party\bin\mkl_intel_thread.dll
+..\..\..\..\third_party\bin\mkl_rt.dll
+        6 個のファイルをコピーしました。
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test3>..\..\..\all_build\x64\Release\test3.exe
+Device 0 has compute capability 2.1.(GeForce GT 540M)
+svd_decomposition START
+=== Σ ===
+5 x 5
+18.186981 0.000000 0.000000 0.000000 0.000000 
+0.000000 14.178826 0.000000 0.000000 0.000000 
+0.000000 0.000000 11.274420 0.000000 0.000000 
+0.000000 0.000000 0.000000 5.428455 0.000000 
+0.000000 0.000000 0.000000 0.000000 1.858070 
+
+5 x 5
+-0.000000 0.000000 0.000000 0.000000 0.000000 
+-0.000000 0.000000 0.000000 0.000000 -0.000000 
+-0.000000 0.000000 0.000000 0.000000 0.000000 
+-0.000000 -0.000000 -0.000000 0.000000 0.000000 
+0.000000 0.000000 0.000000 -0.000000 0.000000 
+
+svd_decomposition END
+
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test3>del *.dll 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test3>cd .. 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test>cd test4 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test4>call run 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test4>set PYPATH=C:\Users\vaio6\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test4>set PYPATH=C:\Users\neutral\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test4>set LDM=..\..\..\all_build\x64\Release 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test4>copy ..\..\..\..\third_party\bin\*.dll 
+..\..\..\..\third_party\bin\libiomp5md.dll
+..\..\..\..\third_party\bin\mkl_avx.dll
+..\..\..\..\third_party\bin\mkl_avx2.dll
+..\..\..\..\third_party\bin\mkl_core.dll
+..\..\..\..\third_party\bin\mkl_intel_thread.dll
+..\..\..\..\third_party\bin\mkl_rt.dll
+        6 個のファイルをコピーしました。
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test4>..\..\..\all_build\x64\Release\test4.exe
+Device 0 has compute capability 2.1.(GeForce GT 540M)
+linear_east_square START
+=== A ===
+6 x 4
+1.440000 -7.840000 -4.390000 4.530000 
+-9.960000 -0.280000 -3.240000 3.830000 
+-7.550000 3.240000 6.270000 -6.640000 
+8.340000 8.090000 5.280000 2.060000 
+7.080000 2.520000 0.740000 -2.470000 
+-5.450000 -5.700000 -1.190000 4.700000 
+
+=== B ===
+6 x 2
+8.580000 9.350000 
+8.260000 -4.430000 
+8.480000 -0.700000 
+-5.280000 -0.260000 
+5.720000 -7.360000 
+8.930000 -2.520000 
+
+info:0
+info:0
+error=0
+=== x ===
+6 x 2
+-0.450637 0.249748 
+-0.849150 -0.902019 
+0.706612 0.632343 
+0.128886 0.135124 
+13.119282 -7.492187 
+-4.821417 -7.136148 
+
+info:0
+info:0
+error=0
+=== x ===
+6 x 2
+-0.450637 0.249748 
+-0.849150 -0.902019 
+0.706612 0.632343 
+0.128886 0.135124 
+13.119282 -7.492187 
+-4.821417 -7.136148 
+
+linear_east_square END
+
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test4>del *.dll 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test4>cd .. 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test>cd test5 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test5>call run 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test5>set PYPATH=C:\Users\vaio6\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test5>set PYPATH=C:\Users\neutral\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test5>set LDM=..\..\..\all_build\x64\Release 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test5>copy ..\..\..\..\third_party\bin\*.dll 
+..\..\..\..\third_party\bin\libiomp5md.dll
+..\..\..\..\third_party\bin\mkl_avx.dll
+..\..\..\..\third_party\bin\mkl_avx2.dll
+..\..\..\..\third_party\bin\mkl_core.dll
+..\..\..\..\third_party\bin\mkl_intel_thread.dll
+..\..\..\..\third_party\bin\mkl_rt.dll
+        6 個のファイルをコピーしました。
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test5>..\..\..\all_build\x64\Release\test5.exe
+Device 0 has compute capability 2.1.(GeForce GT 540M)
+linear_east_square START
+=== A ===
+5 x 10
+-4.672667e-03 6.356769e-01 2.242238e-01 5.427198e-01 7.213395e-01 -6.987261e-01 -6.029625e-01 6.303259e-01 -6.823693e-01 -7.677243e-01 
+-2.633311e-02 -3.379691e-01 6.052791e-01 -8.034961e-01 -8.880131e-01 -1.146747e-01 -9.557122e-01 -4.185429e-01 -5.072111e-01 4.765735e-01 
+9.742786e-01 -7.651132e-01 -2.124353e-01 -9.454038e-02 7.629566e-02 5.812442e-01 -6.832731e-02 -1.293355e-01 1.389573e-01 9.385180e-01 
+9.623914e-02 -7.484680e-02 -2.470555e-01 -3.441758e-01 6.270579e-01 2.931046e-01 -9.051470e-01 9.899151e-01 3.784713e-01 8.590919e-01 
+9.506034e-01 -2.059961e-01 -4.747478e-01 -1.396973e-01 5.290615e-01 1.994616e-01 -8.381061e-01 4.090889e-01 -6.719734e-01 -9.353013e-01 
+
+=== B ===
+10 x 1
+1.099395e-01 
+1.651041e+00 
+-2.108872e+00 
+2.672752e-01 
+.....
+-2.363022e+00 
+-1.733770e+00 
+-2.262083e+00 
+-7.065339e-01 
+
+info:0
+info:0
+=== x ===
+10 x 1
+-1.471969 
+0.544941 
+0.360183 
+-0.833940 
+.....
+-0.567893 
+0.212020 
+0.237482 
+-0.073891 
+
+eps:-1.998932
+info:0
+info:0
+=== x ===
+10 x 1
+-1.471969 
+0.544941 
+0.360183 
+-0.833940 
+.....
+-0.567893 
+0.212020 
+0.237482 
+-0.073891 
+
+eps:-1.998932
+linear_east_square END
+
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test5>del *.dll 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test5>cd .. 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test>cd test6 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test6>call run 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test6>set PYPATH=C:\Users\vaio6\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test6>set PYPATH=C:\Users\neutral\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test6>set LDM=..\..\..\all_build\x64\Release 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test6>copy ..\..\..\..\third_party\bin\*.dll 
+..\..\..\..\third_party\bin\libiomp5md.dll
+..\..\..\..\third_party\bin\mkl_avx.dll
+..\..\..\..\third_party\bin\mkl_avx2.dll
+..\..\..\..\third_party\bin\mkl_core.dll
+..\..\..\..\third_party\bin\mkl_intel_thread.dll
+..\..\..\..\third_party\bin\mkl_rt.dll
+        6 個のファイルをコピーしました。
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test6>..\..\..\all_build\x64\Release\test6.exe
+Device 0 has compute capability 2.1.(GeForce GT 540M)
+multiple_regression START
+=== A ===
+17 x 4
+2.000000 3.000000 5.000000 4.000000 
+3.000000 3.000000 3.000000 4.000000 
+1.000000 2.000000 4.000000 4.000000 
+1.000000 3.000000 5.000000 3.000000 
+.....
+4.000000 3.000000 5.000000 5.000000 
+2.000000 2.000000 5.000000 3.000000 
+2.000000 1.000000 4.000000 5.000000 
+2.000000 2.000000 4.000000 4.000000 
+
+=== B ===
+17 x 1
+4.000000 
+4.000000 
+4.000000 
+4.000000 
+.....
+4.000000 
+3.000000 
+5.000000 
+4.000000 
+
+info:0
+info:0
+error=0
+--------------------------------------------------------------------
+SE(残差)                :2.887640
+SR(変動平方和)          :4.053537
+ST(SE+SR)               :6.941176
+R^2(決定係数(寄与率))   :0.583984
+重相関係数              :0.764189
+自由度調整済寄与率(補正):0.445312
+不偏分散(平均平方)       VE:0.240637 VR:1.013384
+AIC                     :30.106753
+
+F値:4.211263 > F(0.05)_3,13=[3.41]=>予測に有効であると結論できる
+
+係数・定数項の推定(信頼幅:95.00%)
+--------------------------------------------------------------------
+     係数     標準誤差    t値      p値    下限(95.0%)  上限(95.0%)
+--------------------------------------------------------------------
+    1.0877    0.8728    1.2463    0.2364   -0.8139    2.9894
+   -0.0984    0.1081   -0.9105    0.3805   -0.3340    0.1371
+    0.0375    0.1376    0.2722    0.7901   -0.2624    0.3373
+    0.1653    0.1402    1.1788    0.2613   -0.1402    0.4709
+    0.5800    0.1855    3.1274    0.0087    0.1759    0.9841
+--------------------------------------------------------------------
+※p値が小さいほど係数はゼロでは無いと考えられる．
+※AICの値は小さいほど当てはまりがよいとされている
+multiple_regression END
+
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test6>del *.dll 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\basic_test\test6>cd .. 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA>cd test1 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test1>call run 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test1>set PYPATH=C:\Users\vaio6\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test1>set LDM=..\..\..\all_build\x64\Release 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test1>copy ..\..\..\..\third_party\bin\*.dll 
+..\..\..\..\third_party\bin\libiomp5md.dll
+..\..\..\..\third_party\bin\mkl_avx.dll
+..\..\..\..\third_party\bin\mkl_avx2.dll
+..\..\..\..\third_party\bin\mkl_core.dll
+..\..\..\..\third_party\bin\mkl_intel_thread.dll
+..\..\..\..\third_party\bin\mkl_rt.dll
+        6 個のファイルをコピーしました。
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test1>C:\Users\vaio6\Anaconda3\python.exe Untitled.py 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test1>..\..\..\all_build\x64\Release\fastICA_test1.exe
+Device 0 has compute capability 2.1.(GeForce GT 540M)
+2 x 2
+0.001251 0.563585 
+0.193304 0.808741 
+
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test1>del *.dll 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test1>cd .. 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA>cd test2 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test2>call run 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test2>set PYPATH=C:\Users\vaio6\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test2>set LDM=..\..\..\all_build\x64\Release 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test2>copy ..\..\..\..\third_party\bin\*.dll 
+..\..\..\..\third_party\bin\libiomp5md.dll
+..\..\..\..\third_party\bin\mkl_avx.dll
+..\..\..\..\third_party\bin\mkl_avx2.dll
+..\..\..\..\third_party\bin\mkl_core.dll
+..\..\..\..\third_party\bin\mkl_intel_thread.dll
+..\..\..\..\third_party\bin\mkl_rt.dll
+        6 個のファイルをコピーしました。
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test2>C:\Users\vaio6\Anaconda3\python.exe Untitled.py 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test2>..\..\..\all_build\x64\Release\fastICA_test2.exe
+Device 0 has compute capability 2.1.(GeForce GT 540M)
+3 x 3
+0.001251 0.563585 0.193304 
+0.808741 0.585009 0.479873 
+0.350291 0.895962 0.822840 
+
+iteration:1000 >= max_iteration:1000
+$K
+3 x 3
+-0.000119 0.000373 0.000212 
+-0.000111 -0.000064 -0.000693 
+-0.000125 -0.000300 0.000411 
+
+
+$W
+3 x 3
+-0.548411 0.651441 0.524280 
+0.816138 0.280440 0.505244 
+-0.182108 -0.704966 0.685463 
+
+
+$A
+3 x 3
+2805.654341 1401.721172 470.894382 
+-1616.570845 -1086.197582 -2712.690388 
+-470.805886 -2201.698292 -1800.752470 
+
+
+$S
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test2>C:\Users\vaio6\Anaconda3\python.exe Untitled1.py 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test2>del *.dll 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\fastICA\test2>cd .. 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\hungarian-algorithm>cd test1 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\hungarian-algorithm\test1>call run 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\hungarian-algorithm\test1>set PYPATH=C:\Users\vaio6\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\hungarian-algorithm\test1>set PYPATH=C:\Users\neutral\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\hungarian-algorithm\test1>set LDM=..\..\..\all_build\x64\Release 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\hungarian-algorithm\test1>copy ..\..\..\..\third_party\bin\*.dll 
+..\..\..\..\third_party\bin\libiomp5md.dll
+..\..\..\..\third_party\bin\mkl_avx.dll
+..\..\..\..\third_party\bin\mkl_avx2.dll
+..\..\..\..\third_party\bin\mkl_core.dll
+..\..\..\..\third_party\bin\mkl_intel_thread.dll
+..\..\..\..\third_party\bin\mkl_rt.dll
+        6 個のファイルをコピーしました。
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\hungarian-algorithm\test1>..\..\..\all_build\x64\Release\preTestLiNGAM.exe
+Device 0 has compute capability 2.1.(GeForce GT 540M)
+4 x 4
+7.544277e-03 -5.580447e-01 1.158141e-01 -6.666770e-04 
+1.102364e-01 2.638301e-03 1.164630e-02 -1.698562e-03 
+-2.229009e-01 -1.062132e-02 -7.515329e-01 1.076953e-01 
+3.227238e-01 -1.176946e-01 -1.424441e-03 4.667611e-04 
+
+4 x 4
+1.325508e+02 1.791971e+00 8.634526e+00 1.499977e+03 
+9.071415e+00 3.790319e+02 8.586415e+01 5.887332e+02 
+4.486299e+00 9.415026e+01 1.330614e+00 9.285457e+00 
+3.098625e+00 8.496564e+00 7.020299e+02 2.142424e+03 
+
+0,2	1,0	2,3	3,1	
+cost: 35.488
+4 x 2
+0.000000 2.000000 
+1.000000 0.000000 
+2.000000 3.000000 
+3.000000 1.000000 
+
+4 x 4
+0.000000 0.000000 1.000000 0.000000 
+1.000000 0.000000 0.000000 0.000000 
+0.000000 0.000000 0.000000 1.000000 
+0.000000 1.000000 0.000000 0.000000 
+
+4 x 4
+1.102364e-01 2.638301e-03 1.164630e-02 -1.698562e-03 
+3.227238e-01 -1.176946e-01 -1.424441e-03 4.667611e-04 
+7.544277e-03 -5.580447e-01 1.158141e-01 -6.666770e-04 
+-2.229009e-01 -1.062132e-02 -7.515329e-01 1.076953e-01 
+
+4 x 1
+9.071415e+00 
+-8.496564e+00 
+8.634526e+00 
+9.285457e+00 
+
+4 x 4
+1.000000e+00 2.393312e-02 1.056485e-01 -1.540836e-02 
+-2.742043e+00 1.000000e+00 1.210285e-02 -3.965865e-03 
+6.514126e-02 -4.818452e+00 1.000000e+00 -5.756440e-03 
+-2.069736e+00 -9.862380e-02 -6.978326e+00 1.000000e+00 
+
+4 x 4
+0.000000e+00 -2.393312e-02 -1.056485e-01 1.540836e-02 
+2.742043e+00 0.000000e+00 -1.210285e-02 3.965865e-03 
+-6.514126e-02 4.818452e+00 0.000000e+00 5.756440e-03 
+2.069736e+00 9.862380e-02 6.978326e+00 0.000000e+00 
+
+0 1 2 3 
+0 1 3 2 
+0 2 1 3 
+0 2 3 1 
+0 3 1 2 
+0 3 2 1 
+1 0 2 3 
+1 0 3 2 
+1 2 0 3 
+1 2 3 0 
+1 3 0 2 
+1 3 2 0 
+2 0 1 3 
+2 0 3 1 
+2 1 0 3 
+2 1 3 0 
+2 3 0 1 
+2 3 1 0 
+3 0 1 2 
+3 0 2 1 
+3 1 0 2 
+3 1 2 0 
+3 2 0 1 
+3 2 1 0 
+[0]0.000000 [1]0.000000 [2]0.000000 [3]0.000000 [4]0.003966 [5]0.005756 [6]-0.012103 [7]0.015408 [8]-0.023933 
+4 x 4
+0.000000e+00 0.000000e+00 -1.056485e-01 0.000000e+00 
+2.742043e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+-6.514126e-02 4.818452e+00 0.000000e+00 0.000000e+00 
+2.069736e+00 9.862380e-02 6.978326e+00 0.000000e+00 
+
+[9]-0.065141 
+4 x 4
+0.000000e+00 0.000000e+00 -1.056485e-01 0.000000e+00 
+2.742043e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+0.000000e+00 4.818452e+00 0.000000e+00 0.000000e+00 
+2.069736e+00 9.862380e-02 6.978326e+00 0.000000e+00 
+
+[10]0.098624 
+4 x 4
+0.000000e+00 0.000000e+00 -1.056485e-01 0.000000e+00 
+2.742043e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+0.000000e+00 4.818452e+00 0.000000e+00 0.000000e+00 
+2.069736e+00 0.000000e+00 6.978326e+00 0.000000e+00 
+
+[11]-0.105648 
+4 x 4
+0.000000e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+2.742043e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+0.000000e+00 4.818452e+00 0.000000e+00 0.000000e+00 
+2.069736e+00 0.000000e+00 6.978326e+00 0.000000e+00 
+
+0 1 2 3 
+4 x 4
+0.000000e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+2.742043e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+0.000000e+00 4.818452e+00 0.000000e+00 0.000000e+00 
+2.069736e+00 0.000000e+00 6.978326e+00 0.000000e+00 
+
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\hungarian-algorithm\test1>del *.dll 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\hungarian-algorithm\test1>cd .. 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\lasso_lib_test>cd test1 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\lasso_lib_test\test1>call run 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\lasso_lib_test\test1>set PYPATH=C:\Users\vaio6\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\lasso_lib_test\test1>set PYPATH=C:\Users\neutral\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\lasso_lib_test\test1>set LDM=..\..\..\all_build\x64\Release 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\lasso_lib_test\test1>copy ..\..\..\..\third_party\bin\*.dll 
+..\..\..\..\third_party\bin\libiomp5md.dll
+..\..\..\..\third_party\bin\mkl_avx.dll
+..\..\..\..\third_party\bin\mkl_avx2.dll
+..\..\..\..\third_party\bin\mkl_core.dll
+..\..\..\..\third_party\bin\mkl_intel_thread.dll
+..\..\..\..\third_party\bin\mkl_rt.dll
+        6 個のファイルをコピーしました。
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\lasso_lib_test\test1>..\..\..\all_build\x64\Release\lasso_lib_test.exe
+5.964 6.958 7.952 8.946 9.939 
+5 x 1
+0.000000 
+0.000000 
+0.000000 
+0.000000 
+0.000000 
+
+5 x 1
+0.000000 
+0.000000 
+0.000000 
+0.000000 
+0.000000 
+
+5 x 1
+0.000000 
+0.000000 
+0.000000 
+0.000000 
+0.000000 
+
+5 x 1
+0.000000 
+0.000000 
+0.000000 
+0.000000 
+0.000000 
+
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\lasso_lib_test\test1>del *.dll 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\lasso_lib_test\test1>cd .. 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\LiNGAM>cd test1 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\LiNGAM\test1>call run 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\LiNGAM\test1>set PYPATH=C:\Users\neutral\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\LiNGAM\test1>set PYPATH=C:\Users\vaio6\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\LiNGAM\test1>set LDM=..\..\..\all_build\x64\Release 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\LiNGAM\test1>copy ..\..\..\..\third_party\bin\*.dll 
+..\..\..\..\third_party\bin\libiomp5md.dll
+..\..\..\..\third_party\bin\mkl_avx.dll
+..\..\..\..\third_party\bin\mkl_avx2.dll
+..\..\..\..\third_party\bin\mkl_core.dll
+..\..\..\..\third_party\bin\mkl_intel_thread.dll
+..\..\..\..\third_party\bin\mkl_rt.dll
+        6 個のファイルをコピーしました。
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\LiNGAM\test1>C:\Users\vaio6\Anaconda3\python.exe Untitled.py 
+[[ -1.09211979e-01   1.35494671e-01  -9.00871945e+00   6.83168254e-03]
+ [  8.89534894e+00   4.49942767e-01  -2.68706959e+01   1.63807483e-01]
+ [  4.46753284e+01   2.30880090e+00  -1.34418267e+02   9.81792602e+00]
+ [  3.12405515e+02   2.57218317e+01  -9.59316538e+02   6.85413327e+01]]
+
+[[ -3.22482215e-01   1.17181741e-01   1.92911730e-03  -5.24239599e-04]
+ [ -2.23139148e-01  -1.06620402e-02  -7.51519189e-01   1.07696049e-01]
+ [ -1.10444337e-01  -2.00421757e-03  -1.12386107e-02   1.62562750e-03]
+ [  7.78640295e-03  -5.58154508e-01   1.15935856e-01  -6.83864213e-04]]
+[[  3.10094621e+00   8.53375274e+00   5.18371796e+02   1.90752473e+03]
+ [  4.48150855e+00   9.37906802e+01   1.33063801e+00   9.28539169e+00]
+ [  9.05433473e+00   4.98947827e+02   8.89789694e+01   6.15147074e+02]
+ [  1.28429007e+02   1.79161860e+00   8.62545925e+00   1.46227860e+03]]
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\LiNGAM\test1>..\..\..\all_build\x64\Release\LiNGAM.exe
+Device 0 has compute capability 2.1.(GeForce GT 540M)
+1000 x 4
+6.964692e-01 2.338163e+00 1.201415e+01 8.615333e+01 
+2.861393e-01 1.021485e+00 5.337671e+00 3.826367e+01 
+2.268515e-01 1.464198e+00 8.114767e+00 5.745247e+01 
+5.513148e-01 2.462468e+00 1.293676e+01 9.252292e+01 
+.....
+6.909154e-01 2.613539e+00 1.374503e+01 9.828850e+01 
+3.471461e-01 1.669097e+00 9.187106e+00 6.520454e+01 
+4.168489e-03 3.865236e-01 2.528489e+00 1.797343e+01 
+2.948947e-01 9.235292e-01 4.814685e+00 3.433203e+01 
+
+4 x 4
+0.001251 0.563585 0.193304 0.808741 
+0.585009 0.479873 0.350291 0.895962 
+0.822840 0.746605 0.174108 0.858943 
+0.710501 0.513535 0.303995 0.014985 
+
+4 x 4
+-1.019997e+01 3.712417e+00 5.646176e-02 -1.612289e-02 
+7.054564e+00 3.368244e-01 2.376525e+01 -3.405645e+00 
+2.426473e-01 -1.764895e+01 3.665232e+00 -2.148818e-02 
+-3.489886e+00 -6.828634e-02 -3.576708e-01 5.183796e-02 
+
+0,1	1,3	2,2	3,0	
+4 x 2
+0.000000 1.000000 
+1.000000 3.000000 
+2.000000 2.000000 
+3.000000 0.000000 
+
+4 x 4
+0.000000 1.000000 0.000000 0.000000 
+0.000000 0.000000 0.000000 1.000000 
+0.000000 0.000000 1.000000 0.000000 
+1.000000 0.000000 0.000000 0.000000 
+
+4 x 4
+-3.489886e+00 -6.828634e-02 -3.576708e-01 5.183796e-02 
+-1.019997e+01 3.712417e+00 5.646176e-02 -1.612289e-02 
+2.426473e-01 -1.764895e+01 3.665232e+00 -2.148818e-02 
+7.054564e+00 3.368244e-01 2.376525e+01 -3.405645e+00 
+
+4 x 1
+-2.865423e-01 
+2.693663e-01 
+2.728340e-01 
+-2.936302e-01 
+
+4 x 4
+1.000000e+00 1.956693e-02 1.024878e-01 -1.485377e-02 
+-2.747528e+00 1.000000e+00 1.520889e-02 -4.342964e-03 
+6.620243e-02 -4.815235e+00 1.000000e+00 -5.862707e-03 
+-2.071433e+00 -9.890179e-02 -6.978195e+00 1.000000e+00 
+
+4 x 4
+0.000000e+00 -1.956693e-02 -1.024878e-01 1.485377e-02 
+2.747528e+00 0.000000e+00 -1.520889e-02 4.342964e-03 
+-6.620243e-02 4.815235e+00 0.000000e+00 5.862707e-03 
+2.071433e+00 9.890179e-02 6.978195e+00 0.000000e+00 
+
+[0]0.000000 [1]0.000000 [2]0.000000 [3]0.000000 [4]0.004343 [5]0.005863 [6]0.014854 [7]-0.015209 [8]-0.019567 
+4 x 4
+0.000000e+00 0.000000e+00 -1.024878e-01 0.000000e+00 
+2.747528e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+-6.620243e-02 4.815235e+00 0.000000e+00 0.000000e+00 
+2.071433e+00 9.890179e-02 6.978195e+00 0.000000e+00 
+
+[9]-0.066202 
+4 x 4
+0.000000e+00 0.000000e+00 -1.024878e-01 0.000000e+00 
+2.747528e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+0.000000e+00 4.815235e+00 0.000000e+00 0.000000e+00 
+2.071433e+00 9.890179e-02 6.978195e+00 0.000000e+00 
+
+[10]0.098902 
+4 x 4
+0.000000e+00 0.000000e+00 -1.024878e-01 0.000000e+00 
+2.747528e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+0.000000e+00 4.815235e+00 0.000000e+00 0.000000e+00 
+2.071433e+00 0.000000e+00 6.978195e+00 0.000000e+00 
+
+[11]-0.102488 
+4 x 4
+0.000000e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+2.747528e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+0.000000e+00 4.815235e+00 0.000000e+00 0.000000e+00 
+2.071433e+00 0.000000e+00 6.978195e+00 0.000000e+00 
+
+0 1 2 3 
+4 x 4
+0.000000e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+2.747528e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+0.000000e+00 4.815235e+00 0.000000e+00 0.000000e+00 
+2.071433e+00 0.000000e+00 6.978195e+00 0.000000e+00 
+
+4 x 4
+0.000000e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+2.747528e+00 0.000000e+00 0.000000e+00 0.000000e+00 
+0.000000e+00 4.815235e+00 0.000000e+00 0.000000e+00 
+2.071433e+00 0.000000e+00 6.978195e+00 0.000000e+00 
+
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\LiNGAM\test1>del *.dll 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\LiNGAM\test1>cd .. 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\LiNGAM>pause
+続行するには何かキーを押してください . . . 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\LiNGAM>e
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA>cd test1 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test1>call run 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test1>set PYPATH=C:\Users\vaio6\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test1>set PYPATH=C:\Users\neutral\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test1>set LDM=..\..\..\all_build\x64\Release 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test1>copy ..\..\..\..\third_party\bin\*.dll 
+..\..\..\..\third_party\bin\libiomp5md.dll
+..\..\..\..\third_party\bin\mkl_avx.dll
+..\..\..\..\third_party\bin\mkl_avx2.dll
+..\..\..\..\third_party\bin\mkl_core.dll
+..\..\..\..\third_party\bin\mkl_intel_thread.dll
+..\..\..\..\third_party\bin\mkl_rt.dll
+        6 個のファイルをコピーしました。
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test1>..\..\..\all_build\x64\Release\PCA_test1.exe
+Device 0 has compute capability 2.1.(GeForce GT 540M)
+主成分 2.551440 係数 0.601096 0.092426 0.563442 -0.559172
+主成分 0.987518 係数 0.050663 -0.995047 0.080488 -0.028908
+主成分 0.342736 係数 0.038354 0.035656 0.679496 0.731808
+主成分 0.118306 係数 0.796646 -0.008174 -0.462969 0.388520
+=== 固有ベクトル ===
+4 x 1
+0.601096 
+0.092426 
+0.563442 
+-0.559172 
+
+=== 固有ベクトル ===
+4 x 1
+0.050663 
+-0.995047 
+0.080488 
+-0.028908 
+
+=== 固有ベクトル ===
+4 x 1
+0.038354 
+0.035656 
+0.679496 
+0.731808 
+
+=== 固有ベクトル ===
+4 x 1
+0.796646 
+-0.008174 
+-0.462969 
+0.388520 
+
+=== 相関行列 ===
+4 x 4
+1.000000 0.091665 0.833455 -0.812790 
+0.091665 1.000000 0.062533 -0.094891 
+0.833455 0.062533 1.000000 -0.657009 
+-0.812790 -0.094891 -0.657009 1.000000 
+
+=== check ===
+4 x 1
+0.000000 
+0.000000 
+0.000000 
+0.000000 
+
+=== check ===
+4 x 1
+0.000000 
+0.000000 
+0.000000 
+0.000000 
+
+=== check ===
+4 x 1
+0.000000 
+0.000000 
+0.000000 
+0.000000 
+
+=== check ===
+4 x 1
+0.000000 
+0.000000 
+0.000000 
+0.000000 
+
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test1>del *.dll 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test1>cd .. 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA>cd test2 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test2>call run 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test2>set PYPATH=C:\Users\vaio6\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test2>set PYPATH=C:\Users\neutral\Anaconda3 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test2>set LDM=..\..\..\all_build\x64\Release 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test2>copy ..\..\..\..\third_party\bin\*.dll 
+..\..\..\..\third_party\bin\libiomp5md.dll
+..\..\..\..\third_party\bin\mkl_avx.dll
+..\..\..\..\third_party\bin\mkl_avx2.dll
+..\..\..\..\third_party\bin\mkl_core.dll
+..\..\..\..\third_party\bin\mkl_intel_thread.dll
+..\..\..\..\third_party\bin\mkl_rt.dll
+        6 個のファイルをコピーしました。
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test2>..\..\..\all_build\x64\Release\PCA_test2.exe
+Device 0 has compute capability 2.1.(GeForce GT 540M)
+38 x 3
+2.270000 1.970000 0.110000 
+4.410000 12.830000 0.610000 
+4.030000 11.110000 0.530000 
+3.750000 9.860000 0.470000 
+.....
+2.700000 8.040000 0.680000 
+2.510000 6.540000 0.480000 
+2.490000 6.510000 0.470000 
+2.460000 6.460000 0.460000 
+
+主成分 2.059476 係数 0.615508 0.584594 0.528583
+主成分 0.604986 係数 -0.205223 -0.528660 0.823651
+主成分 0.335538 係数 0.760943 -0.615441 -0.205422
+=== check ===
+3 x 1
+0.000000 
+0.000000 
+0.000000 
+
+=== check ===
+3 x 1
+0.000000 
+0.000000 
+0.000000 
+
+=== check ===
+3 x 1
+0.000000 
+0.000000 
+0.000000 
+
+=== 固有ベクトル ===
+3 x 1
+0.615508 
+0.584594 
+0.528583 
+
+=== 固有ベクトル ===
+3 x 1
+-0.205223 
+-0.528660 
+0.823651 
+
+=== 固有ベクトル ===
+3 x 1
+0.760943 
+-0.615441 
+-0.205422 
+
+=== 相関行列 ===
+3 x 3
+1.000000 0.649544 0.515332 
+0.649544 1.000000 0.415382 
+0.515332 0.415382 1.000000 
+
+=== 固有ベクトル ===
+3 x 1
+0.615508 
+0.584594 
+0.528583 
+
+=== 固有ベクトル ===
+3 x 1
+-0.205223 
+-0.528660 
+0.823651 
+
+=== 固有ベクトル ===
+3 x 1
+0.760943 
+-0.615441 
+-0.205422 
+
+38 x 3
+-1.911317 -4.153866 -3.152370 
+2.404936 2.719500 -0.803545 
+1.638499 1.630901 -1.179357 
+1.073755 0.839767 -1.461216 
+.....
+-1.044032 -0.312123 -0.474710 
+-1.427251 -1.261483 -1.414239 
+-1.467590 -1.280470 -1.461216 
+-1.528098 -1.312115 -1.508192 
+
+38 x 3
+-5.271044 -0.008223 1.749626 
+2.645320 -2.593081 0.321392 
+1.338536 -2.169829 0.485346 
+0.379454 -1.867844 0.600405 
+.....
+-1.075999 -0.011729 -0.504839 
+-2.363482 -0.205040 -0.019171 
+-2.424242 -0.225416 -0.028531 
+-2.504816 -0.234961 -0.045448 
+
+寄与率(%)
+68.649185%
+20.166203%
+11.184612%
+=== mean ===
+1 x 3
+3.217632 8.533158 0.781053 
+
+=== variance ===
+1 x 3
+0.495800 1.580012 0.212872 
+
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test2>del *.dll 
+
+C:\Users\vaio6\Desktop\Statistical_analysis_b uild\example\sample_test\PCA\test2>cd .. 
