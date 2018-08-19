@@ -63,6 +63,12 @@ int main()
 	LiNGAM.set(4);
 	LiNGAM.fit(xs);
 
+	/*
+		x = e1
+		y = 3x + e2
+		z = 5y + e3
+		w = 2x + 7z + e4
+	*/
 	LiNGAM.B.print_e();
 
 

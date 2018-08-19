@@ -52,51 +52,6 @@ int main()
 
 	pca2.Report();
 
-	pca2.principal_component().print("主成分");
 	pca2.principal_component().print_csv("test.csv");
-
-	//Matrix<dnn_double>&w = pca2.whitening();
-	//Matrix<dnn_double> pca_w(w.m, w.n);
-	//for (int i = 0; i < w.m; i++)
-	//{
-	//	for (int j = 0; j < w.n; j++)
-	//	{
-	//		double s = 0.0;
-	//		for (int k = 0; k < variablesNum; k++)
-	//		{
-	//			s += w(i, k)*pca2.coef(j, k);
-	//		}
-	//		pca_w(i, j) = s;
-	//	}
-	//}
-	//pca2.variance_covariance().print("相関行列");
-
-	//for (int i = 0; i < variablesNum; i++)
-	//{
-	//	pca2.getEigen().getRightVector(i)[0].print("固有ベクトル");
-	//	//pca.getEigen().getRightVector(i)[1].print("固有ベクトル");
-	//}
-	////w.print();
-	//pca_w.print();
-	////pca_w.print_csv("test.csv");
-
-	//fp = fopen("test.csv", "w");
-	//for (int i = 0; i < w.m; i++)
-	//{
-	//	for (int j = 0; j < w.n-1; j++)
-	//	{
-	//		fprintf(fp, "%f,", pca_w(i, j));
-	//	}
-	//	fprintf(fp, "%f\n", pca_w(i, w.n - 1));
-	//}
-	//fclose(fp);
-
-	//printf("寄与率(%%)\n");
-	//for (int j = 0; j < w.n; j++)
-	//{
-	//	printf("%f%%\n", 100*pca2.contribution_rate(j));
-	//}
-	//pca2.mean.print("mean");
-	//pca2.variance.print("variance");
 }
 

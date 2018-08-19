@@ -122,7 +122,7 @@ public:
 			int nn = 0;
 			for (int i = 0; i < tmp.size(); i++)
 			{
-				if (nn >= N_) break;
+				if (nn == N_) break;
 				if (tmp[i].zero_changed) continue;
 				printf("[%d]%f ", i, tmp[i].dat);
 				tmp[i].dat = 0.0;
@@ -158,7 +158,7 @@ public:
 				for (int i = 0; i < tmp.m*tmp.n; i++)
 				{
 					//‘ÎŠp‚Éƒ[ƒ‚ª—ˆ‚Ä‚µ‚Ü‚Á‚½
-					if (tmp(i, i) == 0.0)
+					if (Substitution(replacement_list[k])(i, i) == 0.0)
 					{
 						tri_ng = true;
 						break;

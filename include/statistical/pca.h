@@ -188,7 +188,7 @@ public:
 		else
 			printf("error:%d\n", stat);
 
-		printf("\neigenvalue:");
+		printf("\neigen value:");
 		for (int i = 0; i < variablesNum; i++)
 		{
 			printf("%.3f ", getEigen().getRealValue()(0,i));
@@ -197,7 +197,7 @@ public:
 
 		for (int i = 0; i < variablesNum; i++)
 		{
-			getEigen().getRightVector(i)[0].print("eigenvector");
+			getEigen().getRightVector(i)[0].print("eigen vector");
 		}
 
 		if (!use_variance_covariance_matrix_)
@@ -227,6 +227,7 @@ public:
 		{
 			printf("%.3f%%\n", 100 * contribution_rate(j));
 		}
+		principal_component().print("principal component");
 	}
 };
 
