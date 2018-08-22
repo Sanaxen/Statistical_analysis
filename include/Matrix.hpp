@@ -1066,6 +1066,48 @@ struct Matrix
 		return mx;
 	}
 
+	Matrix<dnn_double> removeRow(int row)
+	{
+		Matrix<dnn_double> ret(m - 1, n);
+		for (int i = 0; i < m; i++)
+		{
+			if (i == row) continue;
+			for (int j = 0; j < n; j++)
+			{
+				if (i > row)
+				{
+					ret(i - 1, j) = (*this)(i, j);
+				}
+				else
+				{
+					ret(i, j) = (*this)(i, j);
+				}
+			}
+		}
+		return ret;
+	}
+
+	Matrix<dnn_double> removeCol(int col)
+	{
+		Matrix<dnn_double> ret(m, n - 1);
+		for (int i = 0; i < m; i++)
+		{
+			for (int j = 0; j < n; j++)
+			{
+				if (j == col) continue;
+				if (j > col)
+				{
+					ret(i, j - 1) = (*this)(i, j);
+				}
+				else
+				{
+					ret(i, j) = (*this)(i, j);
+				}
+			}
+		}
+		return ret;
+	}
+
 	void saveImage(const char* filename, int channel=3)
 	{
 		const int mn = m*n;
