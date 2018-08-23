@@ -1108,6 +1108,46 @@ struct Matrix
 		return ret;
 	}
 
+	Matrix<dnn_double> appendRow(Matrix<dnn_double>& A)
+	{
+		Matrix<dnn_double> ret(m + A.m, n);
+		for (int i = 0; i < m; i++)
+		{
+			for (int j = 0; j < n; j++)
+			{
+				ret(i, j) = (*this)(i, j);
+			}
+		}
+		for (int i = 0; i < A.m; i++)
+		{
+			for (int j = 0; j < A.n; j++)
+			{
+				ret(m+i, j) = A(i, j);
+			}
+		}
+		return ret;
+	}
+
+	Matrix<dnn_double> appendCol(Matrix<dnn_double>& A)
+	{
+		Matrix<dnn_double> ret(m, n+A.n);
+		for (int i = 0; i < m; i++)
+		{
+			for (int j = 0; j < n; j++)
+			{
+				ret(i, j) = (*this)(i, j);
+			}
+		}
+		for (int i = 0; i < A.m; i++)
+		{
+			for (int j = 0; j < A.n; j++)
+			{
+				ret(i, n+j) = A(i, j);
+			}
+		}
+		return ret;
+	}
+
 	void saveImage(const char* filename, int channel=3)
 	{
 		const int mn = m*n;
