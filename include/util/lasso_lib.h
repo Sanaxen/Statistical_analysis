@@ -185,9 +185,9 @@ public:
 		delete[] yy;
 #endif
 
-		dnn_double* c = new dnn_double[X.m];
-		for (int i = 0; i < X.m; i++) c[i] = model->coef[i];
-		x = Matrix<dnn_double>(c, X.m, 1);
+		dnn_double* c = new dnn_double[X.n];
+		for (int i = 0; i < X.n; i++) c[i] = model->coef[i];
+		x = Matrix<dnn_double>(c, X.n, 1);
 		delete[]c;
 	}
 };
@@ -228,9 +228,9 @@ public:
 		delete[] x;
 		delete[] yy;
 #endif
-		dnn_double* c = new dnn_double[X.m];
-		for (int i = 0; i < X.m; i++) c[i] = model->coef[i];
-		x = Matrix<dnn_double>(c, X.m, 1);
+		dnn_double* c = new dnn_double[X.n];
+		for (int i = 0; i < X.n; i++) c[i] = model->coef[i];
+		x = Matrix<dnn_double>(c, X.n, 1);
 		delete[]c;
 
 	}
@@ -281,9 +281,9 @@ public:
 		delete[] x;
 		delete[] yy;
 #endif
-		dnn_double* c = new dnn_double[X.m];
-		for (int i = 0; i < X.m; i++) c[i] = model->coef[i];
-		x = Matrix<dnn_double>(c, X.m, 1);
+		dnn_double* c = new dnn_double[X.n];
+		for (int i = 0; i < X.n; i++) c[i] = model->coef[i];
+		x = Matrix<dnn_double>(c, X.n, 1);
 		delete[]c;
 
 	}
