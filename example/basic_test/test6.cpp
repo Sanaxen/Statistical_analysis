@@ -4,7 +4,7 @@
 #define _cublas_Init_def
 //#define USE_FLOAT
 #include "../../include/Matrix.hpp"
-#include "../../include/statistical/statistical.h"
+#include "../../include/statistical/LinearRegression.h"
 //#include "../../include/util/mathutil.h"
 
 
