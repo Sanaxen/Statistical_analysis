@@ -185,9 +185,9 @@ public:
 		delete[] yy;
 #endif
 
-		dnn_double* c = new dnn_double[X.n];
-		for (int i = 0; i < X.n; i++) c[i] = model->coef[i];
-		x = Matrix<dnn_double>(c, X.n, 1);
+		dnn_double* c = new dnn_double[X.n+1];
+		for (int i = 0; i < X.n+1; i++) c[i] = model->coef[i];
+		x = Matrix<dnn_double>(c, X.n+1, 1);
 		delete[]c;
 	}
 };
@@ -228,9 +228,9 @@ public:
 		delete[] x;
 		delete[] yy;
 #endif
-		dnn_double* c = new dnn_double[X.n];
-		for (int i = 0; i < X.n; i++) c[i] = model->coef[i];
-		x = Matrix<dnn_double>(c, X.n, 1);
+		dnn_double* c = new dnn_double[X.n+1];
+		for (int i = 0; i < X.n+1; i++) c[i] = model->coef[i];
+		x = Matrix<dnn_double>(c, X.n+1, 1);
 		delete[]c;
 
 	}
@@ -245,7 +245,7 @@ class ElasticNet_Regressor :public _Regressor
 
 public:
 	ElasticNet_Regressor(double lambda1, double lambda2, size_t n_iter, double e) :
-		lambda1_(lambda1), lambda2_(lambda2_), n_iter_(n_iter), e_(e) {
+		lambda1_(lambda1), lambda2_(lambda2), n_iter_(n_iter), e_(e) {
 		_Regressor();
 	}
 
@@ -275,15 +275,15 @@ public:
 		param.e = e_;
 		param.n_iter = n_iter_;
 		param.lambda1 = lambda1_;
-		param.lambda2 = lambda1_;
+		param.lambda2 = lambda2_;
 		model = lm_train(prob, &param);
 #ifdef USE_FLOAT
 		delete[] x;
 		delete[] yy;
 #endif
-		dnn_double* c = new dnn_double[X.n];
-		for (int i = 0; i < X.n; i++) c[i] = model->coef[i];
-		x = Matrix<dnn_double>(c, X.n, 1);
+		dnn_double* c = new dnn_double[X.n+1];
+		for (int i = 0; i < X.n+1; i++) c[i] = model->coef[i];
+		x = Matrix<dnn_double>(c, X.n+1, 1);
 		delete[]c;
 
 	}
