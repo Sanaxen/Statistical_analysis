@@ -49,7 +49,7 @@ private:
 class ElasticNet :public Regressor {
 public:
     ElasticNet(double lambda1, double lambda2, size_t n_iter, double e) :
-            lambda1_(lambda1), lambda2_(lambda2_), n_iter_(n_iter), e_(e) {
+            lambda1_(lambda1), lambda2_(lambda2), n_iter_(n_iter), e_(e) {
         Regressor();
     }
     virtual void fit(const MatrixXd &X, const VectorXd &y);
