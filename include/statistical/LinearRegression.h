@@ -316,6 +316,10 @@ public:
 		F_distribution f_distribution(A.n - 1, A.m - A.n);
 		double f_pdf = f_distribution.p_value(ƒ¿);
 
+		if (f_distribution.status != 0)
+		{
+			printf("f_distribution status:%d\n", f_distribution.status);
+		}
 		printf("F’l:%f > F(%.2f)_%d,%d=[%.2f]", F_value, ƒ¿, A.n - 1, A.m - A.n, f_pdf);
 		if (F_value > f_pdf)
 		{

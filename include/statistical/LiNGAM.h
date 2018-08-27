@@ -45,16 +45,31 @@ class Lingam
 		printf("\nAlgorithmB start\n");
 		Bhat.print("start");
 
-		p.clear();
 		for (int i = 0; i < Bhat.m; i++)
 		{
+			bool skipp = false;
+			for (int k = 0; k < p.size(); k++)
+			{
+				if (p[k] == i)
+				{
+					skipp = true;
+					break;
+				}
+			}
+			if (skipp) continue;
+
 			double sum = 0.0;
-			for (int j = i; j < Bhat.n; j++) sum += Bhat(i, j);
+			for (int j = 0; j < Bhat.n; j++) sum += Bhat(i, j);
 			if (fabs(sum) < 1.0e-16)
 			{
 				p.push_back(i);
 			}
 		}
+		for (int x = 0; x < p.size(); x++)
+			std::cout << x << "," << p[x] << "\t";
+		printf("\n");
+		fflush(stdout);
+
 		printf("AlgorithmB end\n");
 		return (p.size() == Bhat.m);
 	}
@@ -96,11 +111,13 @@ class Lingam
 
 		printf("\nAlgorithmC start\n");
 		int c = 0;
-		while (c < n)
+		std::vector<int> p;
+		p.clear();
+
+		while (c < n*2000)	// while( p.size() < n )
 		{
 			c++;
 			Matrix<dnn_double> B = b_est_tmp;
-			std::vector<int> p;
 			bool stat = AlgorithmB(B, p);
 			if (stat)
 			{
@@ -123,7 +140,12 @@ class Lingam
 				b_est_tmp.v[tmp[i].id] = tmp[i].dat;
 			}
 		}
+		for (int x = 0; x < replacement.size(); x++)
+			std::cout << x << "," << replacement[x] << "\t";
+		printf("\nreplacement.size()=%d\n", replacement.size());
+
 		printf("AlgorithmC end\n");
+		fflush(stdout);
 		return Substitution(replacement)*b_est_tmp;
 	}
 
@@ -140,6 +162,8 @@ public:
 	{
 		variableNum = variableNum_;
 	}
+
+
 	int fit(Matrix<dnn_double>& X, const int max_ica_iteration= MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
 		error = 0;
@@ -288,6 +312,7 @@ public:
 			std::cout << x << "," << replacement[x] << "\t";
 		printf("\n");
 		b_est.print_e();
+		fflush(stdout);
 
 		if ( error == 0 ) B = b_est;
 		

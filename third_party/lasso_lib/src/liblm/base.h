@@ -20,6 +20,7 @@ struct LModel {
 
 class LinearModel {
 public:
+	int error = 0;
     LinearModel() {
         scalaer = new StandardScaler();
     }

@@ -3,6 +3,10 @@
 //Copyright (c) 2018, Sanaxn
 //All rights reserved.
 
+#include <cmath>
+#include <iostream>
+#include <limits>
+
 #define MAX_ITER 400
 
 //Gamma function
@@ -12,6 +16,8 @@ inline double gamma(const double x, int &ier)
 	long k;
 
 	ier = 0;
+	//ISO/IEC 14882:2011 C++11
+	return std::tgamma(x);
 
 	if (x > 5.0) {
 		v = 1.0 / x;
@@ -81,6 +87,7 @@ public:
 		double f0, f1, f2, x0 = 0.0;
 		int sw;
 
+		status = 0;
 		f1 = func(p, x1);
 		f2 = func(p, x2);
 
@@ -119,6 +126,7 @@ public:
 				}
 			}
 		}
+		if (status >= 0) status = 0;
 		return x0;
 	}
 
@@ -157,13 +165,25 @@ public:
 						}
 					}
 					else
+					{
 						status = -1;
+						printf("error:newton(gradient=0)\n");
+						break;
+					}
 				}
 				else
-					status = -1;
+				{
+					printf("error:newton(loop max over)\n");
+					status = -2;
+				}
 			}
 		}
 
+		if (status == -1)
+		{
+			printf("error:newton\n");
+		}
+		if (status >= 0) status = 0;
 		return x;
 	}
 
@@ -348,13 +368,20 @@ public:
 					if (e > 0.5)
 						t0 = yq / sqrt(e);
 					else {
-						x = sqrt(df) / (pis * p * df * gamma(df2, status) / gamma(df2 + 0.5, status));
+						int err1 = 0, err2 = 0;
+						x = sqrt(df) / (pis * p * df * gamma(df2, err1) / gamma(df2 + 0.5, err2));
 						t0 = pow(x, 1.0 / df);
+						//printf("err %d %d\n", err1, err2);
+						if (err1 != 0 || err2 != 0) status = -1;
 					}
+					if (status == 0)
+					{
 					tt = newton(p, t0);
 				}
 			}
 		}
+		}
+		//printf("status:%d\n", status);
 		return tt;
 	}
 };
@@ -387,6 +414,16 @@ public:
 
 	inline F_distribution(int dof1_, int dof2_) :dof1(dof1_), dof2(dof2_)
 	{
+		if (dof1_ <= 0)
+		{
+			printf("F-distribution degree of freedom1 ERROR\n");
+		}
+		if (dof2_ <= 0)
+		{
+			printf("F-distribution degree of freedom2 ERROR\n");
+		}
+		if (dof1 <= 0) dof1 = 1;
+		if (dof2 <= 0) dof2 = 1;
 		status = -1;
 	}
 
@@ -490,10 +527,14 @@ public:
 			}
 		}
 
+		//printf("F distribution sw:%d\n", sw);
 		if (sw == -2)
+		{
 			status = -1;
-
+			//printf("F distribution loop max error\n");
+		}
 		else {
+			//printf("status:%d\n", status);
 			if (e > 0.8) {
 				x = (a1 * b1 + yq * sqrt(a1*a1*b + a*e)) / e;
 				f0 = pow(x, 3.0);
@@ -501,11 +542,23 @@ public:
 			else {
 				y1 = pow((double)dof2, df2 - 1.0);
 				y2 = pow((double)dof1, df2);
-				x = gamma(df1 + df2, status) / gamma(df1, status) / gamma(df2, status) * 2.0 * y1 / y2 / p;
+				int err1 = 0, err2 = 0, err3 = 0;
+				x = gamma(df1 + df2, err1) / gamma(df1, err2) / gamma(df2, err3) * 2.0 * y1 / y2 / p;
+				//printf("err %d %d %d\n", err1, err2, err2);
+				if (err1 != 0 || err2 != 0 || err3 != 0) status = -1;
 				f0 = pow(x, 2.0 / dof2);
 			}
+			//printf("status:%d\n", status);
+			if (status == 0)
+			{
 			ff = newton(p, f0);
 		}
+			else
+			{
+				printf("gamma function error\n");
+			}
+		}
+		//printf("status:%d\n", status);
 
 		return ff;
 	}

@@ -5,6 +5,7 @@
 #define _LASSO_H
 
 #include "../../third_party/lasso_lib/src/liblm/c_api.h"
+#include "../../include/util/mathutil.h"
 
 #ifdef _DEBUG
 #pragma comment(lib, "../../third_party/lasso_lib/lib/x64/Debug/lasso_lib.lib")
@@ -34,6 +35,10 @@ public:
 	}
 	virtual void fit(const Matrix<dnn_double> &X, const Matrix<dnn_double> &y)
 	{}
+	int getStatus()
+	{
+		return this->model->error;
+	}
 
 	Matrix<dnn_double> combine_bias(const Matrix<dnn_double> &X)
 	{
@@ -97,7 +102,7 @@ public:
 		return Y;
 	}
 
-	Matrix<dnn_double> predict(Matrix<dnn_double>& X, bool bias = false)
+	Matrix<dnn_double> predict(Matrix<dnn_double>& X, bool bias = true)
 	{
 		Matrix<dnn_double> t;
 
@@ -139,6 +144,19 @@ public:
 
 		return t;
 	}
+
+	void report()
+	{
+		printf("--------------\n");
+		printf("     ŒW”     \n");
+		printf("--------------\n");
+		printf("%10.4f\n", model->coef[model->n_features-1]);
+		for (int i = 0; i < model->n_features-1; i++)
+		{
+			printf("%10.4f\n", model->coef[i]);
+		}
+		printf("--------------\n");
+	}
 };
 
 class Lasso_Regressor :public _Regressor
@@ -152,8 +170,11 @@ public:
 		lambda_(lambda), n_iter_(n_iter), e_(e) {
 		_Regressor();
 	}
-	virtual void fit(const Matrix<dnn_double> &X, const Matrix<dnn_double> &y)
+	virtual void fit(const Matrix<dnn_double> &X, const Matrix<dnn_double> &y, size_t n_iter=0, double e=0)
 	{
+		if (model != NULL) free_model(model);
+		model = NULL;
+
 #ifdef USE_FLOAT
 		double* x = new double[X.m*X.n];
 		for (int i = 0; i < X.m*X.n; i++) x[i] = X.v[i];
@@ -172,6 +193,8 @@ public:
 #else
 		prob->y = &y.v[0];
 #endif
+		if (n_iter >= 1) n_iter_ = n_iter;
+		if ( e > 0.0) e_ = e;
 
 		param.alg = REG;
 		param.regu = L1;
@@ -249,7 +272,7 @@ public:
 		_Regressor();
 	}
 
-	virtual void fit(const Matrix<dnn_double> &X, const Matrix<dnn_double> &y)
+	virtual void fit(const Matrix<dnn_double> &X, const Matrix<dnn_double> &y, size_t n_iter = 0, double e = 0)
 	{
 #ifdef USE_FLOAT
 		double* x = new double[X.m*X.n];
@@ -269,6 +292,9 @@ public:
 #else
 		prob->y = &y.v[0];
 #endif
+
+		if (n_iter >= 1) n_iter_ = n_iter;
+		if (e > 0.0) e_ = e;
 
 		param.alg = REG;
 		param.regu = L1L2;

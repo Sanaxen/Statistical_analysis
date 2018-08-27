@@ -16,7 +16,7 @@ lm_model* lm_train(const lm_problem *prob, const lm_param *param) {
 
     if (param->alg == REG)
     {
-        if (param->regu == NONE)
+		if (param->regu == NONE)
             lmodel = new LinearRegression();
         else if (param->regu == L1)
             lmodel = new Lasso(param->lambda1, param->n_iter, param->e);
@@ -74,15 +74,21 @@ lm_model* lm_train(const lm_problem *prob, const lm_param *param) {
     model->coef = coef;
     model->mean = mean;
     model->var = var;
+	model->error = lmodel->error;
     delete lmodel;
     return model;
 }
 
 void free_model(lm_model *model) {
-    free(model->coef);
-    free(model->mean);
-    free(model->var);
-    free(model);
+    if (model->coef != NULL ) free(model->coef);
+	if (model->mean != NULL) free(model->mean);
+	if (model->var != NULL) free(model->var);
+	if (model != NULL) free(model);
+
+	model->coef = NULL;
+	model->mean = NULL;
+	model->var = NULL;
+	model = NULL;
 }
 
 double* lm_predict(const lm_model *model, dmatrix *X) {

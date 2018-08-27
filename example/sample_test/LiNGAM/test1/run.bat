@@ -9,5 +9,6 @@ copy ..\..\..\..\third_party\bin\*.dll
 
 %LDM%\LiNGAM.exe
 
+call gr.bat
 :pause
 del *.dll

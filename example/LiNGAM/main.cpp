@@ -52,10 +52,10 @@ int main()
 
 	for (int i = 0; i < len; i++)
 	{
-		xs(i, 0) = x(i, 0);
-		xs(i, 1) = y(i, 0);
-		xs(i, 2) = z(i, 0);
-		xs(i, 3) = w(i, 0);
+		xs(i, 0) = y(i, 0);
+		xs(i, 1) = z(i, 0);
+		xs(i, 2) = w(i, 0);
+		xs(i, 3) = x(i, 0);
 
 	}
 	xs.print_e();
@@ -75,10 +75,11 @@ int main()
 			}
 	LiNGAM.B.print_e();
 
+
+#if 0
 	multiple_regression reg;
 	reg.set(1);
 
-#if 0
 	reg.fit(x, y);
 	reg.les.x.print();
 	reg.report();
@@ -98,13 +99,76 @@ int main()
 	reg.report();
 
 #else
+
+	Matrix<dnn_double> B = LiNGAM.B;
+	xs.print();
+	Matrix<dnn_double> X = xs.Col(LiNGAM.replacement[0]);
+	Matrix<dnn_double> Y = xs.Col(LiNGAM.replacement[1]);
+	for (int i = 1; i < LiNGAM.B.m; i++)
+	{
+		//X.print();
+		//Y.print();
+		size_t n_iter = 10000000;
+		Lasso_Regressor lasso(0.01, n_iter, 1.0e-4);
+		lasso.fit(X, Y);
+		while (lasso.getStatus() != 0)
+		{
+			n_iter *= 2;
+			lasso.fit(X, Y, n_iter, 1.0e-4);
+			printf("n_iter=%d\n", lasso.param.n_iter);
+		}
+
+		Matrix<dnn_double> c(lasso.model->coef, i+1, 1);
+		for (int k = 0; k < i; k++)
+		{
+			c.v[k] = c.v[k] / lasso.model->var[k];
+			B(i, k) = c.v[k];
+		}
+		if (i == LiNGAM.B.m) break;
+		c.print();
+		X = X.appendCol(Y);
+		Y = xs.Col(LiNGAM.replacement[i+1]);
+	}
+	B.print_e();
+
+	{
+		B = B.chop(0.001);
+		B.print_e();
+
+		std::vector<std::string> item;
+		item.resize(B.m);
+		item[0] = "X";
+		item[1] = "Y";
+		item[2] = "Z";
+		item[3] = "W";
+
+		FILE* fp = fopen("digraph.txt", "w");
+		fprintf(fp, "digraph {\n");
+		fprintf(fp, "node [fontname=\"MS UI Gothic\" layout=circo shape=circle]\n");
+		
+		for (int i = 0; i < B.n; i++)
+		{
+			fprintf(fp, "\"%s\"[color=blue shape=circle]\n", item[i]);
+			for (int j = 0; j < B.n; j++)
+			{
+				if (B(i, j) != 0.0)
+				{
+					fprintf(fp, "\"%s\"-> \"%s\" [label=\"%8.3f\" color=black]\n", item[j].c_str(), item[i].c_str(), B(i,j));
+				}
+			}
+		}
+		fprintf(fp, "}\n");
+		fclose(fp);
+	}
+#if 0
 	Lasso_Regressor lasso(0.01, 1000, 1.0e-4);
 
 	lasso.fit(x, y);
 	//lasso.x.print();
 	Matrix<dnn_double> c1(lasso.model->coef, 1+1, 1);
-	c1.v[0] = (c1.v[0]/*- lasso.model->mean[0]*/) /lasso.model->var[0];
+	c1.v[0] = c1.v[0] /lasso.model->var[0];
 	c1.print();
+	lasso.report();
 
 	Matrix<dnn_double>& xy = x.appendCol(y);
 
@@ -114,9 +178,10 @@ int main()
 	lasso2.fit(xy, z);
 	//lasso.x.print();
 	Matrix<dnn_double> c2(lasso2.model->coef, 2+1, 1);
-	c2.v[0] = (c2.v[0]/* - lasso2.model->mean[0]*/) / lasso2.model->var[0];
-	c2.v[1] = (c2.v[1]/* - lasso2.model->mean[1]*/) / lasso2.model->var[1];
+	c2.v[0] = c2.v[0] / lasso2.model->var[0];
+	c2.v[1] = c2.v[1] / lasso2.model->var[1];
 	c2.print();
+	lasso2.report();
 
 	Matrix<dnn_double>& xyz = xy.appendCol(z);
 
@@ -126,9 +191,11 @@ int main()
 	lasso3.fit(xyz, w);
 	//lasso.x.print();
 	Matrix<dnn_double> c3(lasso3.model->coef, 3+1, 1);
-	c3.v[0] = (c3.v[0]/* - lasso3.model->mean[0]*/) / lasso3.model->var[0];
-	c3.v[1] = (c3.v[1] /*- lasso3.model->mean[1]*/) / lasso3.model->var[1];
-	c3.v[2] = (c3.v[2]/* - lasso3.model->mean[2]*/) / lasso3.model->var[2];
+	c3.v[0] = c3.v[0] / lasso3.model->var[0];
+	c3.v[1] = c3.v[1] / lasso3.model->var[1];
+	c3.v[2] = c3.v[2] / lasso3.model->var[2];
 	c3.print();
+	lasso3.report();
+#endif
 #endif
 }

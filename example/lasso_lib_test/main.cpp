@@ -43,6 +43,7 @@ void test2()
 
 	Matrix<dnn_double>& t = (lasso.predict(X_test) - lasso.predict_(X_test)).chop(1.0e-6);
 	t.print();
+	lasso.report();
 }
 
 void test3()
@@ -63,6 +64,7 @@ void test3()
 
 	Matrix<dnn_double>& t = (ridge.predict(X_test, true) - ridge.predict_(X_test)).chop(1.0e-6);
 	t.print();
+	ridge.report();
 }
 
 void test4()
@@ -81,8 +83,9 @@ void test4()
 
 	elasticNet.fit(X, y);
 
-	Matrix<dnn_double>& t = (elasticNet.predict(X_test) - elasticNet.predict_(X_test)).chop(1.0e-6);
+	Matrix<dnn_double>& t = (elasticNet.predict(X_test, true) - elasticNet.predict_(X_test)).chop(1.0e-6);
 	t.print();
+	elasticNet.report();
 }
 
 int main(int argc, char** argv)

@@ -241,7 +241,7 @@ struct Matrix
 		const int mn = m*n;
 
 		dnn_double sum = 0.0;
-		for (int i = 0; i < mn; ++i)  sum += v[i];
+		for (int i = 0; i < mn; ++i)  sum += fabs(v[i]);
 
 		if (sum*sum < eps) return true;
 		return false;
@@ -1102,6 +1102,37 @@ struct Matrix
 				else
 				{
 					ret(i, j) = (*this)(i, j);
+				}
+			}
+		}
+		return ret;
+	}
+
+	Matrix<dnn_double> Col(int col)
+	{
+		Matrix<dnn_double> ret(m, 1);
+		for (int i = 0; i < m; i++)
+		{
+			for (int j = 0; j < n; j++)
+			{
+				if (j == col) 
+				{
+					ret(i, 0) = (*this)(i, j);
+				}
+			}
+		}
+		return ret;
+	}
+	Matrix<dnn_double> Row(int row)
+	{
+		Matrix<dnn_double> ret(1, n);
+		for (int i = 0; i < m; i++)
+		{
+			for (int j = 0; j < n; j++)
+			{
+				if (i == row)
+				{
+					ret(0, j) = (*this)(i, j);
 				}
 			}
 		}

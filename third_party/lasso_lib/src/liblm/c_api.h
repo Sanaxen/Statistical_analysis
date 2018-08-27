@@ -39,6 +39,7 @@ struct lm_model {
     double *mean;
     double *var;
     size_t n_features;
+	int error;
 };
 
 enum { NONE, L1, L2, L1L2};
