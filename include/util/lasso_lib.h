@@ -33,8 +33,10 @@ public:
 		free(prob);
 		if (model) free_model(model);
 	}
-	virtual void fit(const Matrix<dnn_double> &X, const Matrix<dnn_double> &y)
-	{}
+	virtual int fit(const Matrix<dnn_double> &X, const Matrix<dnn_double> &y)
+	{
+		return 0;
+	}
 	int getStatus()
 	{
 		return this->model->error;
@@ -170,7 +172,7 @@ public:
 		lambda_(lambda), n_iter_(n_iter), e_(e) {
 		_Regressor();
 	}
-	virtual void fit(const Matrix<dnn_double> &X, const Matrix<dnn_double> &y, size_t n_iter=0, double e=0)
+	virtual int fit(const Matrix<dnn_double> &X, const Matrix<dnn_double> &y, size_t n_iter=0, double e=0)
 	{
 		if (model != NULL) free_model(model);
 		model = NULL;
@@ -212,6 +214,7 @@ public:
 		for (int i = 0; i < X.n+1; i++) c[i] = model->coef[i];
 		x = Matrix<dnn_double>(c, X.n+1, 1);
 		delete[]c;
+		return  model->error;
 	}
 };
 
@@ -222,7 +225,7 @@ class Ridge_Regressor :public _Regressor
 public:
 	Ridge_Regressor(double lambda) :lambda_(lambda) { _Regressor(); }
 
-	virtual void fit(const Matrix<dnn_double> &X, const Matrix<dnn_double> &y)
+	virtual int fit(const Matrix<dnn_double> &X, const Matrix<dnn_double> &y)
 	{
 #ifdef USE_FLOAT
 		double* x = new double[X.m*X.n];
@@ -256,6 +259,7 @@ public:
 		x = Matrix<dnn_double>(c, X.n+1, 1);
 		delete[]c;
 
+		return  model->error;
 	}
 };
 
@@ -272,7 +276,7 @@ public:
 		_Regressor();
 	}
 
-	virtual void fit(const Matrix<dnn_double> &X, const Matrix<dnn_double> &y, size_t n_iter = 0, double e = 0)
+	virtual int fit(const Matrix<dnn_double> &X, const Matrix<dnn_double> &y, size_t n_iter = 0, double e = 0)
 	{
 #ifdef USE_FLOAT
 		double* x = new double[X.m*X.n];
@@ -311,6 +315,7 @@ public:
 		for (int i = 0; i < X.n+1; i++) c[i] = model->coef[i];
 		x = Matrix<dnn_double>(c, X.n+1, 1);
 		delete[]c;
+		return  model->error;
 
 	}
 };

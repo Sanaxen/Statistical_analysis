@@ -285,6 +285,20 @@ struct Matrix
 		}
 		printf("\n");
 	}
+	void print_f(char *text, ...)
+	{
+		char*	buf = new char[4096];
+
+		va_list ptr;
+
+		va_start(ptr, text);
+		vsprintf(buf, text, ptr);
+		va_end(ptr);
+
+		print(buf);
+		delete[] buf;
+	}
+
 	void print_csv(char* filename)
 	{
 		FILE* fp = fopen(filename, "w");

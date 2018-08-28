@@ -28,7 +28,7 @@ public:
         delete scalaer;
     }
 
-    virtual void fit(const MatrixXd &X, const VectorXd &y) {};
+	virtual int fit(const MatrixXd &X, const VectorXd &y) { return 0; };
     virtual VectorXd predict(const MatrixXd &X);
 
     void set_model(const VectorXd &coef, const RowVectorXd &mean, const RowVectorXd &var) {

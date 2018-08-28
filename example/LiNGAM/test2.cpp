@@ -68,7 +68,7 @@ int main()
 	LiNGAM.set(6);
 	LiNGAM.fit(xs);
 
-	LiNGAM.B.print_e();
+	LiNGAM.B.print_e("B");
 	fflush(stdout);
 
 	for (int i = 0; i < LiNGAM.B.m; i++)
@@ -77,7 +77,7 @@ int main()
 			{
 				LiNGAM.B(i, j) = 0.01*(double)rand() / RAND_MAX;
 			}
-	LiNGAM.B.print_e();
+	LiNGAM.B.print_e("add random eps");
 	fflush(stdout);
 
 

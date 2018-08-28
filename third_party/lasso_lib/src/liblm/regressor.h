@@ -17,7 +17,7 @@ public:
 
 class LinearRegression :public Regressor {
 public:
-    virtual void fit(const MatrixXd &X, const VectorXd &y);
+    virtual int fit(const MatrixXd &X, const VectorXd &y);
 };
 
 
@@ -27,7 +27,7 @@ public:
             lambda_(lambda), n_iter_(n_iter), e_(e) {
         Regressor();
     }
-    virtual void fit(const MatrixXd &X, const VectorXd &y);
+    virtual int fit(const MatrixXd &X, const VectorXd &y);
 private:
     size_t n_iter_;
     double e_;
@@ -39,7 +39,7 @@ private:
 class Ridge :public Regressor {
 public:
     Ridge(double lambda) :lambda_(lambda) { Regressor(); }
-    virtual void fit(const MatrixXd &X, const VectorXd &y);
+    virtual int fit(const MatrixXd &X, const VectorXd &y);
 private:
     double lambda_;
 };
@@ -52,7 +52,7 @@ public:
             lambda1_(lambda1), lambda2_(lambda2), n_iter_(n_iter), e_(e) {
         Regressor();
     }
-    virtual void fit(const MatrixXd &X, const VectorXd &y);
+    virtual int fit(const MatrixXd &X, const VectorXd &y);
 private:
     double lambda1_;
     double lambda2_;

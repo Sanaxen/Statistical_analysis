@@ -5,5 +5,7 @@ del /s *.pdb
 del /s *.ipdb
 del /s *.bak
 del /s *.filters
+del /s *.user
+del /s *.ilk
 
 :rmdir /Q /s *.tlog

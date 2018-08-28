@@ -56,6 +56,10 @@ int main()
 		xs(i, 1) = z(i, 0);
 		xs(i, 2) = w(i, 0);
 		xs(i, 3) = x(i, 0);
+		//xs(i, 0) = x(i, 0);
+		//xs(i, 1) = y(i, 0);
+		//xs(i, 2) = z(i, 0);
+		//xs(i, 3) = w(i, 0);
 
 	}
 	xs.print_e();
@@ -65,7 +69,7 @@ int main()
 	LiNGAM.set(4);
 	LiNGAM.fit(xs);
 
-	LiNGAM.B.print_e();
+	LiNGAM.B.print_e("B");
 
 	for (int i = 0; i < LiNGAM.B.m; i++)
 		for (int j = 0; j < i; j++)
@@ -73,7 +77,7 @@ int main()
 			{
 				LiNGAM.B(i, j) = 0.01*(double)rand() / RAND_MAX;
 			}
-	LiNGAM.B.print_e();
+	LiNGAM.B.print_e("add random eps");
 
 
 #if 0
@@ -148,7 +152,7 @@ int main()
 		
 		for (int i = 0; i < B.n; i++)
 		{
-			fprintf(fp, "\"%s\"[color=blue shape=circle]\n", item[i]);
+			fprintf(fp, "\"%s\"[color=blue shape=circle]\n", item[i].c_str());
 			for (int j = 0; j < B.n; j++)
 			{
 				if (B(i, j) != 0.0)

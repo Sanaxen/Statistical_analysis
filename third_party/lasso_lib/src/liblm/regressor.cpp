@@ -6,17 +6,29 @@
 #include <iostream>
 #include <vector>
 
+class _dummy_dummy_
+{
+public:
+	_dummy_dummy_()
+	{
+		Eigen::initParallel(); 
+	}
+};
+
+_dummy_dummy_ _dummy_dummy__;
+
 VectorXd Regressor::predict(const MatrixXd &X) {
 	MatrixXd X_test = combine_bias(scalaer->transform(X));
 	return X_test * coef_;
 }
 
-void LinearRegression::fit(const MatrixXd & X, const VectorXd & y) {
+int LinearRegression::fit(const MatrixXd & X, const VectorXd & y) {
     MatrixXd X_train = combine_bias(scalaer->fit_transform(X));
     coef_ = (X_train.transpose() * X_train).inverse()*X_train.transpose()*y;
+	return 0;
 }
 
-void Lasso::fit(const MatrixXd & X, const VectorXd & y) {
+int Lasso::fit(const MatrixXd & X, const VectorXd & y) {
 	error = -1;
     MatrixXd X_train = combine_bias(scalaer->fit_transform(X));
     coef_ = VectorXd::Zero(X_train.cols());
@@ -48,21 +60,23 @@ void Lasso::fit(const MatrixXd & X, const VectorXd & y) {
 		coef_(N) = (y - X_train * coef_).sum() / N;
 		if ((coef_ - tmp).norm() < e_)
 		{
-			printf("convergence:%f\n", (coef_ - tmp).norm());
+			printf("convergence:%f - iter:%d\n", (coef_ - tmp).norm(), iter);
 			error = 0;
 			break;
 		}
         //coef_ = tmp;
     }
+	return error;
 }
 
-void Ridge::fit(const MatrixXd & X, const VectorXd & y) {
+int Ridge::fit(const MatrixXd & X, const VectorXd & y) {
     MatrixXd X_train = combine_bias(scalaer->fit_transform(X));
     coef_ = (X_train.transpose() * X_train + lambda_
                                              * MatrixXd::Identity(X_train.cols(), X_train.cols())).inverse()*X_train.transpose()*y;
+	return 0;
 }
 
-void ElasticNet::fit(const MatrixXd & X, const VectorXd & y) {
+int ElasticNet::fit(const MatrixXd & X, const VectorXd & y) {
 	error = -1;
 	MatrixXd X_train = combine_bias(scalaer->fit_transform(X));
     coef_ = VectorXd::Zero(X_train.cols());
@@ -92,10 +106,11 @@ void ElasticNet::fit(const MatrixXd & X, const VectorXd & y) {
 		coef_(N) = (y - X_train * coef_).sum() / N;
 		if ((coef_ - tmp).norm() < e_)
 		{
-			printf("convergence:%f\n", (coef_ - tmp).norm());
+			printf("convergence:%f - iter:%d\n", (coef_ - tmp).norm(), iter);
 			error = 0;
 			break;
 		}
         //coef_ = tmp;
     }
+	return error;
 }

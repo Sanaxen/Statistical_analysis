@@ -22,7 +22,7 @@ VectorXd Classifier::sigmoid(const MatrixXd &X) {
 }
 
 
-void LogisticRegression::fit(const MatrixXd &X, const VectorXd &y) {
+int LogisticRegression::fit(const MatrixXd &X, const VectorXd &y) {
     MatrixXd X_train = combine_bias(scalaer->fit_transform(X));
 
     coef_ = VectorXd::Zero(X_train.cols());
@@ -35,14 +35,14 @@ void LogisticRegression::fit(const MatrixXd &X, const VectorXd &y) {
             break;
         coef_ += learning_rate_ * g;
     }
-
+	return error;
 }
 
 VectorXd LogisticRegression::diff(const MatrixXd &X, const VectorXd &y) {
     return (X.transpose() * (sigmoid(X) - y)).matrix();
 }
 
-void LogisticRegressionL2::fit(const MatrixXd & X, const VectorXd & y)
+int LogisticRegressionL2::fit(const MatrixXd & X, const VectorXd & y)
 {
     MatrixXd X_train = combine_bias(scalaer->fit_transform(X));
 
@@ -56,6 +56,7 @@ void LogisticRegressionL2::fit(const MatrixXd & X, const VectorXd & y)
             break;
         coef_ += learning_rate_ * g;
     }
+	return error;
 
 }
 
@@ -63,12 +64,14 @@ VectorXd LogisticRegressionL2::diff(const MatrixXd &X, const VectorXd &y) {
     return (X.transpose() * (sigmoid(X) - y)).matrix() - lambda_ * coef_;
 }
 
-void LogisticRegressionL1::fit(const MatrixXd & X, const VectorXd & y)
+int LogisticRegressionL1::fit(const MatrixXd & X, const VectorXd & y)
 {
     //TODO: Add this method
+	return error;
 }
 
-void LogisticRegressionL1L2::fit(const MatrixXd & X, const VectorXd & y)
+int LogisticRegressionL1L2::fit(const MatrixXd & X, const VectorXd & y)
 {
     //TODO: Add this method
+	return error;
 }

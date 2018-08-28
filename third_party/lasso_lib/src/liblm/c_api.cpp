@@ -52,6 +52,7 @@ lm_model* lm_train(const lm_problem *prob, const lm_param *param) {
         return NULL;
     }
 
+	lmodel->error = 0;
     Map<Matrix<double, Dynamic, Dynamic, RowMajor>> X(prob->X.data, prob->X.row, prob->X.col);
     Map<VectorXd> y(prob->y, prob->X.row);
     lmodel->fit(X, y);

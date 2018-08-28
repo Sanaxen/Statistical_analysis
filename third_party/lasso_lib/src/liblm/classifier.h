@@ -27,7 +27,7 @@ public:
             learning_rate_(learning_rate), n_iter_(n_iter), e_(e) {
         Classifier();
     }
-    virtual void fit(const MatrixXd &X, const VectorXd &y);
+    virtual int fit(const MatrixXd &X, const VectorXd &y);
 
 private:
     VectorXd diff(const MatrixXd &X, const VectorXd &y);
@@ -43,7 +43,7 @@ public:
             learning_rate_(learning_rate), n_iter_(n_iter), e_(e), lambda_(lambda) {
         Classifier();
     }
-    virtual void fit(const MatrixXd &X, const VectorXd &y);
+    virtual int fit(const MatrixXd &X, const VectorXd &y);
 private:
     double learning_rate_;
     size_t n_iter_;
@@ -58,7 +58,7 @@ public:
             learning_rate_(learning_rate), n_iter_(n_iter), e_(e), lambda_(lambda) {
         Classifier();
     }
-    virtual void fit(const MatrixXd &X, const VectorXd &y);
+    virtual int fit(const MatrixXd &X, const VectorXd &y);
 private:
     VectorXd diff(const MatrixXd &X, const VectorXd &y);
     double learning_rate_;
@@ -73,7 +73,7 @@ public:
             learning_rate_(learning_rate), n_iter_(n_iter), e_(e), lambda1_(lambda1), lambda2_(lambda2_) {
         Classifier();
     }
-    virtual void fit(const MatrixXd &X, const VectorXd &y);
+    virtual int fit(const MatrixXd &X, const VectorXd &y);
 
 private:
     double learning_rate_;
