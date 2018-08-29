@@ -5,7 +5,7 @@
 - [x] Matrix calculation
 - [x] Linear regression
 - [x] Multiple regression
-- [ ] Sparse regression
+- [x] Sparse regression
 - [ ] Nonlinear regression
 - [x] Principal component analysis
 - [x] Independent component analysis

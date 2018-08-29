@@ -59,7 +59,21 @@ class Lingam
 			if (skipp) continue;
 
 			double sum = 0.0;
-			for (int j = 0; j < Bhat.n; j++) sum += Bhat(i, j);
+			for (int j = 0; j < Bhat.n; j++)
+			{
+				bool skipp = false;
+				for (int k = 0; k < p.size(); k++)
+				{
+					if (p[k] == j)
+					{
+						skipp = true;
+						break;
+					}
+				}
+				if (skipp) continue;
+
+				sum += fabs(Bhat(i, j));
+			}
 			if (fabs(sum) < 1.0e-16)
 			{
 				p.push_back(i);
@@ -82,6 +96,7 @@ class Lingam
 	*/
 	Matrix<dnn_double> AlgorithmC(Matrix<dnn_double>& b_est_tmp, int n)
 	{
+		Matrix<dnn_double> b_est = b_est_tmp;
 		const int N = int(n * (n + 1) / 2) - 1;
 
 		dnn_double min_val = 0.0;
@@ -114,7 +129,7 @@ class Lingam
 		std::vector<int> p;
 		p.clear();
 
-		while (c < n*2000)	// while( p.size() < n )
+		while (p.size() < n)
 		{
 			c++;
 			Matrix<dnn_double> B = b_est_tmp;
@@ -144,9 +159,39 @@ class Lingam
 			std::cout << x << "," << replacement[x] << "\t";
 		printf("\nreplacement.size()=%d\n", replacement.size());
 
+		std::vector<int> &r = replacement;
+
+		//b_opt = b_opt[r, :]
+		Matrix<dnn_double> b_opt = (Substitution(r)*b_est);
+		//b_opt = b_opt[:, r]
+		b_opt = (b_opt)*Substitution(r).transpose();
+		b_opt.print_e();
+
+		//b_csl = np.tril(b_opt, -1)
+		Matrix<dnn_double> b_csl = b_opt;
+		for (int i = 0; i < b_csl.m; i++)
+		{
+			for (int j = i; j < b_csl.n; j++)
+			{
+				b_csl(i, j) = 0.0;
+			}
+		}
+		b_csl.print_e();
+
+		if (0)
+		{
+			//•À‚×‘Ö‚¦‚ðŒ³‚É–ß‚·
+			//b_csl[r, :] = deepcopy(b_csl)
+			b_csl = (Substitution(r).transpose()*b_csl);
+			//b_csl.print_e();
+
+			//b_csl[:, r] = deepcopy(b_csl)
+			b_csl = (b_csl*Substitution(r));
+			//b_csl.print_e();
+		}
 		printf("AlgorithmC end\n");
 		fflush(stdout);
-		return Substitution(replacement)*b_est_tmp;
+		return b_csl;
 	}
 
 public:
@@ -188,21 +233,25 @@ public:
 
 		Matrix<dnn_double>& ixs = toMatrix(replace);
 		ixs.print();
-		Substitution(replace).print();
+		Substitution(replace).print("Substitution matrix");
 
+		//P^-1*Wica
 		Matrix<dnn_double>& W_ica_perm = (Substitution(replace).inv()*W_ica);
-		W_ica_perm.print_e();
+		W_ica_perm.print_e("Replacement->W_ica_perm");
 
+		//D^-1
 		Matrix<dnn_double>& D = Matrix<dnn_double>().diag(W_ica_perm);
 		Matrix<dnn_double> D2(diag_vector(D));
-		(D2.Reciprocal()).print_e();
+		(D2.Reciprocal()).print_e("1/D");
 
+		//W_ica_perm_D=I - D^-1*(P^-1*Wica)
 		Matrix<dnn_double>& W_ica_perm_D = W_ica_perm.hadamard(to_vector(D2.Reciprocal()));
 
-		W_ica_perm_D.print_e();
+		W_ica_perm_D.print_e("W_ica_perm_D");
 
+		//B=I - D^-1*(P^-1*Wica)
 		Matrix<dnn_double>& b_est = Matrix<dnn_double>().unit(W_ica_perm_D.m, W_ica_perm_D.n) - W_ica_perm_D;
-		b_est.print_e();
+		b_est.print_e("b_est");
 
 #if 10
 		//https://www.cs.helsinki.fi/u/ahyvarin/papers/JMLR06.pdf
@@ -299,7 +348,14 @@ public:
 
 				if (!tri_ng)
 				{
-					b_est = tmp;
+					b_est = Substitution(replacement_list[k])*b_est;
+					for (int i = 0; i < b_est.m; i++)
+					{
+						for (int j = i; j < b_est.n; j++)
+						{
+							b_est(i, j) = 0.0;
+						}
+					}
 					replacement = replacement_list[k];
 					//for (auto x : v) cout << replacement_list[k][x] << " "; cout << "\n";    // v ‚Ì—v‘f‚ð•\Ž¦
 					break;

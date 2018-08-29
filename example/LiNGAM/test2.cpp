@@ -71,14 +71,14 @@ int main()
 	LiNGAM.B.print_e("B");
 	fflush(stdout);
 
-	for (int i = 0; i < LiNGAM.B.m; i++)
-		for (int j = 0; j < i; j++)
-			if (LiNGAM.B(i, j) == 0.0)
-			{
-				LiNGAM.B(i, j) = 0.01*(double)rand() / RAND_MAX;
-			}
-	LiNGAM.B.print_e("add random eps");
-	fflush(stdout);
+	//for (int i = 0; i < LiNGAM.B.m; i++)
+	//	for (int j = 0; j < i; j++)
+	//		if (LiNGAM.B(i, j) == 0.0)
+	//		{
+	//			LiNGAM.B(i, j) = 0.01*(double)rand() / RAND_MAX;
+	//		}
+	//LiNGAM.B.print_e("add random eps");
+	//fflush(stdout);
 
 
 #if 0
@@ -143,25 +143,25 @@ int main()
 
 		std::vector<std::string> item;
 		item.resize(B.m);
-		item[0] = "X";
-		item[1] = "Y";
-		item[2] = "Z";
-		item[3] = "U";
-		item[4] = "V";
-		item[5] = "W";
+		item[LiNGAM.replacement[0]] = "X";
+		item[LiNGAM.replacement[1]] = "Y";
+		item[LiNGAM.replacement[2]] = "Z";
+		item[LiNGAM.replacement[3]] = "U";
+		item[LiNGAM.replacement[4]] = "V";
+		item[LiNGAM.replacement[5]] = "W";
 
 		FILE* fp = fopen("digraph.txt", "w");
 		fprintf(fp, "digraph {\n");
 		fprintf(fp, "node [fontname=\"MS UI Gothic\" layout=circo shape=circle]\n");
-		
+
 		for (int i = 0; i < B.n; i++)
 		{
-			fprintf(fp, "\"%s\"[color=blue shape=circle]\n", item[i]);
+			fprintf(fp, "\"%s\"[color=blue shape=circle]\n", item[LiNGAM.replacement[i]].c_str());
 			for (int j = 0; j < B.n; j++)
 			{
 				if (B(i, j) != 0.0)
 				{
-					fprintf(fp, "\"%s\"-> \"%s\" [label=\"%8.3f\" color=black]\n", item[j].c_str(), item[i].c_str(), B(i,j));
+					fprintf(fp, "\"%s\"-> \"%s\" [label=\"%8.3f\" color=black]\n", item[LiNGAM.replacement[j]].c_str(), item[LiNGAM.replacement[i]].c_str(), B(i, j));
 				}
 			}
 		}

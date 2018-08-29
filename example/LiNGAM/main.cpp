@@ -60,7 +60,6 @@ int main()
 		//xs(i, 1) = y(i, 0);
 		//xs(i, 2) = z(i, 0);
 		//xs(i, 3) = w(i, 0);
-
 	}
 	xs.print_e();
 
@@ -71,13 +70,13 @@ int main()
 
 	LiNGAM.B.print_e("B");
 
-	for (int i = 0; i < LiNGAM.B.m; i++)
-		for (int j = 0; j < i; j++)
-			if (LiNGAM.B(i, j) == 0.0)
-			{
-				LiNGAM.B(i, j) = 0.01*(double)rand() / RAND_MAX;
-			}
-	LiNGAM.B.print_e("add random eps");
+	//for (int i = 0; i < LiNGAM.B.m; i++)
+	//	for (int j = 0; j < i; j++)
+	//		if (LiNGAM.B(i, j) == 0.0)
+	//		{
+	//			LiNGAM.B(i, j) = 0.01*(double)rand() / RAND_MAX;
+	//		}
+	//LiNGAM.B.print_e("add random eps");
 
 
 #if 0
@@ -105,6 +104,7 @@ int main()
 #else
 
 	Matrix<dnn_double> B = LiNGAM.B;
+#if 10
 	xs.print();
 	Matrix<dnn_double> X = xs.Col(LiNGAM.replacement[0]);
 	Matrix<dnn_double> Y = xs.Col(LiNGAM.replacement[1]);
@@ -131,9 +131,10 @@ int main()
 		if (i == LiNGAM.B.m) break;
 		c.print();
 		X = X.appendCol(Y);
-		Y = xs.Col(LiNGAM.replacement[i+1]);
+		Y = xs.Col(LiNGAM.replacement[i + 1]);
 	}
 	B.print_e();
+#endif
 
 	{
 		B = B.chop(0.001);
@@ -141,10 +142,10 @@ int main()
 
 		std::vector<std::string> item;
 		item.resize(B.m);
-		item[0] = "X";
-		item[1] = "Y";
-		item[2] = "Z";
-		item[3] = "W";
+		item[LiNGAM.replacement[0]] = "X";
+		item[LiNGAM.replacement[1]] = "Y";
+		item[LiNGAM.replacement[2]] = "Z";
+		item[LiNGAM.replacement[3]] = "W";
 
 		FILE* fp = fopen("digraph.txt", "w");
 		fprintf(fp, "digraph {\n");
@@ -152,12 +153,12 @@ int main()
 		
 		for (int i = 0; i < B.n; i++)
 		{
-			fprintf(fp, "\"%s\"[color=blue shape=circle]\n", item[i].c_str());
+			fprintf(fp, "\"%s\"[color=blue shape=circle]\n", item[LiNGAM.replacement[i]].c_str());
 			for (int j = 0; j < B.n; j++)
 			{
 				if (B(i, j) != 0.0)
 				{
-					fprintf(fp, "\"%s\"-> \"%s\" [label=\"%8.3f\" color=black]\n", item[j].c_str(), item[i].c_str(), B(i,j));
+					fprintf(fp, "\"%s\"-> \"%s\" [label=\"%8.3f\" color=black]\n", item[LiNGAM.replacement[j]].c_str(), item[LiNGAM.replacement[i]].c_str(), B(i,j));
 				}
 			}
 		}

@@ -1,0 +1,11 @@
+digraph {
+node [fontname="MS UI Gothic" layout=circo shape=circle]
+"X"[color=blue shape=circle]
+"Y"[color=blue shape=circle]
+"X"-> "Y" [label="   2.446" color=black]
+"Z"[color=blue shape=circle]
+"Y"-> "Z" [label="   4.842" color=black]
+"W"[color=blue shape=circle]
+"X"-> "W" [label="   1.726" color=black]
+"Z"-> "W" [label="   6.987" color=black]
+}

@@ -260,7 +260,7 @@ struct Matrix
 			}
 			for (int j = 0; j < n; j++)
 			{
-				printf("%e ", v[n*i + j]);
+				printf("%10.6e ", v[n*i + j]);
 			}
 			printf("\n");
 		}
@@ -279,7 +279,7 @@ struct Matrix
 			}
 			for (int j = 0; j < n; j++)
 			{
-				printf("%f ", v[n*i + j]);
+				printf("%10.6f ", v[n*i + j]);
 			}
 			printf("\n");
 		}
