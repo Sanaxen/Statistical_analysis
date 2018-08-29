@@ -38,7 +38,7 @@ MIT License Copyright (c) 2017 Sanaxen
 * Ridge 
 * Elastic Net  
 MIT License Copyright (c) 2017 Liu  
-MIT License Copyright (c) 2017 Sanaxen
+MIT License Copyright (c) 2018 Sanaxen
 
 # CLAPCK  
 modified BSD license  
@@ -51,4 +51,9 @@ The University of Colorado Denver.  All rights reserved.
 
 # MKL
 Copyright (c) 2017 Intel Corporation.
+
+# CSVparser
+MIT License Copyright (c) 2017 Romain Sylvian  
+MIT License Copyright (c) 2018 Sanaxen
+
 
