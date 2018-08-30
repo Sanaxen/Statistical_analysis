@@ -5,6 +5,8 @@
 #include "../../include/Matrix.hpp"
 #include "../../include/statistical/fastICA.h"
 #include "../../include/hungarian-algorithm/Hungarian.h"
+#include "../../include/util/lasso_lib.h"
+#include "../../include/statistical/LinearRegression.h"
 
 template<class T>
 class VectorIndex
@@ -188,6 +190,11 @@ class Lingam
 			//b_csl[:, r] = deepcopy(b_csl)
 			b_csl = (b_csl*Substitution(r));
 			//b_csl.print_e();
+
+			for (int i = 0; i < B.n; i++)
+			{
+				r[i] = i;
+			}
 		}
 		printf("AlgorithmC end\n");
 		fflush(stdout);
@@ -198,6 +205,7 @@ public:
 
 	vector<int> replacement;
 	Matrix<dnn_double> B;
+	Matrix<dnn_double> input;
 
 	Lingam() {
 		error = -999;
@@ -208,10 +216,117 @@ public:
 		variableNum = variableNum_;
 	}
 
+	int remove_redundancy(const dnn_double alpha = 0.01, const size_t max_ica_iteration = 10000000, const dnn_double tolerance = TOLERANCE)
+	{
+		error = 0;
+		Matrix<dnn_double> xs = input;
+		//xs.print();
+		Matrix<dnn_double> X = xs.Col(replacement[0]);
+		Matrix<dnn_double> Y = xs.Col(replacement[1]);
+		for (int i = 1; i < B.m; i++)
+		{
+			//X.print();
+			//Y.print();
+			size_t n_iter = max_ica_iteration;
+			Lasso_Regressor lasso(alpha, n_iter, tolerance);
+			lasso.fit(X, Y);
+			while (lasso.getStatus() != 0)
+			{
+				error = -1;
+				//return error;
+
+				//n_iter *= 2;
+				//lasso.fit(X, Y, n_iter, tolerance);
+				printf("n_iter=%d\n", lasso.param.n_iter);
+			}
+
+			Matrix<dnn_double> c(lasso.model->coef, i + 1, 1);
+			for (int k = 0; k < i; k++)
+			{
+				c.v[k] = c.v[k] / lasso.model->var[k];
+				B(i, k) = c.v[k];
+			}
+			if (i == B.m) break;
+			//c.print();
+			X = X.appendCol(Y);
+			Y = xs.Col(replacement[i + 1]);
+		}
+		//B.print_e();
+		return error;
+	}
+
+	void digraph(const std::vector<std::string>& column_names, const char* filename)
+	{
+		Matrix<dnn_double> B_tmp = B.chop(0.001);
+		B_tmp.print_e();
+
+		std::vector<std::string> item;
+		item.resize(B.n);
+		for (int i = 0; i < B.n; i++)
+		{
+			item[i] = column_names[replacement[i]];
+		}
+
+		FILE* fp = fopen(filename, "w");
+		fprintf(fp, "digraph {\n");
+		fprintf(fp, "node [fontname=\"MS UI Gothic\" layout=circo shape=circle]\n");
+
+		for (int i = 0; i < B_tmp.n; i++)
+		{
+			fprintf(fp, "\"%s\"[color=blue shape=circle]\n", item[i].c_str());
+			for (int j = 0; j < B_tmp.n; j++)
+			{
+				if (B_tmp(i, j) != 0.0)
+				{
+					fprintf(fp, "\"%s\"-> \"%s\" [label=\"%8.3f\" color=black]\n", item[j].c_str(), item[i].c_str(), B_tmp(i, j));
+				}
+			}
+		}
+		fprintf(fp, "}\n");
+		fclose(fp);
+	}
+
+	void report(const std::vector<std::string>& column_names)
+	{
+		printf("=======	Cause - and-effect diagram =======\n");
+		for (int i = 0; i < B.n; i++)
+		{
+			for (int j = 0; j < B.n; j++)
+			{
+				if (B(i, j) != 0.0)
+				{
+					printf("%s --[%6.3f]--> %s\n", column_names[j].c_str(), B(i, j), column_names[i].c_str());
+				}
+			}
+		}
+		printf("------------------------------------------\n");
+	}
+	void before_sorting()
+	{
+		std::vector<int> &r = replacement;
+		Matrix<dnn_double> b_csl = B;
+
+		//•À‚×‘Ö‚¦‚ðŒ³‚É–ß‚·
+		//b_csl[r, :] = deepcopy(b_csl)
+		b_csl = (Substitution(r).transpose()*b_csl);
+		//b_csl.print_e();
+
+		//b_csl[:, r] = deepcopy(b_csl)
+		b_csl = (b_csl*Substitution(r));
+		//b_csl.print_e();
+
+		for (int i = 0; i < B.n; i++)
+		{
+			r[i] = i;
+		}
+		B = b_csl;
+	}
 
 	int fit(Matrix<dnn_double>& X, const int max_ica_iteration= MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
 		error = 0;
+
+		input = X;
 		Matrix<dnn_double> xs = X;
 
 		ICA ica;
