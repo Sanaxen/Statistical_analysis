@@ -18,8 +18,8 @@ Duplicate definition prevention
 
 |options|description|default|additional requirements to use|
 |-----|-----|----|----|
-|USE_LAPACK|Use [CLAPACK](http://www.netlib.org/clapack/) |ON|[CLAPACK, version 3.2.1 CMAKE package] http://www.netlib.org/clapack/clapack-3.2.1-CMAKE.tgz|
-|USE_BLAS|Use [CLAPACK](http://www.netlib.org/clapack/) |ON|[CLAPACK, version 3.2.1 CMAKE package] http://www.netlib.org/clapack/clapack-3.2.1-CMAKE.tgz|
-|USE_MKL|Use [Intel? Math Kernel Library (Intel? MKL) ]|OFF|https://software.intel.com/en-us/mkl|
-|USE_CUBLAS|Use NVIDIA cuBLAS library |OFF|https://developer.nvidia.com/cublas|
+|USE_LAPACK|Use [CLAPACK](http://www.netlib.org/clapack/) |ON|[CLAPACK, version 3.2.1 CMAKE package](http://www.netlib.org/clapack/clapack-3.2.1-CMAKE.tgz)|
+|USE_BLAS|Use [CLAPACK](http://www.netlib.org/clapack/) |ON|[CLAPACK, version 3.2.1 CMAKE package](http://www.netlib.org/clapack/clapack-3.2.1-CMAKE.tgz)|
+|USE_MKL|Use [Intel@ Math Kernel Library (Intel@ MKL)](https://software.intel.com/en-us/mkl)|OFF|https://software.intel.com/en-us/mkl|
+|USE_CUBLAS|Use [NVIDIA cuBLAS library](https://developer.nvidia.com/cublas) |OFF|https://developer.nvidia.com/cublas|
 
