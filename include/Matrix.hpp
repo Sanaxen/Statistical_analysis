@@ -1217,7 +1217,69 @@ struct Matrix
 		}
 		stbi_write_bmp(filename, n, m, channel, (void*)data);
 	}
+
 };
+
+template<class T>
+inline bool readImage(const char *filename, Matrix<T>&R, Matrix<T>&G, Matrix<T>&B, Matrix<T>&A)
+{
+	int x, y;
+	unsigned char *data = 0;
+	int nbit;
+	data = stbi_load(filename, &x, &y, &nbit, 0);
+	if (data == NULL)
+	{
+		printf("image file[%s] read error.\n", filename);
+		return false;
+	}
+	//printf("height %d   width %d \n", y, x);
+
+	R = Matrix<T>(x, y);
+	G = Matrix<T>(x, y);
+	B = Matrix<T>(x, y);
+	A = Matrix<T>(x, y);
+
+	//#pragma omp parallel for
+	for (int i = 0; i<y; ++i) {
+		for (int j = 0; j<x; ++j) {
+			if (nbit == 1)	//8bit
+			{
+				int pos = (i*x + j);
+				R.v[pos] = data[pos];
+				G.v[pos] = data[pos];
+				B.v[pos] = data[pos];
+				A.v[pos] = 255.0;
+			}
+			if (nbit == 2)	//16bit
+			{
+				int pos = (i*x + j);
+				R.v[pos] = data[pos * 2 + 0];
+				G.v[pos] = data[pos * 2 + 1];
+				B.v[pos] = data[pos * 2 + 2];
+				A.v[pos] = 255.0;
+			}
+			if (nbit == 3)	//24
+			{
+				int pos = (i*x + j);
+				R.v[pos] = data[pos * 3 + 0];
+				G.v[pos] = data[pos * 3 + 1];
+				B.v[pos] = data[pos * 3 + 2];
+				A.v[pos] = 255.0;
+			}
+			if (nbit == 4)	//32
+			{
+				int pos = (i*x + j);
+				R.v[pos] = data[pos * 4 + 0];
+				G.v[pos] = data[pos * 4 + 1];
+				B.v[pos] = data[pos * 4 + 2];
+				A.v[pos] = data[pos * 4 + 3];
+			}
+		}
+	}
+	stbi_image_free(data);
+	return true;
+}
+
 
 template<class T>
 class column_major_Matrix
