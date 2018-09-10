@@ -6,6 +6,7 @@
 
 #include "../../../include/Matrix.hpp"
 #include "../../../include/statistical/fastICA.h"
+#include "../../../include/util/csvreader.h"
 
 static Matrix<dnn_double> mat_read(FILE *fp, int *rows, int *cols)
 {
@@ -56,6 +57,7 @@ int main(int argc, char *argv[])
 
 	compc = 2;
 
+#if 0
 	// Matrix creation
 	if ((fp = fopen("mix1.csv", "r")) == NULL) {
 		perror("Error opening input file");
@@ -68,6 +70,15 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 	Matrix<dnn_double> X2 = mat_read2(fp, &rows);
+#else
+	CSVReader csv1("mix1.csv", ',', false);
+	CSVReader csv2("mix2.csv", ',', false);
+	
+	Matrix<dnn_double> X1 = csv1.toMat().transpose();
+	Matrix<dnn_double> X2 = csv2.toMat().transpose();
+	rows = X1.m;
+
+#endif
 
 	X1.print_csv("input1.csv");
 	X2.print_csv("input2.csv");
@@ -94,5 +105,7 @@ int main(int argc, char *argv[])
 	X1.print_csv("output1.csv");
 	X2.print_csv("output2.csv");
 
+	X1.print("X1");
+	X2.print("X2");
 	return 0;
 }

@@ -3,6 +3,7 @@
 #define _cublas_Init_def
 #include "../../include/Matrix.hpp"
 #include "../../include/statistical/pca.h"
+#include "../../include/util/csvreader.h"
 
 int main()
 {
@@ -10,6 +11,14 @@ int main()
 	std::vector<dnn_double> component;
 	int n, variablesNum;
 
+#if 10
+	CSVReader csv("2-3c.csv");
+	x = csv.toMat_removeEmptyRow();
+	x = x.removeCol(0);
+	variablesNum = x.n;
+	n = x.m;
+
+#else
 	FILE* fp = fopen("2-3c.csv", "r");
 	if (fp == NULL)
 	{
@@ -36,6 +45,7 @@ int main()
 			x(i, variablesNum - 1) = s;
 		}
 	}
+#endif
 	x.print();
 
 	PCA pca2;
