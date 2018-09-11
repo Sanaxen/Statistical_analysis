@@ -137,8 +137,9 @@ namespace csv
     {
 
     public:
-		Parser::Parser(const std::string &data, const DataType &type, char sep)
-			: _type(type), _sep(sep)
+		bool use_heade = true;
+		Parser::Parser(const std::string &data, const DataType &type, char sep, bool use_heade_)
+			: _type(type), _sep(sep), use_heade(use_heade_)
 		{
 			std::string line;
 			if (type == eFILE)
@@ -283,7 +284,7 @@ namespace csv
 			std::vector<std::string>::iterator it;
 
 			it = _originalFile.begin();
-			it++; // skip header
+			if (use_heade)	it++; // skip header
 
 			for (; it != _originalFile.end(); it++)
 			{
