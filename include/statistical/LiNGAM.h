@@ -238,6 +238,7 @@ public:
 				//n_iter *= 2;
 				//lasso.fit(X, Y, n_iter, tolerance);
 				printf("n_iter=%d\n", lasso.param.n_iter);
+				break;
 			}
 
 			Matrix<dnn_double> c(lasso.model->coef, i + 1, 1);

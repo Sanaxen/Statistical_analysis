@@ -56,8 +56,8 @@ int Lasso::fit(const MatrixXd & X, const VectorXd & y) {
             coef_(k) = w_k;
         }
 
-		//coef_(N) = 0.0;
-		coef_(N) = (y - X_train * coef_).sum() / N;
+		//coef_(X_train.cols() - 1) = 0.0;
+		//coef_(X_train.cols()-1) = (y - X_train * coef_).sum() / N;
 		if ((coef_ - tmp).norm() < e_)
 		{
 			printf("convergence:%f - iter:%d\n", (coef_ - tmp).norm(), iter);

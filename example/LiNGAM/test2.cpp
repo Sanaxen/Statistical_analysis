@@ -1,5 +1,6 @@
 #define _cublas_Init_def
 #include "../../include/statistical/LiNGAM.h"
+#include "../../include/util/csvreader.h"
 
 void read_csv(int n, char* filename, Matrix<dnn_double>& x)
 {
@@ -41,12 +42,29 @@ int main()
 	Matrix<dnn_double> x, y, z, u, v, w;
 
 	int len = 1000;
+#if 0
 	read_csv(len, "x.csv", x);
 	read_csv(len, "y.csv", y);
 	read_csv(len, "z.csv", z);
 	read_csv(len, "u.csv", u);
 	read_csv(len, "v.csv", v);
 	read_csv(len, "w.csv", w);
+#else
+	CSVReader csv1("x.csv", ',', false);
+	CSVReader csv2("y.csv", ',', false);
+	CSVReader csv3("z.csv", ',', false);
+	CSVReader csv4("u.csv", ',', false);
+	CSVReader csv5("v.csv", ',', false);
+	CSVReader csv6("w.csv", ',', false);
+	x = csv1.toMat().transpose();
+	y = csv2.toMat().transpose();
+	z = csv3.toMat().transpose();
+	u = csv4.toMat().transpose();
+	v = csv5.toMat().transpose();
+	w = csv6.toMat().transpose();
+
+	len = x.m;
+#endif
 
 	Matrix<dnn_double>xs(len, 6);
 
