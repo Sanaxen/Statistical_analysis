@@ -10,7 +10,7 @@
 - [x] Principal component analysis
 - [x] Independent component analysis
 - [x] Eigenvalue analysis
-- [ ] Statistical causal search
+- [x] Statistical causal search
 
 ----
 The current aim is to create a **non-GPL C++ implementation** of a **linear non-Gaussian aperiodic model (LiNGAM)** which is one of the statistical causality search.
