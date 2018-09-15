@@ -1,4 +1,5 @@
 #define _cublas_Init_def extern
+#include "../../include/Matrix.hpp"
 #include "../../include/statistical/RegularizationRegression.h"
 #include "../../include/util/csvreader.h"
 //cublas_init _cublas_Init;

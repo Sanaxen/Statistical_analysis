@@ -6,7 +6,7 @@
 #define MAX_ITERATIONS	1000
 #define TOLERANCE		0.0001
 //where 1 ≤ a1 ≤ 2 is some suitable constant, often taken as a1 = 1. 
-#define A1			1
+#define A1_			1
 
 //#define RAND	RandMT
 #define RAND	Rand
@@ -60,7 +60,7 @@ public:
 		const int rows = X.m;
 		const int cols = X.n;
 
-		const dnn_double alp = A1;
+		const dnn_double alp = A1_;
 		Matrix<dnn_double>& W = Matrix<dnn_double>(rows, rows);
 		Matrix<dnn_double>& D = Matrix<dnn_double>(rows, rows);
 		Matrix<dnn_double>& d = Matrix<dnn_double>(1, rows);

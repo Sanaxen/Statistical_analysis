@@ -18,10 +18,10 @@
 
 //#define USE_GPU	1
 
-#define USE_LIBLM
+//#define USE_LIBLM
 
-//#define SVDcmp	svd_decomposition
-#define SVDcmp	svd_decomposition_nr
+#define SVDcmp	svd_decomposition
+//#define SVDcmp	svd_decomposition_nr
 #pragma warning( disable : 4819 ) 
 #pragma warning( disable : 4996 ) 
 #pragma warning( disable : 4267 ) 

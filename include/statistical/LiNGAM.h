@@ -10,7 +10,7 @@
 #include "../../include/statistical/LinearRegression.h"
 #include "../../include/statistical/RegularizationRegression.h"
 #ifdef USE_LIBLM
-#include "../../include/util/lasso_lib.h"
+#include "../../include/statistical/RegularizationRegression_eigen_version.h"
 #endif
 
 template<class T>
@@ -221,7 +221,7 @@ public:
 		variableNum = variableNum_;
 	}
 
-	int remove_redundancy(const dnn_double alpha = 0.01, const size_t max_ica_iteration = 10000000, const dnn_double tolerance = TOLERANCE)
+	int remove_redundancy(const dnn_double alpha = 0.01, const size_t max_ica_iteration = 10000, const dnn_double tolerance = TOLERANCE)
 	{
 		error = 0;
 		Matrix<dnn_double> xs = input;
@@ -234,7 +234,7 @@ public:
 			//Y.print();
 			size_t n_iter = max_ica_iteration;
 #ifdef USE_LIBLM
-			Lasso_Regressor lasso(alpha, n_iter, tolerance);
+			Lasso lasso(alpha, n_iter, tolerance);
 #else
 			LassoRegression lasso(alpha, n_iter, tolerance);
 #endif
@@ -246,19 +246,15 @@ public:
 
 				//n_iter *= 2;
 				//lasso.fit(X, Y, n_iter, tolerance);
-#ifdef USE_LIBLM
-				printf("n_iter=%d\n", lasso.param.n_iter);
-#else
-				printf("n_iter=%d\n", lasso.num_iteration);
-#endif
+				printf("n_iter=%d error_eps=%f\n", lasso.num_iteration,lasso.error_eps);
 				break;
 			}
 
 #ifdef USE_LIBLM
-			Matrix<dnn_double> c(lasso.model->coef, i + 1, 1);
+			Matrix<dnn_double>& c = formEigenVectorXd(lasso.coef_);
 			for (int k = 0; k < i; k++)
 			{
-				c.v[k] = c.v[k] / lasso.model->var[k];
+				c.v[k] = c.v[k] / lasso.scalaer.var_[k];
 				B(i, k) = c.v[k];
 			}
 #else
