@@ -66,7 +66,7 @@ public:
 		for (int j = 0; j < X.n; j++)
 			for (int i = 0; i < X.m; i++)
 			{
-				xx(i, j) /= model->var[j];
+				xx(i, j) = (xx(i, j) - model->mean[j])/model->var[j];
 			}
 
 		if ( bias ) xx = combine_bias(xx);
