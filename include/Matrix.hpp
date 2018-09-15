@@ -492,7 +492,7 @@ struct Matrix
 		return ret;
 	}
 
-	static T norm_fro ( const Matrix<T>& mat )
+	T norm_fro ( const Matrix<T>& mat )
 	{
 		int m = mat.m, n = mat.n;
 		T ret = 0.0;
@@ -503,6 +503,27 @@ struct Matrix
 
 		return sqrt(ret);
 	}
+
+	T norm()
+	{
+		T ret = 0.0;
+
+		const int mn = m*n;
+#pragma omp parallel for reduction(+:ret)
+		for (int i = 0; i < mn; ++i) ret += v[i] * v[i];
+
+		return sqrt(ret);
+	}
+
+	T Sum()
+	{
+		T d = 0.0;
+
+		for (int i = 0; i < n*m; i++) d += v[i];
+
+		return d;
+	}
+
 
 	void apply ( const std::function<double(const double&)>& func )
 	{
@@ -981,7 +1002,7 @@ struct Matrix
 				sigma.v[j] += (x(i, j) - means.v[j])*(x(i, j) - means.v[j]);
 
 		for (int i = 0; i<n; i++)
-			sigma.v[i] /= T(m);
+			sigma.v[i] /= T(m-1);
 
 		return Sqrt(sigma);
 	}
@@ -1143,8 +1164,8 @@ struct Matrix
 		Matrix<dnn_double> ret = *this;
 		for (int i = 0; i < N; i++)
 		{
+			if (ret.n == col_s) break;
 			ret = ret.removeCol(col_s);
-			if ( ret.n < col_s) break;
 		}
 		return ret;
 	}
@@ -1268,6 +1289,12 @@ struct Matrix
 		stbi_write_bmp(filename, n, m, channel, (void*)data);
 	}
 
+	inline operator T() const {
+		if ( m == 1 && n == 1 )return (*this)(0, 0); 
+
+		printf("mxn != 1x1\n");
+		return 0.0;
+	}
 };
 
 template<class T>
@@ -1668,7 +1695,7 @@ T SumAll(Matrix<T>& X)
 {
 	T d= 0.0;
 
-	for (int i = 0; i < X.n*X.m; i++) d += X(i, i);
+	for (int i = 0; i < X.n*X.m; i++) d += X.v[i];
 
 	return d;
 }
