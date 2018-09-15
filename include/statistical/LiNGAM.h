@@ -1,12 +1,17 @@
 #ifndef __LINGAM_H__
+//Copyright (c) 2018, Sanaxn
+//All rights reserved.
 
 #define __LINGAM_H__
 
 #include "../../include/Matrix.hpp"
 #include "../../include/statistical/fastICA.h"
 #include "../../include/hungarian-algorithm/Hungarian.h"
-#include "../../include/util/lasso_lib.h"
 #include "../../include/statistical/LinearRegression.h"
+#include "../../include/statistical/RegularizationRegression.h"
+#ifdef USE_LIBLM
+#include "../../include/util/lasso_lib.h"
+#endif
 
 template<class T>
 class VectorIndex
@@ -228,7 +233,11 @@ public:
 			//X.print();
 			//Y.print();
 			size_t n_iter = max_ica_iteration;
+#ifdef USE_LIBLM
 			Lasso_Regressor lasso(alpha, n_iter, tolerance);
+#else
+			LassoRegression lasso(alpha, n_iter, tolerance);
+#endif
 			lasso.fit(X, Y);
 			while (lasso.getStatus() != 0)
 			{
@@ -237,16 +246,29 @@ public:
 
 				//n_iter *= 2;
 				//lasso.fit(X, Y, n_iter, tolerance);
+#ifdef USE_LIBLM
 				printf("n_iter=%d\n", lasso.param.n_iter);
+#else
+				printf("n_iter=%d\n", lasso.num_iteration);
+#endif
 				break;
 			}
 
+#ifdef USE_LIBLM
 			Matrix<dnn_double> c(lasso.model->coef, i + 1, 1);
 			for (int k = 0; k < i; k++)
 			{
 				c.v[k] = c.v[k] / lasso.model->var[k];
 				B(i, k) = c.v[k];
 			}
+#else
+			Matrix<dnn_double>& c = lasso.coef;
+			for (int k = 0; k < i; k++)
+			{
+				c.v[k] = c.v[k] / lasso.sigma(0, k);
+				B(i, k) = c.v[k];
+			}
+#endif
 			if (i == B.m) break;
 			//c.print();
 			X = X.appendCol(Y);

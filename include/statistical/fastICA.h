@@ -77,7 +77,7 @@ public:
 		std::vector<dnn_double> lim(max_iteration + 1, 1000);
 
 		int it = 0;
-		const Matrix<dnn_double>& xt = X.transpose() / cols;
+		const Matrix<dnn_double>& xt = X.transpose() / dnn_double(cols);
 
 		while (lim[it] > tolerance && it < max_iteration)
 		{
@@ -116,7 +116,7 @@ public:
 
 		//whitening
 		xt = xx.transpose();
-		xx = xx / rows;
+		xx = xx / dnn_double(rows);
 		SVDcmp<dnn_double> svd1(xt*xx);
 		d.diag_vec(svd1.Sigma);
 
