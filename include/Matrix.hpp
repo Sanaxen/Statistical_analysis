@@ -266,8 +266,11 @@ struct Matrix
 		}
 		printf("\n");
 	}
-	void print(char* title = NULL)
+	void print(char* title = NULL, char* format=NULL)
 	{
+		char* format_ = "%10.6f ";
+		if (format) format_ = format;
+
 		if (title )printf("=== %s ===\n", title);
 		printf("%d x %d\n", m, n);
 		for (int i = 0; i < m; i++)
@@ -279,7 +282,7 @@ struct Matrix
 			}
 			for (int j = 0; j < n; j++)
 			{
-				printf("%10.6f ", v[n*i + j]);
+				printf(format_, v[n*i + j]);
 			}
 			printf("\n");
 		}
@@ -952,6 +955,37 @@ struct Matrix
 				ret(i, j) -= means.v[j];
 		return ret;
 	}
+
+	Matrix<T> Mean()
+	{
+		Matrix<T>& x = *this;
+		Matrix<T>& means = Matrix<T>().zeros(1, n);
+
+		for (int i = 0; i < m; i++)
+			for (int j = 0; j < n; j++)
+				means.v[j] += x(i, j);
+
+		for (int i = 0; i<n; i++)
+			means.v[i] /= T(m);
+
+		return means;
+	}
+
+	Matrix<T> Std(Matrix<T>& means)
+	{
+		Matrix<T>& x = *this;
+		Matrix<T>& sigma = Matrix<T>().zeros(1, n);
+
+		for (int i = 0; i < m; i++)
+			for (int j = 0; j < n; j++)
+				sigma.v[j] += (x(i, j) - means.v[j])*(x(i, j) - means.v[j]);
+
+		for (int i = 0; i<n; i++)
+			sigma.v[i] /= T(m);
+
+		return Sqrt(sigma);
+	}
+
 	Matrix<T> DeCenters(Matrix<T>& means)
 	{
 		Matrix<T> ret = *this;
@@ -1100,6 +1134,22 @@ struct Matrix
 		}
 		return ret;
 	}
+
+	Matrix<dnn_double> removeCol(int col_s, int col_e)
+	{
+		int N = col_e - col_s + 1;
+		if (col_e < 0) N = n - col_s + 1;
+
+		Matrix<dnn_double> ret = *this;
+		for (int i = 0; i < N; i++)
+		{
+			ret = ret.removeCol(col_s);
+			if ( ret.n < col_s) break;
+		}
+		return ret;
+	}
+
+
 
 	Matrix<dnn_double> removeCol(int col)
 	{
