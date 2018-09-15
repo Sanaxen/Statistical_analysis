@@ -14,9 +14,11 @@
 #define USE_LAPACK
 #define USE_BLAS
 #define USE_MKL
-#define USE_CUBLAS
+//#define USE_CUBLAS
 
-#define USE_GPU	1
+//#define USE_GPU	1
+
+#define USE_LIBLM
 
 //#define SVDcmp	svd_decomposition
 #define SVDcmp	svd_decomposition_nr

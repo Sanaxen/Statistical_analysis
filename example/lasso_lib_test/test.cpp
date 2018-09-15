@@ -1,9 +1,7 @@
 #define _cublas_Init_def extern
-#include "../../include/matrix_config.h"
-#include "../../include/Matrix.hpp"
-
-#include "../../include/util/lasso_lib.h"
+#include "../../include/statistical/RegularizationRegression.h"
 #include "../../include/util/csvreader.h"
+//cublas_init _cublas_Init;
 
 int main(int argc, char** argv)
 {
@@ -12,11 +10,12 @@ int main(int argc, char** argv)
 
 	df = df.removeCol(0);
 
-	Matrix<dnn_double>& y = df.Col(13);
+	Matrix<dnn_double>& y = df.Col(13);	//7
 	y.print("", "%.3f ");
 
-	Matrix<dnn_double>& X = df.removeCol(14,-1);
+	Matrix<dnn_double>& X = df.removeCol(13,-1);
 	X.print("", "%.3f ");
+	printf("***%d\n", X.n);
 #if 0
 	Matrix<dnn_double> means = X.Mean();
 
@@ -34,12 +33,18 @@ int main(int argc, char** argv)
 	X.print("", "%.3f ");
 #endif
 
-	Lasso_Regressor lasso(1.0, 1000, 0.0001);
 
-	lasso.fit(X, y);
+	LassoRegression lasso_my(1.0, 1000, 0.0001);
 
-	Matrix<dnn_double>& z = lasso.predict(X);
-	lasso.report();
+	lasso_my.fit(X, y);
+	lasso_my.report();
 
+/*
+scikit-learn‚ÌLasso
+22.5328063241
+[-0.          0.         -0.          0.         -0.          2.71517992
+-0.         -0.         -0.         -0.         -1.34423287  0.18020715
+-3.54700664]
+*/
 	return 0;
 }
