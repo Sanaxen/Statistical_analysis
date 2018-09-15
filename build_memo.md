@@ -27,4 +27,5 @@ Duplicate definition prevention
 |USE_BLAS|Use [CLAPACK](http://www.netlib.org/clapack/) |ON|[CLAPACK, version 3.2.1 CMAKE package](http://www.netlib.org/clapack/clapack-3.2.1-CMAKE.tgz)|
 |USE_MKL|Use [Intel@ Math Kernel Library (Intel@ MKL)](https://software.intel.com/en-us/mkl)|OFF|https://software.intel.com/en-us/mkl|
 |USE_CUBLAS|Use [NVIDIA cuBLAS library](https://developer.nvidia.com/cublas) |OFF|https://developer.nvidia.com/cublas|
+|USE_EIGEN|Use [C++ template library for linear algebra](http://eigen.tuxfamily.org/index.php?title=Main_Page) |OFF|http://eigen.tuxfamily.org/index.php?title=Main_Page|
 
