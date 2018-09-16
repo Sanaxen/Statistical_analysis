@@ -492,30 +492,41 @@ struct Matrix
 		return ret;
 	}
 
-	T norm_fro ( const Matrix<T>& mat )
+	T norm_fro ( const Matrix<T>& mat ) const
 	{
 		int m = mat.m, n = mat.n;
 		T ret = 0.0;
 
 		const int mn = m*n;
-#pragma omp parallel for reduction(+:ret)
+//#pragma omp parallel for reduction(+:ret)
 		for( int i = 0; i < mn; ++i ) ret += mat.v[i]*mat.v[i];
 
 		return sqrt(ret);
 	}
 
-	T norm()
+	inline T norm() const
 	{
 		T ret = 0.0;
 
 		const int mn = m*n;
-#pragma omp parallel for reduction(+:ret)
+//#pragma omp parallel for reduction(+:ret)
 		for (int i = 0; i < mn; ++i) ret += v[i] * v[i];
 
 		return sqrt(ret);
 	}
 
-	T Sum()
+	inline T norm_sqr() const
+	{
+		T ret = 0.0;
+
+		const int mn = m*n;
+//#pragma omp parallel for reduction(+:ret)
+		for (int i = 0; i < mn; ++i) ret += v[i] * v[i];
+
+		return ret;
+	}
+
+	inline T Sum() const
 	{
 		T d = 0.0;
 
@@ -1167,6 +1178,20 @@ struct Matrix
 					ret(i, j) = (*this)(i, j);
 				}
 			}
+		}
+		return ret;
+	}
+
+	Matrix<dnn_double> removeRow(int row_s, int row_e)
+	{
+		int N = row_e - row_s + 1;
+		if (row_e < 0) N = n - row_s + 1;
+
+		Matrix<dnn_double> ret = *this;
+		for (int i = 0; i < N; i++)
+		{
+			if (ret.m == row_s) break;
+			ret = ret.removeCol(row_s);
 		}
 		return ret;
 	}

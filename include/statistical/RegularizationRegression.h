@@ -135,17 +135,17 @@ public:
 
 				Matrix<dnn_double>& x_k = train.Col(k);
 
-				dnn_double z = x_k.transpose()*x_k;
+				const dnn_double z = x_k.transpose()*x_k;
 
 				tmp_beta(0, k) = 0;
-				dnn_double p_k = x_k.transpose()*(y - train * tmp_beta.transpose());
+				const dnn_double p_k = x_k.transpose()*(y - train * tmp_beta.transpose());
 
 				//if (k == 0 && iter == 0)
 				//{
 				//	printf("%f\n", p_k);
 				//	printf("%f\n", lambda*N);
 				//}
-				double w_k = _soft_thresholding_operator(p_k, lambda1*N) / z;
+				const dnn_double w_k = _soft_thresholding_operator(p_k, lambda1*N) / z;
 				beta(0, k) = w_k;
 
 				if (use_bias)
@@ -223,17 +223,17 @@ public:
 
 				Matrix<dnn_double>& x_k = train.Col(k);
 
-				dnn_double z = x_k.transpose()*x_k + lambda2;
+				const dnn_double z = x_k.transpose()*x_k + lambda2;
 
 				tmp_beta(0, k) = 0;
-				dnn_double p_k = x_k.transpose()*(y - train * tmp_beta.transpose());
+				const dnn_double p_k = x_k.transpose()*(y - train * tmp_beta.transpose());
 
 				//if (k == 0 && iter == 0)
 				//{
 				//	printf("%f\n", p_k);
 				//	printf("%f\n", lambda*N);
 				//}
-				double w_k = _soft_thresholding_operator(p_k, lambda1*N) / z;
+				const dnn_double w_k = _soft_thresholding_operator(p_k, lambda1*N) / z;
 				beta(0, k) = w_k;
 
 				if (use_bias)

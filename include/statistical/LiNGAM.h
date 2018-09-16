@@ -258,11 +258,10 @@ public:
 				B(i, k) = c.v[k];
 			}
 #else
-			Matrix<dnn_double>& c = lasso.coef;
+			const Matrix<dnn_double>& c = lasso.coef;
 			for (int k = 0; k < i; k++)
 			{
-				c.v[k] = c.v[k] / lasso.sigma(0, k);
-				B(i, k) = c.v[k];
+				B(i, k) = c.v[k] / lasso.sigma(0, k);
 			}
 #endif
 			if (i == B.m) break;
