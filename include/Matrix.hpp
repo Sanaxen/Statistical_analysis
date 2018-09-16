@@ -1007,6 +1007,21 @@ struct Matrix
 		return Sqrt(sigma);
 	}
 
+	//Global Contrast Normalization (GCN)
+	Matrix<dnn_double> whitening(const Matrix<dnn_double>& means, const Matrix<dnn_double>& sigma)
+	{
+		Matrix<dnn_double> x = *this;
+		for (int i = 0; i < x.m; i++)
+		{
+			for (int j = 0; j < x.n; j++)
+			{
+				x(i, j) = (x(i, j) - means(0, j)) / sigma(0, j);
+			}
+		}
+		return x;
+	}
+
+
 	Matrix<T> DeCenters(Matrix<T>& means)
 	{
 		Matrix<T> ret = *this;
