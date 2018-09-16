@@ -1,8 +1,7 @@
-#define _cublas_Init_def extern
+#define _cublas_Init_def
 #include "../../include/Matrix.hpp"
 #include "../../include/statistical/RegularizationRegression.h"
 #include "../../include/util/csvreader.h"
-//cublas_init _cublas_Init;
 
 int main(int argc, char** argv)
 {
@@ -40,6 +39,11 @@ int main(int argc, char** argv)
 	lasso_my.fit(X, y);
 	lasso_my.report();
 
+	printf("scikit-learn\n");
+	printf("22.5328063241"
+		"[-0.          0. - 0.          0. - 0.          2.71517992"
+		"- 0. - 0. - 0. - 0. - 1.34423287  0.18020715"
+		"- 3.54700664]\n");
 /*
 scikit-learn‚ÌLasso
 22.5328063241

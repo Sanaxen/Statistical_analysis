@@ -1,10 +1,9 @@
-#define _cublas_Init_def extern
+#define _cublas_Init_def
 #include "../../include/Matrix.hpp"
 #include "../../include/statistical/RegularizationRegression.h"
 //#ifdef USE_LIBLM
 #include "../../include/statistical/RegularizationRegression_eigen_version.h"
 //#endif
-//cublas_init _cublas_Init;
 
 
 void test1()
