@@ -221,7 +221,7 @@ public:
 		variableNum = variableNum_;
 	}
 
-	int remove_redundancy(const dnn_double alpha = 0.01, const size_t max_ica_iteration = 10000, const dnn_double tolerance = TOLERANCE)
+	int remove_redundancy(const dnn_double alpha = 0.01, const size_t max_ica_iteration = 1000000, const dnn_double tolerance = TOLERANCE)
 	{
 		error = 0;
 		Matrix<dnn_double> xs = input;

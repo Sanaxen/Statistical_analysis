@@ -1,6 +1,6 @@
 //
 //
-// Made a single header by Sanaxen on 2018/09/15.
+// Made a single header && original bug fix by Sanaxen on 2018/09/15.
 // base code Created by Doge on 2017/11/14.
 
 #ifndef LIBLM_REGRESSOR_H

@@ -21,6 +21,11 @@ The current aim is to create a **non-GPL C++ implementation** of a **linear non-
 **GPU support is experimental so performance is not good.**  
 **The directory structure and file name will probably change in the future.**  
 
+<font color="OrangeRed">
+In reality,
+Since the GPU calculation is not an experimental level and the mounting method is very bad, the calculation speed is slower than the calculation by the CPU. That is the worst.
+</font>
+
 ***progress***
 <img src="https://github.com/Sanaxen/Statistical_analysis/blob/master/images/progress.png"/> 
 

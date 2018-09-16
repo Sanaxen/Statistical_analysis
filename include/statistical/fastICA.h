@@ -18,6 +18,7 @@ class ICA
 	
 	Matrix<dnn_double> V;
 	Matrix<dnn_double> xt;
+	//Number of components
 	int component;
 public:
 	//pre-whitening matrix that projects data onto the first compc principal components.

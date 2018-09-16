@@ -37,20 +37,13 @@ public:
 	Matrix<dnn_double> coef;
 	bool use_bias = true;
 
-	Matrix<dnn_double> whitening(Matrix<dnn_double>& X)
+	//Global Contrast Normalization (GCN)
+	inline Matrix<dnn_double> whitening_( Matrix<dnn_double>& X)
 	{
-		Matrix<dnn_double> x = X;
-		for (int i = 0; i < X.m; i++)
-		{
-			for (int j = 0; j < X.n; j++)
-			{
-				x(i, j) = (X(i, j) - means(0, j)) / sigma(0, j);
-			}
-		}
-		return x;
+		return X.whitening(means, sigma);
 	}
 
-	int getStatus() const
+	inline int getStatus() const
 	{
 		return error;
 	}
@@ -75,7 +68,7 @@ public:
 
 	virtual Matrix<dnn_double> predict(Matrix<dnn_double>& X)
 	{
-		Matrix<dnn_double>& x = whitening(X);
+		Matrix<dnn_double>& x = whitening_(X);
 		//Matrix<dnn_double> x = X;
 
 		if (use_bias)
@@ -107,7 +100,7 @@ public:
 	{
 		means = X.Mean();
 		sigma = X.Std(means);
-		Matrix<dnn_double> train = whitening(X);
+		Matrix<dnn_double>& train = whitening_(X);
 		Matrix<dnn_double> beta;
 
 		if (use_bias)
@@ -162,10 +155,10 @@ public:
 				}
 			}
 
+			num_iteration = iter;
 			error_eps = (coef - beta).norm();
 			if (error_eps < tolerance)
 			{
-				num_iteration = iter;
 				printf("convergence:%f - iter:%d\n", (coef - beta).norm(), iter);
 				error = 0;
 				break;
@@ -195,7 +188,7 @@ public:
 
 		means = X.Mean();
 		sigma = X.Std(means);
-		Matrix<dnn_double> train = whitening(X);
+		Matrix<dnn_double>& train = whitening_(X);
 		Matrix<dnn_double> beta;
 
 		if (use_bias)
@@ -250,10 +243,10 @@ public:
 				}
 			}
 
+			num_iteration = iter;
 			error_eps = (coef - beta).norm();
 			if (error_eps < tolerance)
 			{
-				num_iteration = iter;
 				printf("convergence:%f - iter:%d\n", (coef - beta).norm(), iter);
 				error = 0;
 				break;
@@ -276,12 +269,12 @@ public:
 		error = 0;
 	}
 
-	virtual int fit(Matrix<dnn_double>& X, Matrix<dnn_double>& y)
+	virtual int fit( Matrix<dnn_double>& X, Matrix<dnn_double>& y)
 	{
 
 		means = X.Mean();
 		sigma = X.Std(means);
-		Matrix<dnn_double> train = whitening(X);
+		Matrix<dnn_double>& train = whitening_(X);
 		Matrix<dnn_double> beta;
 
 		if (use_bias)
