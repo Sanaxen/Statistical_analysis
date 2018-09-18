@@ -45,7 +45,7 @@ public:
 
 		if (error == 0)
 		{
-			b = les.x;
+			b = les.coef;
 		}
 	}
 
@@ -176,7 +176,7 @@ public:
 		if (error != 0) return error;
 
 		bias = mean_y;
-		for (int i = 0; i < A.n; i++) bias -= les.x(i, 0)*mean_x[i];
+		for (int i = 0; i < A.n; i++) bias -= les.coef(i, 0)*mean_x[i];
 		//printf("bias:%f\n", bias);
 
 		y_predict.clear();
@@ -185,7 +185,7 @@ public:
 			dnn_double y = bias;
 			for (int j = 0; j < A.n; j++)
 			{
-				y += A(i, j)*les.x(j, 0);
+				y += A(i, j)*les.coef(j, 0);
 			}
 			y_predict.push_back(y);
 		}
@@ -266,7 +266,7 @@ public:
 		t_value.clear();
 		for (int i = 0; i < A.n; i++)
 		{
-			t_value.push_back(les.x(i, 0) / se_ii[i]);
+			t_value.push_back(les.coef(i, 0) / se_ii[i]);
 		}
 		t_value.push_back(bias / se_ii[A.n]);
 
@@ -352,12 +352,12 @@ public:
 		printf("%10.4f\n", bias + t_distribution.p_value(ƒ¿ / 2.0)*se_ii[A.n]);
 		for (int i = 0; i < A.n; i++)
 		{
-			printf("%10.4f", les.x(i, 0));
+			printf("%10.4f", les.coef(i, 0));
 			printf("%10.4f", se_ii[i]);
 			printf("%10.4f", t_value[i]);
 			printf("%10.4f", p_value[i]);
-			printf("%10.4f", les.x(i, 0) - t_distribution.p_value(ƒ¿ / 2.0)*se_ii[i]);
-			printf("%10.4f\n", les.x(i, 0) + t_distribution.p_value(ƒ¿ / 2.0)*se_ii[i]);
+			printf("%10.4f", les.coef(i, 0) - t_distribution.p_value(ƒ¿ / 2.0)*se_ii[i]);
+			printf("%10.4f\n", les.coef(i, 0) + t_distribution.p_value(ƒ¿ / 2.0)*se_ii[i]);
 		}
 		printf("--------------------------------------------------------------------\n");
 

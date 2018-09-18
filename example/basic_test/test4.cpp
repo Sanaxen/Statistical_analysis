@@ -68,10 +68,10 @@ int main(int argc, char** argv)
 		linear_east_square les;
 
 		printf("error=%d\n",les.fit(A, B));
-		les.x.print("x");
+		les.coef.print("coef");
 
 		printf("error=%d\n", les.fit2(A, B));
-		les.x.print("x");
+		les.coef.print("coef");
 	}
 	printf("linear_east_square END\n\n");
 	return 0;

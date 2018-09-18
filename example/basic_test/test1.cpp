@@ -33,7 +33,7 @@ int main(int argc, char** argv)
 
 	linear_equation lneq;
 	lneq.solv(A, B);
-	Matrix<dnn_double>x = lneq.x;
+	Matrix<dnn_double>x = lneq.coef;
 	(A*x - B).print("--");
 
 	B = lneq.inv(A);
