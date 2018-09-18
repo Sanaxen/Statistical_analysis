@@ -31,7 +31,7 @@
 //#define USE_BLAS
 //#define USE_MKL
 //#define USE_CUBLAS
-
+//#define USE_EIGEN
 
 #ifdef USE_CUBLAS
 #include "../include/util/cuda_util.h"
@@ -2513,7 +2513,7 @@ class linear_equation
 {
 	int error;
 public:
-	Matrix<dnn_double> x;
+	Matrix<dnn_double> coef;
 
 	inline int getStatus() const
 	{
@@ -2532,26 +2532,26 @@ public:
 		}
 		column_major_Matrix<dnn_double> cmmA(A);
 		column_major_Matrix<dnn_double> cmmB(B);
-		x = cmmB.get_column_major();
+		coef = cmmB.get_column_major();
 		Matrix<dnn_double> a = cmmA.get_column_major();
 
 		long int n = a.m;
 		long int nrhs = 1;
 		long int lda = a.m;
 		long int* ipiv = new long int[n];
-		long int ldb = x.m;
+		long int ldb = coef.m;
 		long int info = 0;
 
 #ifdef USE_FLOAT
-		sgesv_(&n, &nrhs, &a.v[0], &lda, ipiv, &x.v[0], &ldb, &info);
+		sgesv_(&n, &nrhs, &a.v[0], &lda, ipiv, &coef.v[0], &ldb, &info);
 #else
-		dgesv_(&n, &nrhs, &a.v[0], &lda, ipiv, &x.v[0], &ldb, &info);
+		dgesv_(&n, &nrhs, &a.v[0], &lda, ipiv, &coef.v[0], &ldb, &info);
 #endif
 		delete[] ipiv;
 
-		Matrix<dnn_double> xx = x;
+		Matrix<dnn_double> xx = coef;
 		column_major_Matrix<dnn_double> cmmX(xx);
-		cmmX.toRow_major(x);
+		cmmX.toRow_major(coef);
 		error = info;
 		return info;
 	}
@@ -2596,7 +2596,7 @@ class linear_east_square
 {
 	int error;
 public:
-	Matrix<dnn_double> x;
+	Matrix<dnn_double> coef;
 
 	inline int getStatus() const
 	{
@@ -2694,16 +2694,16 @@ public:
 			return error;
 		}
 
-		x = Matrix<dnn_double>(ldb, nrhs);
-		for (int i = 0; i < x.m; i++)
-			for (int j = 0; j < x.n; j++)
-				x(i, j) = b_[i*x.n + j];
+		coef = Matrix<dnn_double>(ldb, nrhs);
+		for (int i = 0; i < coef.m; i++)
+			for (int j = 0; j < coef.n; j++)
+				coef(i, j) = b_[i*coef.n + j];
 
 		if (b_alloc ) delete[] b_;
 
 		column_major_Matrix<dnn_double> cmm;
-		cmm.set_column_major(x);
-		cmm.toRow_major(x);
+		cmm.set_column_major(coef);
+		cmm.toRow_major(coef);
 
 #endif
 		error = info;
@@ -2801,16 +2801,16 @@ public:
 			return error;
 		}
 
-		x = Matrix<dnn_double>(ldb, nrhs);
-		for (int i = 0; i < x.m; i++)
-			for (int j = 0; j < x.n; j++)
-				x(i, j) = b_[i*x.n + j];
+		coef = Matrix<dnn_double>(ldb, nrhs);
+		for (int i = 0; i < coef.m; i++)
+			for (int j = 0; j < coef.n; j++)
+				coef(i, j) = b_[i*coef.n + j];
 
 		if (b_alloc) delete[] b_;
 
 		column_major_Matrix<dnn_double> cmm;
-		cmm.set_column_major(x);
-		cmm.toRow_major(x);
+		cmm.set_column_major(coef);
+		cmm.toRow_major(coef);
 
 #endif
 		error = info;
