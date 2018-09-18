@@ -112,8 +112,15 @@ public:
 
 		Matrix<dnn_double> xx = X;
 
+#if 10
 		//centering
 		xx = xx.Centers(means_);
+#else
+		//Global Contrast Normalization (GCN)
+		means_ = xx.Mean();
+		Matrix<dnn_double>& sigma = xx.Std(means_);
+		xx = xx.whitening(means_, sigma);
+#endif
 
 		//whitening
 		xt = xx.transpose();
@@ -121,8 +128,17 @@ public:
 		SVDcmp<dnn_double> svd1(xt*xx);
 		d.diag_vec(svd1.Sigma);
 
+#if 10
+		//xPCAwhite = diag(1. / sqrt(diag(S) + epsilon)) * U' * x;
+		// PCA
 		V = svd1.V.diag(InvSqrt(d).v)*svd1.U.transpose();
 		xx = V*xt;
+#else
+		//xZCAwhite = U * diag(1./sqrt(diag(S) + epsilon)) * U' * x;
+		// ZCA
+		V = svd1.U*svd1.V.diag(InvSqrt(d).v)*svd1.U.transpose();
+		xx = V*xt;
+#endif
 
 		whitening_ = xx;
 
