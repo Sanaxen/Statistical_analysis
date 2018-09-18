@@ -1,7 +1,7 @@
 #define _cublas_Init_def
 #include "../../include/Matrix.hpp"
 #include "../../include/statistical/RegularizationRegression.h"
-//#ifdef USE_LIBLM
+//#ifdef USE_EIGEN
 #include "../../include/statistical/RegularizationRegression_eigen_version.h"
 //#endif
 

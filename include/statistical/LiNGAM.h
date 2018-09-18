@@ -9,7 +9,7 @@
 #include "../../include/hungarian-algorithm/Hungarian.h"
 #include "../../include/statistical/LinearRegression.h"
 #include "../../include/statistical/RegularizationRegression.h"
-#ifdef USE_LIBLM
+#ifdef USE_EIGEN
 #include "../../include/statistical/RegularizationRegression_eigen_version.h"
 #endif
 
