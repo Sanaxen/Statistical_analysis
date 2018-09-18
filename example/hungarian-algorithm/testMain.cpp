@@ -205,22 +205,39 @@ int main(void)
 				}
 				if (tri_ng) break;
 			}
+			//if (!tri_ng)
+			//{
+			//	b_est = tmp;
+			//	for (auto x : v) cout << replacement_list[k][x] << " "; cout << "\n";    // v ‚Ì—v‘f‚ð•\Ž¦
+			//	break;
+			//}
 			if (!tri_ng)
 			{
-				b_est = tmp;
-				for (auto x : v) cout << replacement_list[k][x] << " "; cout << "\n";    // v ‚Ì—v‘f‚ð•\Ž¦
+				b_est = Substitution(replacement_list[k])*b_est;
+				for (int i = 0; i < b_est.m; i++)
+				{
+					for (int j = i; j < b_est.n; j++)
+					{
+						b_est(i, j) = 0.0;
+					}
+				}
+				replacement = replacement_list[k];
+				//for (auto x : v) cout << replacement_list[k][x] << " "; cout << "\n";    // v ‚Ì—v‘f‚ð•\Ž¦
 				break;
 			}
 		}
 	} while (tri_ng);
 
-	b_est.print_e();
-	/*
-	#[[ 0.          0.          0.          0.        ]
-	# [ 2.74204345  0.          0.          0.        ]
-	# [-0.06514126  4.81845158  0.          0.        ]
-	# [ 2.06973634  0.0986238   6.97832595  0.        ]]
-	*/
+	b_est.print();
+
+	printf("reference\n");
+	printf(
+		"/*\n"
+		"#[[ 0.          0.          0.          0.        ]\n"
+		"# [ 2.74204345  0.          0.          0.        ]\n"
+		"# [-0.06514126  4.81845158  0.          0.        ]\n"
+		"# [ 2.06973634  0.0986238   6.97832595  0.        ]]\n"
+		"*/\n");
 
 	return 0;
 }
