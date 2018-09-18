@@ -65,6 +65,7 @@ public:
 		mean = Matrix<dnn_double>().zeros(1, variablesNum);
 
 		x = xx;
+
 		Matrix<dnn_double> C(variablesNum, variablesNum);
 
 		coef = Matrix<dnn_double>(variablesNum, variablesNum);
@@ -92,9 +93,9 @@ public:
 
 			if (use_variance_covariance_matrix_)
 			{
-			for (int i = 0; i < n; i++)
-				x(i, j) = (x(i, j) - mean_) / s2;
-		}
+				for (int i = 0; i < n; i++)
+					x(i, j) = (x(i, j) - mean_) / s2;
+			}
 			else
 			{
 				for (int i = 0; i < n; i++)
@@ -186,7 +187,7 @@ public:
 			}
 		}
 		else
-			printf("error:%d\n", stat);
+			printf("error:%d\n", error);
 
 		printf("\neigen value:");
 		for (int i = 0; i < variablesNum; i++)
