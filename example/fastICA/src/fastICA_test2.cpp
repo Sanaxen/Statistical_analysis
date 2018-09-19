@@ -7,6 +7,11 @@
 #include "../../../include/Matrix.hpp"
 #include "../../../include/statistical/fastICA.h"
 #include "../../../include/util/csvreader.h"
+#ifdef USE_GNUPLOT
+#include "../../../include/util/plot.h"
+
+#define GNUPLOT_PATH "\"C:\\Program Files (x86)\\gnuplot\\bin\\wgnuplot.exe\""
+#endif
 
 static Matrix<dnn_double> mat_read(FILE *fp, int *rows, int *cols)
 {
@@ -95,6 +100,16 @@ int main(int argc, char *argv[])
 		X(i, 2) = X3(i, 0);
 	}
 
+#ifdef USE_GNUPLOT
+	{
+		gnuPlot plot1(std::string(GNUPLOT_PATH));
+		plot1.linewidth = 1;
+		plot1.title = "mixing signale";
+		plot1.plot_lines(X, std::vector<std::string>(), 2000);
+		plot1.draw();
+	}
+#endif
+
 	ICA ica;
 
 	ica.set(compc);
@@ -120,5 +135,18 @@ int main(int argc, char *argv[])
 	X1.print("X1");
 	X2.print("X2");
 	X3.print("X3");
+#ifdef USE_GNUPLOT
+	{
+		gnuPlot plot1(std::string(GNUPLOT_PATH));
+
+		plot1.linewidth = 1;
+		plot1.title = "source signale";
+		plot1.plot_lines(X1, std::vector<std::string>(), 2000);
+		plot1.plot_lines(X2, std::vector<std::string>(), 2000);
+		plot1.plot_lines(X3, std::vector<std::string>(), 2000);
+		plot1.draw();
+	}
+#endif
+
 	return 0;
 }

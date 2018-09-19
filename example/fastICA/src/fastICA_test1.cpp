@@ -7,6 +7,11 @@
 #include "../../../include/Matrix.hpp"
 #include "../../../include/statistical/fastICA.h"
 #include "../../../include/util/csvreader.h"
+#ifdef USE_GNUPLOT
+#include "../../../include/util/plot.h"
+
+#define GNUPLOT_PATH "\"C:\\Program Files (x86)\\gnuplot\\bin\\wgnuplot.exe\""
+#endif
 
 static Matrix<dnn_double> mat_read(FILE *fp, int *rows, int *cols)
 {
@@ -83,6 +88,16 @@ int main(int argc, char *argv[])
 	X1.print_csv("input1.csv");
 	X2.print_csv("input2.csv");
 
+#ifdef USE_GNUPLOT
+	{
+		gnuPlot plot1(std::string(GNUPLOT_PATH));
+
+		plot1.plot_lines(X1, std::vector<std::string>());
+		plot1.plot_lines(X2, std::vector<std::string>());
+		plot1.draw();
+	}
+#endif
+
 	Matrix<dnn_double> X(rows, 2);
 	for (int i = 0; i < rows; i++)
 	{
@@ -107,5 +122,16 @@ int main(int argc, char *argv[])
 
 	X1.print("X1");
 	X2.print("X2");
+
+#ifdef USE_GNUPLOT
+	{
+		gnuPlot plot1(std::string(GNUPLOT_PATH));
+
+		plot1.plot_lines(X1, std::vector<std::string>());
+		plot1.plot_lines(X2, std::vector<std::string>());
+		plot1.draw();
+	}
+#endif
+
 	return 0;
 }

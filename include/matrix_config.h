@@ -18,7 +18,7 @@
 //#define USE_EIGEN
 
 //#define USE_GPU	1
-
+#define USE_GNUPLOT
 
 #define SVDcmp	svd_decomposition
 //#define SVDcmp	svd_decomposition_nr

@@ -3,12 +3,20 @@
 #include "../../include/statistical/RegularizationRegression.h"
 #include "../../include/util/csvreader.h"
 
+#ifdef USE_GNUPLOT
+#include "../../include/util/plot.h"
+
+#define GNUPLOT_PATH "\"C:\\Program Files (x86)\\gnuplot\\bin\\wgnuplot.exe\""
+#endif
+
 int main(int argc, char** argv)
 {
 	CSVReader csv1("Boston.csv");
 	Matrix<dnn_double> df = csv1.toMat();
 
 	df = df.removeCol(0);
+	std::vector<std::string> header = csv1.getHeader();
+	header.erase(header.begin() + 0);
 
 	Matrix<dnn_double>& y = df.Col(13);	//7
 	y.print("", "%.3f ");
@@ -33,6 +41,25 @@ int main(int argc, char** argv)
 	X.print("", "%.3f ");
 #endif
 
+#ifdef USE_GNUPLOT
+	{
+		gnuPlot plot1(std::string(GNUPLOT_PATH), 0);
+		plot1.plot_lines(X, header);
+		plot1.draw();
+
+		gnuPlot plot2(std::string(GNUPLOT_PATH), 1);
+		plot2.set_label_x("crim[”Æß—¦]");
+		plot2.set_label_y("mdev[Z‘î‰¿Ši‚Ì’†‰›’l]");
+		plot2.scatter(X, y);
+		plot2.scatter(X.Col(1), y);
+		plot2.draw();
+
+		gnuPlot plot3(std::string(GNUPLOT_PATH), 2);
+		plot3.set_label_x("mdev[Z‘î‰¿Ši‚Ì’†‰›’l]");
+		plot3.plot_histogram(Histogram(y,5));
+		plot3.draw();
+	}
+#endif
 
 	LassoRegression lasso_my(1.0, 1000, 0.0001);
 

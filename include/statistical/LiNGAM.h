@@ -233,7 +233,7 @@ public:
 			//X.print();
 			//Y.print();
 			size_t n_iter = max_ica_iteration;
-#ifdef USE_LIBLM
+#ifdef USE_EIGEN
 			Lasso lasso(alpha, n_iter, tolerance);
 #else
 			LassoRegression lasso(alpha, n_iter, tolerance);
@@ -250,7 +250,7 @@ public:
 				break;
 			}
 
-#ifdef USE_LIBLM
+#ifdef USE_EIGEN
 			Matrix<dnn_double>& c = formEigenVectorXd(lasso.coef_);
 			for (int k = 0; k < i; k++)
 			{
