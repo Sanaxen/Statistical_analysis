@@ -2,6 +2,12 @@
 #include "../../include/statistical/LiNGAM.h"
 #include "../../include/util/csvreader.h"
 
+#ifdef USE_GNUPLOT
+#include "../../include/util/plot.h"
+
+#define GNUPLOT_PATH "\"C:\\Program Files (x86)\\gnuplot\\bin\\wgnuplot.exe\""
+#endif
+
 void read_csv(int n, char* filename, Matrix<dnn_double>& x)
 {
 	FILE* fp = fopen(filename, "r");
@@ -101,4 +107,19 @@ int main()
 
 	LiNGAM.digraph(names, "digraph.txt");
 	LiNGAM.report(names);
+
+#ifdef USE_GNUPLOT
+	{
+		gnuPlot plot1(std::string(GNUPLOT_PATH), 0, true);
+		plot1.set_label_x("X");
+		plot1.set_label_y("W");
+		plot1.scatter(xs.Col(4), xs.Col(3), "X->W", 4, NULL);
+		plot1.draw();
+
+		system("cmd.exe /c gr.bat");
+		plot1 = gnuPlot(std::string(GNUPLOT_PATH), 1);
+		plot1.command(std::string("plot \"Digraph.png\" binary filetype=png with rgbimage\n"));
+		plot1.draw();
+	}
+#endif
 }

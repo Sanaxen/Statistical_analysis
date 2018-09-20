@@ -50,13 +50,21 @@ int main(int argc, char** argv)
 		gnuPlot plot2(std::string(GNUPLOT_PATH), 1);
 		plot2.set_label_x("crim[”Æß—¦]");
 		plot2.set_label_y("mdev[Z‘î‰¿Ši‚Ì’†‰›’l]");
-		plot2.scatter(X, y);
-		plot2.scatter(X.Col(1), y);
+		plot2.scatter(X, y, "crim", 6, NULL);
+		plot2.scatter(X.Col(1), y, "zn", 5, NULL);
 		plot2.draw();
 
-		gnuPlot plot3(std::string(GNUPLOT_PATH), 2);
+		plot2 = gnuPlot(std::string(GNUPLOT_PATH), 2);
+		plot2.set_label_x("crim[”Æß—¦]");
+		plot2.set_label_y("mdev[Z‘î‰¿Ši‚Ì’†‰›’l]");
+		plot2.scatter(X, y, "crim", 6);
+		plot2.scatter(X.Col(1), y, "zn", 5);
+		plot2.draw();
+
+		gnuPlot plot3(std::string(GNUPLOT_PATH), 3);
+		plot3.linecolor = "rgb \"light-cyan\"";
 		plot3.set_label_x("mdev[Z‘î‰¿Ši‚Ì’†‰›’l]");
-		plot3.plot_histogram(Histogram(y,5));
+		plot3.plot_histogram(Histogram(y,5), "mdev-histogram");
 		plot3.draw();
 	}
 #endif
@@ -72,6 +80,7 @@ int main(int argc, char** argv)
 		"- 0. - 0. - 0. - 0. - 1.34423287  0.18020715\n"
 		"- 3.54700664]\n");
 	
+
 	LassoRegression lasso_my2(0.0, 1000, 0.0001);
 
 	lasso_my2.fit(X, y);
@@ -89,5 +98,23 @@ scikit-learn‚ÌLasso
 -0.         -0.         -0.         -0.         -1.34423287  0.18020715
 -3.54700664]
 */
+
+#ifdef USE_GNUPLOT
+	{
+		Matrix<dnn_double> yy = lasso_my.predict(X) - y;
+		Matrix<dnn_double> yy2 = lasso_my2.predict(X) - y;
+
+		gnuPlot plot1(std::string(GNUPLOT_PATH), 4);
+		plot1.plot_lines(yy, std::vector<std::string>());
+		plot1.plot_lines(yy2, std::vector<std::string>());
+		plot1.draw();
+
+		plot1 = gnuPlot(std::string(GNUPLOT_PATH), 4, true);
+		plot1.plot_lines(yy, std::vector<std::string>());
+		plot1.plot_lines(yy2, std::vector<std::string>());
+		plot1.draw();
+	}
+#endif
+
 	return 0;
 }
