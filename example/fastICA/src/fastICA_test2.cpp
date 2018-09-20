@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 	{
 		gnuPlot plot1(std::string(GNUPLOT_PATH));
 		plot1.linewidth = 1;
-		plot1.title = "mixing signale";
+		plot1.set_title("mixing signale");
 		plot1.plot_lines(X, std::vector<std::string>(), 2000);
 		plot1.draw();
 	}
@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
 		gnuPlot plot1(std::string(GNUPLOT_PATH));
 
 		plot1.linewidth = 1;
-		plot1.title = "source signale";
+		plot1.set_title("source signale");
 		plot1.plot_lines(X1, std::vector<std::string>(), 2000);
 		plot1.plot_lines(X2, std::vector<std::string>(), 2000);
 		plot1.plot_lines(X3, std::vector<std::string>(), 2000);
