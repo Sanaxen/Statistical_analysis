@@ -9,6 +9,9 @@
 #include "../../include/hungarian-algorithm/Hungarian.h"
 #include "../../include/statistical/LinearRegression.h"
 #include "../../include/statistical/RegularizationRegression.h"
+
+//#define USE_EIGEN
+
 #ifdef USE_EIGEN
 #include "../../include/statistical/RegularizationRegression_eigen_version.h"
 #endif
