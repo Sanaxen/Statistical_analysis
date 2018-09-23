@@ -20,18 +20,25 @@ static Matrix<dnn_double> mat_read(FILE *fp, int *rows, int *cols)
 	fscanf(fp, "%d %d", rows, cols);
 	M = Matrix<dnn_double>(*rows, *cols);
 	
+#ifndef USE_FLOAT
 	for (i=0; i<*rows; i++) {
 		for (j=0; j<*cols; j++)
 			fscanf(fp, "%lf ", &(M(i,j)));	
 	}
-	
+#else
+	for (i = 0; i<*rows; i++) {
+		for (j = 0; j<*cols; j++)
+			fscanf(fp, "%f ", &(M(i, j)));
+	}
+#endif
+
 	return M;	
 }
 static Matrix<dnn_double> mat_read2(FILE *fp, int *rows)
 {
 	int i, j; Matrix<dnn_double> M;
 
-	std::vector<double> d;
+	std::vector<dnn_double> d;
 
 	int s;
 	do

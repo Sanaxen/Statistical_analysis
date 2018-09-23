@@ -35,12 +35,12 @@ int main()
 		fscanf(fp, "%d,", &id);
 		for (int j = 0; j < variablesNum - 1; j++)
 		{
-			dnn_double s;
-			fscanf(fp, "%lf ,", &s);
+			double s;
+			fscanf(fp, "%f ,", &s);
 			x(i, j) = s;
 		}
 		{
-			dnn_double s;
+			double s;
 			fscanf(fp, "%lf", &s);
 			x(i, variablesNum - 1) = s;
 		}

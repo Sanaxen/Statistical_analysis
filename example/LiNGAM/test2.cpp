@@ -19,7 +19,7 @@ void read_csv(int n, char* filename, Matrix<dnn_double>& x)
 	x = Matrix<dnn_double>(n, 1);
 	for (int i = 0; i < n; i++)
 	{
-		dnn_double s = 0;
+		double s = 0;
 		if (i < n - 1)
 		{
 			int k = fscanf(fp, "%lf,", &s);

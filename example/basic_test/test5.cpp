@@ -46,11 +46,11 @@ int main(int argc, char** argv)
 	les.fit(A, B);
 	les.coef.print("coef");
 
-	printf("eps:%f\n", SumAll(Pow(A*les.coef - B, 2.)));
+	printf("eps:%f\n", SumAll(Pow(A*les.coef - B, dnn_double(2))));
 
 	les.fit2(A, B);
 	les.coef.print("coef");
-	printf("eps:%f\n", SumAll(Pow(A*les.coef - B, 2.)));
+	printf("eps:%f\n", SumAll(Pow(A*les.coef - B, dnn_double(2))));
 	printf("linear_east_square END\n\n");
 
 	return 0;

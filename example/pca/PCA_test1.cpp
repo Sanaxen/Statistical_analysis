@@ -25,10 +25,17 @@ int main()
 
 	x = Matrix<dnn_double>(n, variablesNum);
 
+#ifndef USE_FLOAT
 	for (int i = 0; i < n; i++) {   // データ
 		for (int j = 0; j < variablesNum; j++)
 			fscanf(fp, "%lf", &x(i,j));
 	}
+#else
+	for (int i = 0; i < n; i++) {   // データ
+		for (int j = 0; j < variablesNum; j++)
+			fscanf(fp, "%f", &x(i, j));
+	}
+#endif
 
 	PCA pca;
 	

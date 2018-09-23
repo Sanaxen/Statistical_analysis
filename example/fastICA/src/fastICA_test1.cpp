@@ -20,10 +20,17 @@ static Matrix<dnn_double> mat_read(FILE *fp, int *rows, int *cols)
 	fscanf(fp, "%d %d", rows, cols);
 	M = Matrix<dnn_double>(*rows, *cols);
 
+#ifndef USE_FLOAT
 	for (i = 0; i<*rows; i++) {
 		for (j = 0; j<*cols; j++)
 			fscanf(fp, "%lf ", &(M(i, j)));
 	}
+#else
+	for (i = 0; i<*rows; i++) {
+		for (j = 0; j<*cols; j++)
+			fscanf(fp, "%f ", &(M(i, j)));
+	}
+#endif
 
 	return M;
 }
@@ -31,7 +38,7 @@ static Matrix<dnn_double> mat_read2(FILE *fp, int *rows)
 {
 	int i, j; Matrix<dnn_double> M;
 
-	std::vector<double> d;
+	std::vector<dnn_double> d;
 
 	int s;
 	do
@@ -125,7 +132,7 @@ int main(int argc, char *argv[])
 
 #ifdef USE_GNUPLOT
 	{
-		gnuPlot plot1(std::string(GNUPLOT_PATH));
+		gnuPlot plot1(std::string(GNUPLOT_PATH), 0, false);
 
 		plot1.plot_lines(X1, std::vector<std::string>());
 		plot1.plot_lines(X2, std::vector<std::string>());
