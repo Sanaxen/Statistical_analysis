@@ -135,31 +135,32 @@ public:
 
 				Matrix<dnn_double>& x_k = train.Col(k);
 
-				const dnn_double z = x_k.transpose()*x_k;
+				const Matrix<dnn_double>& x_k_T = x_k.transpose();
+				const dnn_double z = x_k_T*x_k;
 
 				tmp_beta(0, k) = 0;
-				const dnn_double p_k = x_k.transpose()*(y - train * tmp_beta.transpose());
+				const dnn_double p_k = x_k_T*(y - train * tmp_beta.transpose());
 
-				//if (k == 0 && iter == 0)
+				beta(0, k) = _soft_thresholding_operator(p_k, lambda1*N) / z;
+
+				//if (use_bias)
 				//{
-				//	printf("%f\n", p_k);
-				//	printf("%f\n", lambda*N);
+				//	beta(0, train.n - 1) = 0.0;
+				//	beta(0, train.n - 1) = (y - train * beta.transpose()).Sum() / N;
 				//}
-				const dnn_double w_k = _soft_thresholding_operator(p_k, lambda1*N) / z;
-				beta(0, k) = w_k;
+			}
 
-				if (use_bias)
-				{
-					beta(0, train.n - 1) = 0.0;
-					beta(0, train.n - 1) = (y - train * beta.transpose()).Sum() / N;
-				}
+			if (use_bias)
+			{
+				beta(0, train.n - 1) = 0.0;
+				beta(0, train.n - 1) = (y - train * beta.transpose()).Sum() / N;
 			}
 
 			num_iteration = iter;
 			error_eps = (coef - beta).norm();
 			if (error_eps < tolerance)
 			{
-				printf("convergence:%f - iter:%d\n", (coef - beta).norm(), iter);
+				printf("convergence:%f - iter:%d\n", error_eps, iter);
 				error = 0;
 				break;
 			}
@@ -223,18 +224,13 @@ public:
 
 				Matrix<dnn_double>& x_k = train.Col(k);
 
-				const dnn_double z = x_k.transpose()*x_k + lambda2;
+				const Matrix<dnn_double>& x_k_T = x_k.transpose();
+				const dnn_double z = x_k_T*x_k + lambda2;
 
 				tmp_beta(0, k) = 0;
 				const dnn_double p_k = x_k.transpose()*(y - train * tmp_beta.transpose());
 
-				//if (k == 0 && iter == 0)
-				//{
-				//	printf("%f\n", p_k);
-				//	printf("%f\n", lambda*N);
-				//}
-				const dnn_double w_k = _soft_thresholding_operator(p_k, lambda1*N) / z;
-				beta(0, k) = w_k;
+				beta(0, k) = _soft_thresholding_operator(p_k, lambda1*N) / z;
 
 				if (use_bias)
 				{
@@ -247,7 +243,7 @@ public:
 			error_eps = (coef - beta).norm();
 			if (error_eps < tolerance)
 			{
-				printf("convergence:%f - iter:%d\n", (coef - beta).norm(), iter);
+				printf("convergence:%f - iter:%d\n", error_eps, iter);
 				error = 0;
 				break;
 			}
