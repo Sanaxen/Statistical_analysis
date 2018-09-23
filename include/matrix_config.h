@@ -17,7 +17,7 @@
 //#define USE_CUBLAS
 //#define USE_EIGEN
 
-//#define USE_GPU	1
+//#define USE_GPU	1	//use C++AMP
 #define USE_GNUPLOT
 
 #define SVDcmp	svd_decomposition

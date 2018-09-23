@@ -1,3 +1,4 @@
+del /s plot_*.*
 echo Test > log.txt
 
 cd basic_test

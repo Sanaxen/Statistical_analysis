@@ -354,6 +354,8 @@ public:
 		ica.set(variableNum);
 		ica.fit(xs, max_ica_iteration, tolerance);
 		(ica.A.transpose()).inv().print_e();
+		error = ica.getStatus();
+
 
 		Matrix<dnn_double>& W_ica = (ica.A.transpose()).inv();
 		Matrix<dnn_double>& W_ica_ = Abs(W_ica).Reciprocal();
