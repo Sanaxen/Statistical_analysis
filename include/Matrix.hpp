@@ -325,6 +325,7 @@ struct Matrix
 
 	Matrix<T>& operator = ( const Matrix& mat )
 	{
+#if 0
 		if( v != NULL ) delete [] v;
 
 		m = mat.m; n = mat.n;
@@ -333,30 +334,82 @@ struct Matrix
 			return *this;
 		}
 			
-		v = new T[m*n];
 		const int mn = m*n;
+		v = new T[mn];
+#else
+
+		const int mn = mat.m*mat.n;
+		if (m == mat.m && n == mat.n)
+		{
+			m = mat.m; n = mat.n;
+			if (m == 0 || n == 0) {
+				if (v != NULL) delete[] v;
+				v = NULL;
+				return *this;
+			}
+		}
+		else
+		{
+			if (v != NULL) delete[] v;
+
+			m = mat.m; n = mat.n;
+			if (m == 0 || n == 0) {
+				v = NULL;
+				return *this;
+			}
+
+			v = new T[mn];
+		}
+#endif
+
+#if 10
+		const int N = 8;
+		const int NN = mn / N;
+		const T* v_ = mat.v;
+#pragma omp parallel for
+		for (int i = 0; i < NN; ++i)
+		{
+			const int Ni = N*i;
+			v[Ni] = v_[Ni];
+			v[Ni + 1] = v_[Ni + 1];
+			v[Ni + 2] = v_[Ni + 2];
+			v[Ni + 3] = v_[Ni + 3];
+			v[Ni + 4] = v_[Ni + 4];
+			v[Ni + 5] = v_[Ni + 5];
+			v[Ni + 6] = v_[Ni + 6];
+			v[Ni + 7] = v_[Ni + 7];
+		}
+		if (mn % N)
+		{
+			for (int i = 8*NN; i < mn; i += 1)
+			{
+				v[i] = v_[i];
+			}
+		}
+		return *this;
+#endif
 
 //#ifdef USE_CUBLAS
 //		cublasXcopy(mn, (dnn_double*)mat.v, (dnn_double*)this->v);
 //		return *this;
 //#endif
 
-//#ifdef USE_BLAS
-//			int one = 1;
-//#ifndef USE_FLOAT
-//			f2c_dcopy(&(int)mn, (dnn_double*)mat.v, &one, (dnn_double*)this->v, &one);
-//#else
-//			f2c_scopy(&(int)mn, (dnn_double*)mat.v, &one, (dnn_double*)this->v, &one);
-//
-//#endif
-//			return *this;
-//#endif
 
 #ifdef USE_MKL
 #ifndef USE_FLOAT
 			cblas_dcopy(mn, (dnn_double*)mat.v, 1, (dnn_double*)this->v, 1);
 #else
 			cblas_scopy(mn, (dnn_double*)mat.v, 1, (dnn_double*)this->v, 1);
+#endif
+			return *this;
+#endif
+
+#ifdef USE_BLAS
+			int one = 1;
+#ifndef USE_FLOAT
+			f2c_dcopy(&(int)mn, (dnn_double*)mat.v, &one, (dnn_double*)this->v, &one);
+#else
+			f2c_scopy(&(int)mn, (dnn_double*)mat.v, &one, (dnn_double*)this->v, &one);		
 #endif
 			return *this;
 #endif
@@ -492,27 +545,29 @@ struct Matrix
 		return ret;
 	}
 
-	T norm_fro ( const Matrix<T>& mat ) const
-	{
-		int m = mat.m, n = mat.n;
-		T ret = 0.0;
-
-		const int mn = m*n;
-//#pragma omp parallel for reduction(+:ret)
-		for( int i = 0; i < mn; ++i ) ret += mat.v[i]*mat.v[i];
-
-		return sqrt(ret);
-	}
+//	T norm_fro ( const Matrix<T>& mat ) const
+//	{
+//		int m = mat.m, n = mat.n;
+//		T ret = 0.0;
+//
+//		const int mn = m*n;
+////#pragma omp parallel for reduction(+:ret)
+//		for( int i = 0; i < mn; ++i ) ret += mat.v[i]*mat.v[i];
+//
+//		return sqrt(ret);
+//	}
 
 	inline T norm() const
 	{
-		T ret = 0.0;
+		return sqrt(norm_sqr());
 
-		const int mn = m*n;
+//		T ret = 0.0;
+//
+//		const int mn = m*n;
 //#pragma omp parallel for reduction(+:ret)
-		for (int i = 0; i < mn; ++i) ret += v[i] * v[i];
-
-		return sqrt(ret);
+//		for (int i = 0; i < mn; ++i) ret += v[i] * v[i];
+//
+//		return sqrt(ret);
 	}
 
 	inline T norm_sqr() const
@@ -520,7 +575,34 @@ struct Matrix
 		T ret = 0.0;
 
 		const int mn = m*n;
-//#pragma omp parallel for reduction(+:ret)
+
+#if 10
+		const int N = 8;
+		const int NN = mn / N;
+#pragma omp parallel for reduction(+:ret)
+		for (int i = 0; i < NN; ++i)
+		{
+			const int Ni = N*i;
+			ret += v[Ni] * v[Ni];
+			ret += v[Ni + 1] * v[Ni + 1];
+			ret += v[Ni + 2] * v[Ni + 2];
+			ret += v[Ni + 3] * v[Ni + 3];
+			ret += v[Ni + 4] * v[Ni + 4];
+			ret += v[Ni + 5] * v[Ni + 5];
+			ret += v[Ni + 6] * v[Ni + 6];
+			ret += v[Ni + 7] * v[Ni + 7];
+	}
+		if (mn % N)
+		{
+			for (int i = 8 * NN; i < mn; i += 1)
+	{
+				ret += v[i] * v[i];
+			}
+		}
+		return ret;
+#endif
+
+#pragma omp parallel for reduction(+:ret)
 		for (int i = 0; i < mn; ++i) ret += v[i] * v[i];
 
 		return ret;
@@ -530,7 +612,36 @@ struct Matrix
 	{
 		T d = 0.0;
 
-		for (int i = 0; i < n*m; i++) d += v[i];
+		const int mn = m*n;
+
+#if 10
+		const int N = 8;
+		const int NN = mn / N;
+#pragma omp parallel for reduction(+:d)
+		for (int i = 0; i < NN; ++i)
+		{
+			const int Ni = N*i;
+			d += v[Ni];
+			d += v[Ni + 1];
+			d += v[Ni + 2];
+			d += v[Ni + 3];
+			d += v[Ni + 4];
+			d += v[Ni + 5];
+			d += v[Ni + 6];
+			d += v[Ni + 7];
+		}
+		if (mn % N)
+		{
+			for (int i = 8 * NN; i < mn; i += 1)
+			{
+				d += v[i];
+			}
+		}
+		return d;
+#endif
+
+#pragma omp parallel for reduction(+:d)
+		for (int i = 0; i < mn; i++) d += v[i];
 
 		return d;
 	}
@@ -892,7 +1003,7 @@ struct Matrix
 	 
 	friend Matrix<T> operator / ( const Matrix<T>& m1, const T& c )
 	{
-		return (1.0/c)*m1;
+		return ( dnn_double(1)/c)*m1;
 	}
 
 	friend std::ostream& operator << ( std::ostream& os, const Matrix<T>& A )
@@ -1236,6 +1347,7 @@ struct Matrix
 	Matrix<dnn_double> Col(int col)
 	{
 		Matrix<dnn_double> ret(m, 1);
+#pragma omp parallel for
 		for (int i = 0; i < m; i++)
 		{
 			for (int j = 0; j < n; j++)
@@ -1251,6 +1363,7 @@ struct Matrix
 	Matrix<dnn_double> Row(int row)
 	{
 		Matrix<dnn_double> ret(1, n);
+#pragma omp parallel for
 		for (int i = 0; i < m; i++)
 		{
 			for (int j = 0; j < n; j++)
@@ -1989,7 +2102,7 @@ public:
 #endif
 		if (info != 0)
 		{
-			printf("ERROR dgesvd_ %d\n", info);
+			::printf("ERROR dgesvd_ %d\n", info);
 			return;
 		}
 		if (info == 0)
@@ -2020,7 +2133,7 @@ public:
 
 		if (info != 0)
 		{
-			printf("ERROR dgesvd_ %d\n", info);
+			::printf("ERROR dgesvd_ %d\n", info);
 		}
 		error = info;
 
@@ -2582,7 +2695,7 @@ public:
 		column_major_Matrix<dnn_double> cmm(b);
 		Matrix<dnn_double>& B = b;
 		cmm.toRow_major(B);
-		printf("info:%d\n", info);
+		::printf("info:%d\n", info);
 		//B.print();
 
 		delete[] ipiv;
@@ -2665,14 +2778,25 @@ public:
 		{
 			return error;
 		}
-		{
-			int i, j;
-			printf("\n %s\n", "Least squares solution");
-			for (i = 0; i < n; i++) {
-				for (j = 0; j < nrhs; j++) printf(" %6.2f", x.v[i + j*lda]);
-				printf("\n");
-			}
-		}
+		//{
+		//	int i, j;
+		//	printf("\n %s\n", "Least squares solution");
+		//	for (i = 0; i < n; i++) {
+		//		for (j = 0; j < nrhs; j++) printf(" %6.2f", x.v[i + j*lda]);
+		//		printf("\n");
+		//	}
+		//}
+		coef = Matrix<dnn_double>(ldb, nrhs);
+		for (int i = 0; i < coef.m; i++)
+			for (int j = 0; j < coef.n; j++)
+				coef(i, j) = b_[i*coef.n + j];
+
+		if (b_alloc) delete[] b_;
+
+		column_major_Matrix<dnn_double> cmm;
+		cmm.set_column_major(coef);
+		cmm.toRow_major(coef);
+
 #else
 		dgels_("N", &m, &n, &nrhs, &a.v[0], &lda, b_, &ldb, &wkopt, &lwork, &info);
 
@@ -2772,14 +2896,25 @@ public:
 		{
 			return error;
 		}
-		{
-			int i, j;
-			printf("\n %s\n", "Least squares solution");
-			for (i = 0; i < n; i++) {
-				for (j = 0; j < nrhs; j++) printf(" %6.2f", x.v[i + j*lda]);
-				printf("\n");
-			}
-		}
+		//{
+		//	int i, j;
+		//	printf("\n %s\n", "Least squares solution");
+		//	for (i = 0; i < n; i++) {
+		//		for (j = 0; j < nrhs; j++) printf(" %6.2f", x.v[i + j*lda]);
+		//		printf("\n");
+		//	}
+		//}
+		coef = Matrix<dnn_double>(ldb, nrhs);
+		for (int i = 0; i < coef.m; i++)
+			for (int j = 0; j < coef.n; j++)
+				coef(i, j) = b_[i*coef.n + j];
+
+		if (b_alloc) delete[] b_;
+
+		column_major_Matrix<dnn_double> cmm;
+		cmm.set_column_major(coef);
+		cmm.toRow_major(coef);
+
 #else
 		dgelss_(&m, &n, &nrhs, &a.v[0], &lda, b_, &ldb, &S[0], &RCOND, &rank, &wkopt, &lwork, &info);
 
