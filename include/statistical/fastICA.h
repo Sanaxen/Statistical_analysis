@@ -20,7 +20,12 @@ class ICA
 	Matrix<dnn_double> xt;
 	//Number of components
 	int component;
+	int error;
 public:
+	inline int getStatus() const
+	{
+		return error;
+	}
 	//pre-whitening matrix that projects data onto the first compc principal components.
 	Matrix<dnn_double> K;
 
@@ -58,6 +63,7 @@ public:
 	*/
 	inline Matrix<dnn_double> fastICA_calc(Matrix<dnn_double>& X, const int max_iteration = MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
+		error = 0;
 		const int rows = X.m;
 		const int cols = X.n;
 
@@ -73,14 +79,17 @@ public:
 		d.diag_vec(svd.Sigma);
 
 
-		Matrix<dnn_double> Wd = svd.U*svd.V.diag((d.Reciprocal()).v)*svd.U.transpose()*W;
+		Matrix<dnn_double>& Wd = svd.U*svd.V.diag((d.Reciprocal()).v)*svd.U.transpose()*W;
 
-		std::vector<dnn_double> lim(max_iteration + 1, 1000);
+		dnn_double delta = FLT_MAX;
+		dnn_double delta_pre = FLT_MAX;
+		dnn_double delta_min = FLT_MAX;
+		Matrix<dnn_double> Wd_;
 
 		int it = 0;
 		const Matrix<dnn_double>& xt = X.transpose() / dnn_double(cols);
 
-		while (lim[it] > tolerance && it < max_iteration)
+		while (delta > tolerance && it < max_iteration)
 		{
 			// g1(u) = tanh(a1*u)
 			Matrix<dnn_double>& tmp = Tanh(alp*(Wd * X));
@@ -91,13 +100,41 @@ public:
 
 			W = svd.U*svd.V.diag(d.Reciprocal().v)*svd.U.transpose()*tmp;
 
-			lim[it + 1] = fabs((W*Wd.transpose()).MaxDiag() - 1.0);
+			delta = fabs((W*Wd.transpose()).MaxDiag() - 1.0);
+
+			if (it % 1000 == 0)
+			{
+				printf("delta[%d]:%f\n", it, delta);
+			}
+			if (delta < delta_min)
+			{
+				Wd_ = W;
+				delta_min = delta;
+			}
+			if (fabs(delta - delta_pre) < 1.0e-6 && it > 0)
+			{
+				printf("convergence:%f - iter:%d\n", fabs(delta - delta_pre), it);
+				break;
+			}
+			if (fabs(delta) <= tolerance)
+			{
+				printf("convergence:%f - iter:%d\n", fabs(delta), it);
+			}
+
+			delta_pre = delta;
 			Wd = W;
 			it++;
 		}
 		if (it >= max_iteration)
 		{
+			error = -1;
 			printf("iteration:%d >= max_iteration:%d\n", it, max_iteration);
+			printf("delta_min:%f\n", delta_min);
+			if (delta_min < 0.01)
+			{
+				Wd = Wd_;
+				error = 1;
+			}
 		}
 
 		return Wd;
