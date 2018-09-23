@@ -232,13 +232,18 @@ public:
 
 				beta(0, k) = _soft_thresholding_operator(p_k, lambda1*N) / z;
 
-				if (use_bias)
-				{
-					beta(0, train.n - 1) = 0.0;
-					beta(0, train.n - 1) = (y - train * beta.transpose()).Sum() / N;
-				}
+				//if (use_bias)
+				//{
+				//	beta(0, train.n - 1) = 0.0;
+				//	beta(0, train.n - 1) = (y - train * beta.transpose()).Sum() / N;
+				//}
 			}
 
+			if (use_bias)
+			{
+				beta(0, train.n - 1) = 0.0;
+				beta(0, train.n - 1) = (y - train * beta.transpose()).Sum() / N;
+			}
 			num_iteration = iter;
 			error_eps = (coef - beta).norm();
 			if (error_eps < tolerance)
