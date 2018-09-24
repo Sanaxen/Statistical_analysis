@@ -36,7 +36,7 @@ We use the following code according to the license.
 # hungarian-algorithm
 Copyright (c) 2014, Markus Buehren  
 Copyright (c) 2018, mcximing  
-MIT License Copyright (c) 2017 Sanaxen 
+MIT License Copyright (c) 2018 Sanaxen 
 
 # Linear Regression
 * Lasso 
