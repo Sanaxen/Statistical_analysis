@@ -276,7 +276,7 @@ public:
 		return error;
 	}
 
-	void digraph(const std::vector<std::string>& column_names, const char* filename)
+	void digraph(const std::vector<std::string>& column_names, const char* filename, bool sideways = false, bool background_Transparent=false)
 	{
 		Matrix<dnn_double> B_tmp = B.chop(0.001);
 		B_tmp.print_e();
@@ -290,6 +290,14 @@ public:
 
 		FILE* fp = fopen(filename, "w");
 		fprintf(fp, "digraph {\n");
+		if (background_Transparent)
+		{
+			fprintf(fp, "graph[bgcolor=\"#00000000\"];\n");
+		}
+		if (sideways)
+		{
+			fprintf(fp, "graph[rankdir=\"LR\"];\n");
+		}
 		fprintf(fp, "node [fontname=\"MS UI Gothic\" layout=circo shape=circle]\n");
 
 		for (int i = 0; i < B_tmp.n; i++)
