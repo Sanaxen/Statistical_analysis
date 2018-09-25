@@ -1114,7 +1114,7 @@ struct Matrix
 		return means;
 	}
 
-	Matrix<T> Std(Matrix<T>& means)
+	Matrix<T> Var(Matrix<T>& means)
 	{
 		Matrix<T>& x = *this;
 		Matrix<T>& sigma = Matrix<T>().zeros(1, n);
@@ -1124,9 +1124,39 @@ struct Matrix
 				sigma.v[j] += (x(i, j) - means.v[j])*(x(i, j) - means.v[j]);
 
 		for (int i = 0; i<n; i++)
-			sigma.v[i] /= T(m-1);
+			sigma.v[i] /= T(m - 1);
 
-		return Sqrt(sigma);
+		return sigma;
+	}
+
+	Matrix<T> Std(Matrix<T>& means)	//Std^2 = var
+	{
+		//Matrix<T>& x = *this;
+		//Matrix<T>& sigma = Matrix<T>().zeros(1, n);
+
+		//for (int i = 0; i < m; i++)
+		//	for (int j = 0; j < n; j++)
+		//		sigma.v[j] += (x(i, j) - means.v[j])*(x(i, j) - means.v[j]);
+
+		//for (int i = 0; i<n; i++)
+		//	sigma.v[i] /= T(m-1);
+
+		return Sqrt(Var(means));
+	}
+
+	Matrix<T> Cov(Matrix<T>& means, Matrix<T>& Y, Matrix<T>& meansY)
+	{
+		Matrix<T>& x = *this;
+		Matrix<T>& cov = Matrix<T>().zeros(1, n);
+
+		for (int i = 0; i < m; i++)
+			for (int j = 0; j < n; j++)
+				cov.v[j] += (x(i, j) - means.v[j])*(Y(i, j) - meansY.v[j]);
+
+		for (int i = 0; i<n; i++)
+			cov.v[i] /= T(m - 1);
+
+		return cov;
 	}
 
 	//Global Contrast Normalization (GCN)
