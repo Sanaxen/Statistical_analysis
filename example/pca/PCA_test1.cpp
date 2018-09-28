@@ -9,6 +9,11 @@
 #include "../../include/Matrix.hpp"
 #include "../../include/statistical/pca.h"
 
+#ifdef USE_GNUPLOT
+#include "../../include/util/plot.h"
+
+#define GNUPLOT_PATH "\"C:\\Program Files (x86)\\gnuplot\\bin\\wgnuplot.exe\""
+#endif
 
 int main()
 {
@@ -50,5 +55,14 @@ int main()
 	å¬•ª 0.118306 ŒW” 0.796646 -0.008174 -0.462969 0.388520
 	*/
 	pca.Report();
+
+#ifdef USE_GNUPLOT
+	gnuPlot plot1(std::string(GNUPLOT_PATH), 1);
+	plot1.set_label_x("å¬•ª");
+	plot1.set_label_y("ŒÅ—L’l");
+	plot1.plot_lines(Matrix<dnn_double>(pca.component), std::vector<std::string>());
+	plot1.draw();
+#endif
+
 }
 
