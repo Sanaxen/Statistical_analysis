@@ -1,6 +1,7 @@
 del /s plot_*.*
 echo Test > log.txt
 
+
 cd basic_test
 call runall.bat >> ..\log.txt
 cd ..
@@ -22,6 +23,10 @@ call runall.bat >> ..\log.txt
 cd ..
 
 cd PCA
+call runall.bat >> ..\log.txt
+cd ..
+
+cd nonliner
 call runall.bat >> ..\log.txt
 cd ..
 

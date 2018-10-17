@@ -28,4 +28,6 @@ Duplicate definition prevention
 |USE_MKL|Use [Intel@ Math Kernel Library (Intel@ MKL)](https://software.intel.com/en-us/mkl)|OFF|https://software.intel.com/en-us/mkl|
 |USE_CUBLAS|Use [NVIDIA cuBLAS library](https://developer.nvidia.com/cublas) |OFF|https://developer.nvidia.com/cublas|
 |USE_EIGEN|Use [C++ template library for linear algebra](http://eigen.tuxfamily.org/index.php?title=Main_Page) |OFF|http://eigen.tuxfamily.org/index.php?title=Main_Page|
+|USE_GNUPLOT|Use [ portable command-line driven graphing utility](http://www.gnuplot.info/) |ON|http://www.gnuplot.info/|
+|USE_GRAPHVIZ_DOT|Use [ graph visualization software.](https://www.graphviz.org/) |ON|https://www.graphviz.org/|
 
