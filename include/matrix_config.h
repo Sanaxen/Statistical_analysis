@@ -19,6 +19,7 @@
 
 //#define USE_GPU	1	//use C++AMP
 #define USE_GNUPLOT
+#define USE_GRAPHVIZ_DOT
 
 #define SVDcmp	svd_decomposition
 //#define SVDcmp	svd_decomposition_nr

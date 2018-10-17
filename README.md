@@ -6,7 +6,7 @@
 - [x] Linear regression
 - [x] Multiple regression
 - [x] Sparse regression
-- [ ] Nonlinear regression
+- [x] Nonlinear regression
 - [x] Principal component analysis
 - [x] Independent component analysis
 - [x] Eigenvalue analysis
@@ -33,19 +33,19 @@ Since the GPU calculation is not an experimental level and the mounting method i
 We use the following code according to the license.
 
 
-# hungarian-algorithm
+## hungarian-algorithm
 Copyright (c) 2014, Markus Buehren  
-Copyright (c) 2018, mcximing  
-MIT License Copyright (c) 2018 Sanaxen 
+[Copyright (c) 2018, mcximing](https://github.com/mcximing/hungarian-algorithm-cpp)  
+MIT License Copyright (c) 2018 Sanaxen(Made a single header) 
 
-# Linear Regression
+## Linear Regression(optional)
 * Lasso 
 * Ridge 
 * Elastic Net  
-MIT License Copyright (c) 2017 Liu  
+[MIT License Copyright (c) 2017 Liu](https://github.com/WiseDoge/liblm)
 MIT License Copyright (c) 2018 Sanaxen
 
-# CLAPCK  
+## CLAPCK  
 modified BSD license  
 Copyright (c) 1992-2013  
 The University of Tennessee and The University of Tennessee Research Foundation.  All rights reserved.  
@@ -54,11 +54,14 @@ The University of California Berkeley. All rights reserved.
 Copyright (c) 2006-2013  
 The University of Colorado Denver.  All rights reserved. 
 
-# MKL
+## MKL(optional)
 Copyright (c) 2017 Intel Corporation.
 
-# CSVparser
-MIT License Copyright (c) 2017 Romain Sylvian  
-MIT License Copyright (c) 2018 Sanaxen
+## CSVparser
+[MIT License Copyright (c) 2017 Romain Sylvian](https://github.com/MyBoon/CSVparser)  
+MIT License Copyright (c) 2018 Sanaxen(Made a single header)
 
+## tiny-dnn
+[BSD 3-Clause License Copyright (c) 2013, Taiga Nomi](https://github.com/tiny-dnn/tiny-dnn)  
+Used for nonlinear regression and nonlinear time series prediction
 
