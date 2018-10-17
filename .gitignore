@@ -5,3 +5,5 @@ third_party/lasso_lib/lasso_lib.VC.db
 *.log
 third_party/lasso_lib/x64/Debug/lasso_lib.tlog/CL.command.1.tlog
 *.tlog
+example/sample_test/nonliner/test1/error_loss.dat
+example/sample_test/nonliner/test1/graph_net.txt
