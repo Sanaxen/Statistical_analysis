@@ -35,6 +35,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LiNGAM2", "..\LiNGAM\LiNGAM
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lasso_test", "..\lasso_lib_test\lasso_test.vcxproj", "{06CF6EA5-6682-4F2F-80D5-D0040C106260}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NonLinearRegression", "..\fitting\NonLinearRegression.vcxproj", "{E31FE6E6-A734-45D0-AE9F-D0C0436E8D0B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TimeSeriesRegression", "..\fitting\TimeSeriesRegression.vcxproj", "{D7A4EF0F-3401-4A4F-8F26-FF8BB2D40EC6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -171,6 +175,22 @@ Global
 		{06CF6EA5-6682-4F2F-80D5-D0040C106260}.Release|x64.Build.0 = Release|x64
 		{06CF6EA5-6682-4F2F-80D5-D0040C106260}.Release|x86.ActiveCfg = Release|Win32
 		{06CF6EA5-6682-4F2F-80D5-D0040C106260}.Release|x86.Build.0 = Release|Win32
+		{E31FE6E6-A734-45D0-AE9F-D0C0436E8D0B}.Debug|x64.ActiveCfg = Debug|x64
+		{E31FE6E6-A734-45D0-AE9F-D0C0436E8D0B}.Debug|x64.Build.0 = Debug|x64
+		{E31FE6E6-A734-45D0-AE9F-D0C0436E8D0B}.Debug|x86.ActiveCfg = Debug|Win32
+		{E31FE6E6-A734-45D0-AE9F-D0C0436E8D0B}.Debug|x86.Build.0 = Debug|Win32
+		{E31FE6E6-A734-45D0-AE9F-D0C0436E8D0B}.Release|x64.ActiveCfg = Release|x64
+		{E31FE6E6-A734-45D0-AE9F-D0C0436E8D0B}.Release|x64.Build.0 = Release|x64
+		{E31FE6E6-A734-45D0-AE9F-D0C0436E8D0B}.Release|x86.ActiveCfg = Release|Win32
+		{E31FE6E6-A734-45D0-AE9F-D0C0436E8D0B}.Release|x86.Build.0 = Release|Win32
+		{D7A4EF0F-3401-4A4F-8F26-FF8BB2D40EC6}.Debug|x64.ActiveCfg = Debug|x64
+		{D7A4EF0F-3401-4A4F-8F26-FF8BB2D40EC6}.Debug|x64.Build.0 = Debug|x64
+		{D7A4EF0F-3401-4A4F-8F26-FF8BB2D40EC6}.Debug|x86.ActiveCfg = Debug|Win32
+		{D7A4EF0F-3401-4A4F-8F26-FF8BB2D40EC6}.Debug|x86.Build.0 = Debug|Win32
+		{D7A4EF0F-3401-4A4F-8F26-FF8BB2D40EC6}.Release|x64.ActiveCfg = Release|x64
+		{D7A4EF0F-3401-4A4F-8F26-FF8BB2D40EC6}.Release|x64.Build.0 = Release|x64
+		{D7A4EF0F-3401-4A4F-8F26-FF8BB2D40EC6}.Release|x86.ActiveCfg = Release|Win32
+		{D7A4EF0F-3401-4A4F-8F26-FF8BB2D40EC6}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

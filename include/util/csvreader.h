@@ -11,6 +11,10 @@ public:
 	{
 		csvfile_ = new csv::Parser(std::string(filename), csv::DataType::eFILE, separator, use_header);
 	}
+	CSVReader(std::string filename, char separator = ',', bool use_header = true)
+	{
+		csvfile_ = new csv::Parser(filename, csv::DataType::eFILE, separator, use_header);
+	}
 	~CSVReader()
 	{
 		delete csvfile_;
