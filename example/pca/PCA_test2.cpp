@@ -5,47 +5,30 @@
 #include "../../include/statistical/pca.h"
 #include "../../include/util/csvreader.h"
 
-int main()
+int main(int argc, char** argv)
 {
 	Matrix<dnn_double> x, coef;
 	std::vector<dnn_double> component;
 	int n, variablesNum;
 
-#if 10
-	CSVReader csv("2-3c.csv");
+	std::string csvfile("2-3c.csv");
+
+	bool header = false;
+	for (int count = 1; count + 1 < argc; count += 2) {
+		std::string argname(argv[count]);
+		if (argname == "--csv") {
+			csvfile = std::string(argv[count + 1]);
+		}
+		if (argname == "--header") {
+			header = (atoi(argv[count + 1]) != 0) ? true : false;
+		}
+	}
+
+	CSVReader csv(csvfile, ',', header);
 	x = csv.toMat_removeEmptyRow();
 	x = x.removeCol(0);
 	variablesNum = x.n;
 	n = x.m;
-
-#else
-	FILE* fp = fopen("2-3c.csv", "r");
-	if (fp == NULL)
-	{
-		return -1;
-	}
-	variablesNum = 3;
-	n = 38;
-	char buf[256];
-	fgets(buf, 256, fp);
-
-	x = Matrix<dnn_double>(n, variablesNum);
-	int id;
-	for (int i = 0; i < n; i++) {   // ƒf[ƒ^
-		fscanf(fp, "%d,", &id);
-		for (int j = 0; j < variablesNum - 1; j++)
-		{
-			double s;
-			fscanf(fp, "%f ,", &s);
-			x(i, j) = s;
-		}
-		{
-			double s;
-			fscanf(fp, "%lf", &s);
-			x(i, variablesNum - 1) = s;
-		}
-	}
-#endif
 	x.print();
 
 	PCA pca2;
@@ -56,12 +39,12 @@ int main()
 	pca2.Report();
 
 	pca2.principal_component().print("Žå¬•ª");
-	pca2.principal_component().print_csv("test.csv");
+	pca2.principal_component().print_csv("output1.csv");
 
 	stat = pca2.fit(x, true, false);
 
 	pca2.Report();
 
-	pca2.principal_component().print_csv("test.csv");
+	pca2.principal_component().print_csv("output2.csv");
 }
 

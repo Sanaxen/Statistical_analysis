@@ -92,6 +92,7 @@ int main()
 		names[5] = "U";
 
 	}
+	//xs.print_csv("sample2.csv");
 	xs.print_e();
 
 	Lingam LiNGAM;
