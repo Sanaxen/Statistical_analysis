@@ -32,7 +32,7 @@ public:
 	{
 		return error;
 	}
-	//Cumulative contribution rate(—İÏŠñ—^—¦)
+	//Cumulative contribution rate(Šñ—^—¦)
 	dnn_double contribution_rate(const int id)
 	{
 		return eig.getRealValue()(0, id) / variance_covariance_.Tr();
@@ -171,6 +171,22 @@ public:
 
 		return pca_w;
 	}
+	
+	//ˆöq•‰‰×—Ê
+	Matrix<dnn_double> factor_loading()
+	{
+		Matrix<dnn_double>&w = whitening();
+		Matrix<dnn_double> factor(variablesNum, variablesNum);
+		for (int i = 0; i < variablesNum; i++)
+		{
+			double L = sqrt(getEigen().getRealValue()(0, i));
+			for (int j = 0; j < variablesNum; j++)
+			{
+				factor(i, j) = L*coef(i, j);
+			}
+		}
+		return factor;
+	}
 
 	void Report(int debug = 0)
 	{
@@ -222,13 +238,16 @@ public:
 				(variance_covariance()*tmp2[0] - value(0, i) * tmp2[0]).chop(1.0e-6).print("check");
 			}
 		}
-		printf("Šñ—^—¦(%%)\n");
+		printf("Šñ—^—¦(%%) —İÏŠñ—^—¦(%%)\n");
 		Matrix<dnn_double>&w = whitening();
+		double sum = 0.0;
 		for (int j = 0; j < w.n; j++)
 		{
-			printf("%.3f%%\n", 100 * contribution_rate(j));
+			sum += contribution_rate(j);
+			printf("%.3f%% %.3f%%\n", 100 * contribution_rate(j), 100*sum);
 		}
 		principal_component().print("principal component");
+		factor_loading().print("factor_loading");
 	}
 };
 
