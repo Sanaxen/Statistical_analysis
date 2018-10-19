@@ -76,7 +76,7 @@ class TimeSeriesRegression
 					y[k] = y[k] * Sigma[k] + Mean[k];
 				}
 
-				fprintf(fp_test, "%f ", iX[i][0]);
+				fprintf(fp_test, "%f ", iX[i+1][0]);
 				for (int k = 0; k < y_predict.size()-1; k++)
 				{
 					fprintf(fp_test, "%f %f ", y_predict[k], y[k]);
