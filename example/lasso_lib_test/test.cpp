@@ -11,40 +11,72 @@
 
 int main(int argc, char** argv)
 {
+	std::string csvfile("sample.csv");
+
+	Matrix<dnn_double> X;
+	Matrix<dnn_double> y;
+	std::vector<std::string> header_str;
+
+	int start_col = 0;
+	bool header = false;
+	int max_iteration = 1000;
+	double tol = 0.001;
+	double lambda1 = 0.0001;
+
+	for (int count = 1; count + 1 < argc; count += 2) {
+		std::string argname(argv[count]);
+		if (argname == "--csv") {
+			csvfile = std::string(argv[count + 1]);
+		}
+		else
+		if (argname == "--header") {
+			header = (atoi(argv[count + 1]) != 0) ? true : false;
+		}else
+		if (argname == "--col") {
+			start_col = atoi(argv[count + 1]);
+		}
+		else if (argname == "--iter") {
+			max_iteration = atoi(argv[count + 1]);
+		}
+		else if (argname == "--tol") {
+			tol = atof(argv[count + 1]);
+		}
+		else if (argname == "--L1") {
+			lambda1 = atof(argv[count + 1]);
+		}
+		else {
+			std::cerr << "Invalid parameter specified - \"" << argname << "\""
+				<< std::endl;
+			return -1;
+		}
+	}
+
+	FILE* fp = fopen(csvfile.c_str(), "r");
+	if (fp == NULL)
+	{
+
 	CSVReader csv1("Boston.csv");
 	Matrix<dnn_double> df = csv1.toMat();
 
 	df = df.removeCol(0);
-	std::vector<std::string> header = csv1.getHeader();
-	header.erase(header.begin() + 0);
+		header_str = csv1.getHeader();
+		header_str.erase(header_str.begin() + 0);
 
-	Matrix<dnn_double>& y = df.Col(13);	//7
+		y = df.Col(13);	//7
 	y.print("", "%.3f ");
 
-	Matrix<dnn_double>& X = df.removeCol(13,-1);
+		X = df.removeCol(13, -1);
 	X.print("", "%.3f ");
 	printf("***%d\n", X.n);
-#if 0
-	Matrix<dnn_double> means = X.Mean();
 
-	means.print("É ");
-	Matrix<dnn_double>É–2 = X.Std(means);
-	É–2.print("É–");
-
-	for (int i = 0; i < X.m; i++)
-	{
-		for (int j = 0; j < X.n; j++)
-		{
-			X(i, j) = (X(i, j)-means(0,j)) / É–2(0,j);
-		}
-	}
-	X.print("", "%.3f ");
-#endif
+		Matrix<dnn_double> T = y;
+		T = T.appendCol(X);
+		T.print_csv("sample.csv", header_str);
 
 #ifdef USE_GNUPLOT
 	{
 		gnuPlot plot1(std::string(GNUPLOT_PATH), 0);
-		plot1.plot_lines(X, header);
+			plot1.plot_lines(X, header_str);
 		plot1.draw();
 
 		gnuPlot plot2(std::string(GNUPLOT_PATH), 1);
@@ -64,7 +96,7 @@ int main(int argc, char** argv)
 		gnuPlot plot3(std::string(GNUPLOT_PATH), 3);
 		plot3.linecolor = "rgb \"light-cyan\"";
 		plot3.set_label_x("mdev[èZëÓâøäiÇÃíÜâõíl]");
-		plot3.plot_histogram(Histogram(y,5), "mdev-histogram");
+			plot3.plot_histogram(Histogram(y, 5), "mdev-histogram");
 		plot3.draw();
 	}
 #endif
@@ -92,12 +124,12 @@ int main(int argc, char** argv)
 		"- 3.74733185]\n");
 
 	/*
-scikit-learnÇÃLasso
-22.5328063241
-[-0.          0.         -0.          0.         -0.          2.71517992
--0.         -0.         -0.         -0.         -1.34423287  0.18020715
--3.54700664]
-*/
+		scikit-learnÇÃLasso
+		22.5328063241
+		[-0.          0.         -0.          0.         -0.          2.71517992
+		-0.         -0.         -0.         -0.         -1.34423287  0.18020715
+		-3.54700664]
+		*/
 
 #ifdef USE_GNUPLOT
 	{
@@ -115,6 +147,35 @@ scikit-learnÇÃLasso
 		plot1.draw();
 	}
 #endif
+
+
+	}
+	else
+	{
+		fclose(fp);
+
+		CSVReader csv1(csvfile, ',', header);
+		if (header) header_str = csv1.getHeader();
+
+		Matrix<dnn_double> T = csv1.toMat_removeEmptyRow();
+		if (start_col)
+		{
+			for (int i = 0; i < start_col; i++)
+			{
+				T = T.removeCol(0);
+			}
+		}
+		y = T.Col(0);
+		X = T.removeCol(0);
+
+		X.print("X");
+		y.print("y");
+		LassoRegression lasso_my(lambda1, max_iteration, tol);
+
+		lasso_my.fit(X, y);
+		lasso_my.report();
+	}
+
 
 	return 0;
 }

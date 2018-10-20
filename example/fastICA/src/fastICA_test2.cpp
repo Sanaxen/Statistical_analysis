@@ -64,31 +64,39 @@ static Matrix<dnn_double> mat_read2(FILE *fp, int *rows)
 // !! [example\sample_data\fastICA\run.bat]
 int main(int argc, char *argv[])
 {
-	int rows, cols, compc;
-	FILE *fp;
+	std::string csvfile("sample.csv");
 
+	int max_ica_iteration = MAX_ITERATIONS;
+	double ica_tolerance = TOLERANCE;
+	int start_col = 0;
+	bool header = false;
+	for (int count = 1; count + 1 < argc; count += 2) {
+		std::string argname(argv[count]);
+		if (argname == "--csv") {
+			csvfile = std::string(argv[count + 1]);
+		}
+		if (argname == "--header") {
+			header = (atoi(argv[count + 1]) != 0) ? true : false;
+		}
+		if (argname == "--col") {
+			start_col = atoi(argv[count + 1]);
+		}
+		else if (argname == "--iter") {
+			max_ica_iteration = atoi(argv[count + 1]);
+		}
+		else if (argname == "--tol") {
+			ica_tolerance = atof(argv[count + 1]);
+		}
+	}
+
+	int rows, cols, compc;
+	FILE* fp = fopen(csvfile.c_str(), "r");
+	Matrix<dnn_double> X;
+
+	if (fp == NULL)
+	{
 	compc = 3;
 
-#if 0
-	// Matrix creation
-	if ((fp = fopen("mix_1.csv", "r")) == NULL) {
-		perror("Error opening input file");
-		exit(-1);
-	}
-	Matrix<dnn_double> X1 = mat_read2(fp, &rows);
-
-	if ((fp = fopen("mix_2.csv", "r")) == NULL) {
-		perror("Error opening input file");
-		exit(-1);
-	}
-	Matrix<dnn_double> X2 = mat_read2(fp, &rows);
-
-	if ((fp = fopen("mix_3.csv", "r")) == NULL) {
-		perror("Error opening input file");
-		exit(-1);
-	}
-	Matrix<dnn_double> X3 = mat_read2(fp, &rows);
-#else
 	CSVReader csv1("mix_1.csv", ',', false);
 	CSVReader csv2("mix_2.csv", ',', false);
 	CSVReader csv3("mix_3.csv", ',', false);
@@ -97,15 +105,33 @@ int main(int argc, char *argv[])
 	Matrix<dnn_double> X2 = csv2.toMat().transpose();
 	Matrix<dnn_double> X3 = csv3.toMat().transpose();
 	rows = X1.m;
-#endif
 
-	Matrix<dnn_double> X(rows, 3);
+		X = Matrix<dnn_double>(rows, 3);
+
 	for (int i = 0; i < rows; i++)
 	{
 		X(i, 0) = X1(i, 0);
 		X(i, 1) = X2(i, 0);
 		X(i, 2) = X3(i, 0);
 	}
+		X.print_csv("sample.csv");
+	}
+	else
+	{
+		fclose(fp);
+	}
+
+	CSVReader csv(csvfile, ',', header);
+	X = csv.toMat_removeEmptyRow();
+	if (start_col)
+	{
+		for (int i = 0; i < start_col; i++)
+		{
+			X = X.removeCol(0);
+		}
+	}
+	compc = X.n;
+	rows = X.m;
 
 #ifdef USE_GNUPLOT
 	{
@@ -122,35 +148,43 @@ int main(int argc, char *argv[])
 	ica.set(compc);
 
 	// ICA computation
-	ica.fit(X);
+	ica.fit(X, max_ica_iteration, ica_tolerance);
 
 	// Output
 	ica.K.print();
 	ica.W.print();
 	ica.A.print();
 
+	std::vector<Matrix<dnn_double>> Xo;
+	Xo.resize(compc);
+
+	for (int c = 0; c < compc; c++)
+	{
+		Xo[c] = Matrix<dnn_double>(rows, 1);
 	for (int i = 0; i < rows; i++)
 	{
-		X1(i, 0) = ica.S(i, 0);
-		X2(i, 0) = ica.S(i, 1);
-		X3(i, 0) = ica.S(i, 2);
+			Xo[c](i, 0) = ica.S(i, c);
+		}
 	}
-	X1.print_csv("output1.csv");
-	X2.print_csv("output2.csv");
-	X3.print_csv("output3.csv");
+	for (int c = 0; c < compc; c++)
+	{
+		char buf[256];
+		sprintf(buf, "output%d.csv", c);
 
-	X1.print("X1");
-	X2.print("X2");
-	X3.print("X3");
+		Xo[c].print_csv(buf);
+		Xo[c].print(buf);
+	}
+
 #ifdef USE_GNUPLOT
 	{
 		gnuPlot plot1(std::string(GNUPLOT_PATH));
 
 		plot1.linewidth = 1;
 		plot1.set_title("source signale");
-		plot1.plot_lines(X1, std::vector<std::string>(), 2000);
-		plot1.plot_lines(X2, std::vector<std::string>(), 2000);
-		plot1.plot_lines(X3, std::vector<std::string>(), 2000);
+		for (int c = 0; c < compc; c++)
+		{
+			plot1.plot_lines(Xo[c], std::vector<std::string>(), 2000);
+		}
 		plot1.draw();
 	}
 #endif

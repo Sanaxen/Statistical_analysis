@@ -13,6 +13,7 @@ int main(int argc, char** argv)
 
 	std::string csvfile("2-3c.csv");
 
+	int start_col = 0;
 	bool header = false;
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -22,11 +23,20 @@ int main(int argc, char** argv)
 		if (argname == "--header") {
 			header = (atoi(argv[count + 1]) != 0) ? true : false;
 		}
+		if (argname == "--col") {
+			start_col = atoi(argv[count + 1]);
+		}
 	}
 
 	CSVReader csv(csvfile, ',', header);
 	x = csv.toMat_removeEmptyRow();
-	x = x.removeCol(0);
+	if (start_col)
+	{
+		for (int i = 0; i < start_col; i++)
+		{
+			x = x.removeCol(0);
+		}
+	}
 	variablesNum = x.n;
 	n = x.m;
 	x.print();

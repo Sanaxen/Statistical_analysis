@@ -14,6 +14,7 @@ int main(int argc, char** argv)
 	printf("multiple_regression START\n");
 	std::string csvfile("sample.csv");
 
+	int start_col = 0;
 	bool header = false;
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -22,6 +23,9 @@ int main(int argc, char** argv)
 		}
 		if (argname == "--header") {
 			header = (atoi(argv[count + 1]) != 0) ? true : false;
+		}
+		if (argname == "--col") {
+			start_col = atoi(argv[count + 1]);
 		}
 	}
 
@@ -54,6 +58,14 @@ int main(int argc, char** argv)
 
 	CSVReader csv1(csvfile, ',', header);
 	Matrix<dnn_double> T = csv1.toMat();
+	T = csv1.toMat_removeEmptyRow();
+	if (start_col)
+	{
+		for (int i = 0; i < start_col; i++)
+		{
+			T = T.removeCol(0);
+		}
+	}
 
 	Matrix<dnn_double> A(T.m, T.n-1);
 	Matrix<dnn_double> B(T.m, 1);

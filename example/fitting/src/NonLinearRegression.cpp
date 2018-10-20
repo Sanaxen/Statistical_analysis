@@ -20,6 +20,7 @@
 
 int main(int argc, char** argv)
 {
+	int start_col = 0;
 	int x_dim, y_dim;
 	std::string csvfile("sample.csv");
 
@@ -33,6 +34,9 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--csv") {
 			csvfile = std::string(argv[count + 1]);
+		}
+		if (argname == "--col") {
+			start_col = atoi(argv[count + 1]);
 		}
 	}
 
@@ -48,6 +52,14 @@ int main(int argc, char** argv)
 
 	CSVReader csv1(csvfile, ',', false);
 	Matrix<dnn_double> z = csv1.toMat();
+	z = csv1.toMat_removeEmptyRow();
+	if (start_col)
+	{
+		for (int i = 0; i < start_col; i++)
+		{
+			z = z.removeCol(0);
+		}
+	}
 
 	Matrix<dnn_double> x = z.Col(0);
 	for (int i = 1; i < x_dim; i++)
@@ -87,6 +99,9 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--csv") {
+			continue;
+		}else
+		if (argname == "--col") {
 			continue;
 		}
 		else if (argname == "--progress") {

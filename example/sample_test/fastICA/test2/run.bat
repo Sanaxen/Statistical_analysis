@@ -8,7 +8,7 @@ copy ..\..\..\..\third_party\bin\*.dll
 %PYPATH%\python.exe Untitled.py
 
 :ICA
-%LDM%\fastICA_test2.exe
+%LDM%\fastICA_test2.exe --csv sample.csv
 
 :csv -> wav
 %PYPATH%\python.exe Untitled1.py
