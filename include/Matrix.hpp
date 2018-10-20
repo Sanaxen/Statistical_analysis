@@ -321,6 +321,31 @@ struct Matrix
 		}
 		fclose(fp);
 	}
+	void print_csv(char* filename, std::vector<std::string>& header_str)
+	{
+		FILE* fp = fopen(filename, "w");
+		if (fp == NULL)
+		{
+			fprintf(stderr, "file open error[write][%s]\n", filename);
+			return;
+		}
+		for (int j = 0; j < n-1; j++)
+		{
+			fprintf(fp, "%s,", header_str[j].c_str());
+		}
+		fprintf(fp, "%s\n", header_str[n - 1].c_str());
+
+		for (int i = 0; i < m; i++)
+		{
+			for (int j = 0; j < n; j++)
+			{
+				fprintf(fp, "%f", v[n*i + j]);
+				if (j < n - 1) fprintf(fp, ",");
+				else fprintf(fp, "\n");
+	}
+		}
+		fclose(fp);
+	}
 
 
 	Matrix<T>& operator = ( const Matrix& mat )
