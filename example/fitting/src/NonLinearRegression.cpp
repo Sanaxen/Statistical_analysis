@@ -20,9 +20,11 @@
 
 int main(int argc, char** argv)
 {
+	bool header = false;
 	int start_col = 0;
 	int x_dim, y_dim;
 	std::string csvfile("sample.csv");
+	std::string report_file("report.txt");
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -38,6 +40,9 @@ int main(int argc, char** argv)
 		if (argname == "--col") {
 			start_col = atoi(argv[count + 1]);
 		}
+		if (argname == "--header") {
+			header = (atoi(argv[count + 1]) != 0) ? true : false;
+		}
 	}
 
 	FILE* fp = fopen(csvfile.c_str(), "r");
@@ -50,7 +55,7 @@ int main(int argc, char** argv)
 		fclose(fp);
 	}
 
-	CSVReader csv1(csvfile, ',', false);
+	CSVReader csv1(csvfile, ',', header);
 	Matrix<dnn_double> z = csv1.toMat();
 	z = csv1.toMat_removeEmptyRow();
 	if (start_col)
@@ -104,6 +109,13 @@ int main(int argc, char** argv)
 		if (argname == "--col") {
 			continue;
 		}
+		else
+		if (argname == "--header") {
+			continue;
+		}
+		else if (argname == "--capture") {
+			regression.capture = (0 < atoi(argv[count + 1])) ? true : false;
+		}
 		else if (argname == "--progress") {
 			regression.progress = (0 < atoi(argv[count + 1])) ? true : false;
 		}
@@ -147,6 +159,6 @@ int main(int argc, char** argv)
 		<< std::endl;
 
 	regression.fit(n_layers, input_unit);
-
+	regression.report(report_file);
 	return 0;
 }

@@ -27,9 +27,11 @@
 
 int main(int argc, char** argv)
 {
+	bool header = false;
 	int start_col = 0;
 	int x_dim, y_dim;
 	std::string csvfile("sample.csv");
+	std::string report_file("report.txt");
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -41,6 +43,9 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--csv") {
 			csvfile = std::string(argv[count + 1]);
+		}
+		if (argname == "--header") {
+			header = (atoi(argv[count + 1]) != 0) ? true : false;
 		}
 	}
 
@@ -54,7 +59,7 @@ int main(int argc, char** argv)
 		fclose(fp);
 	}
 
-	CSVReader csv1(csvfile, ',', false);
+	CSVReader csv1(csvfile, ',', header);
 	Matrix<dnn_double> z = csv1.toMat();
 	z = csv1.toMat_removeEmptyRow();
 	if (start_col)
@@ -97,6 +102,7 @@ int main(int argc, char** argv)
 	int n_rnn_layers = -1;
 	int input_unit = -1;
 	int sequence_length = -1;
+	bool capture = false;
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -108,8 +114,15 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--csv") {
 			continue;
-		} else	if (argname == "--col") {
+		} 
+		else if (argname == "--col") {
 			continue;
+		} 
+		else if (argname == "--header") {
+			continue;
+		}
+		else if (argname == "--capture") {
+			timeSeries.capture = (0 < atoi(argv[count + 1])) ? true : false;
 		}
 		else if (argname == "--progress") {
 			timeSeries.progress = (0 < atoi(argv[count + 1])) ? true : false;
@@ -161,6 +174,7 @@ int main(int argc, char** argv)
 		<< std::endl;
 
 	timeSeries.fit(sequence_length, n_rnn_layers, n_layers, input_unit);
+	timeSeries.report(report_file);
 
 	return 0;
 }

@@ -15,6 +15,7 @@ int main(int argc, char** argv)
 {
 	std::string csvfile("sample.csv");
 
+	int start_col = 0;
 	bool header = false;
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -23,6 +24,9 @@ int main(int argc, char** argv)
 		}
 		if (argname == "--header") {
 			header = (atoi(argv[count + 1]) != 0) ? true : false;
+		}
+		if (argname == "--col") {
+			start_col = atoi(argv[count + 1]);
 		}
 	}
 
@@ -54,13 +58,21 @@ int main(int argc, char** argv)
 
 	CSVReader csv1(csvfile, ',', header);
 	Matrix<dnn_double> xs = csv1.toMat();
+	xs = csv1.toMat_removeEmptyRow();
+	if (start_col)
+	{
+		for (int i = 0; i < start_col; i++)
+		{
+			xs = xs.removeCol(0);
+		}
+	}
 
 
 	Lingam LiNGAM;
 
 	size_t max_ica_iteration = MAX_ITERATIONS;
 	double ica_tolerance = TOLERANCE;
-	bool lasso = true;
+	double lasso = 0.0;
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -68,6 +80,9 @@ int main(int argc, char** argv)
 			continue;
 		}else
 		if (argname == "--header") {
+			continue;
+		}else
+		if (argname == "--col") {
 			continue;
 		}
 		else if (argname == "--iter") {
@@ -77,7 +92,7 @@ int main(int argc, char** argv)
 			ica_tolerance = atof(argv[count + 1]);
 		}
 		else if (argname == "--lasso") {
-			lasso = (atoi(argv[count + 1]) != 0) ? true : false;
+			lasso = atof(argv[count + 1]);
 		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
@@ -90,12 +105,15 @@ int main(int argc, char** argv)
 	header_names.resize(xs.n);
 	if (header && csv1.getHeader().size() > 0)
 	{
-		header_names = csv1.getHeader();
+		for (int i = 0; i < xs.n; i++)
+		{
+			header_names[i] = csv1.getHeader(i + start_col);
+		}
 	}
 	else
 	{
 		for (int i = 0; i < xs.n; i++)
-		{ 
+		{
 			char buf[32];
 			sprintf(buf, "%d", i);
 			header_names[i] = buf;
@@ -108,7 +126,7 @@ int main(int argc, char** argv)
 	LiNGAM.B.print_e("B");
 	if (lasso)
 	{
-		LiNGAM.remove_redundancy();
+		LiNGAM.remove_redundancy(lasso);
 	}
 	LiNGAM.before_sorting();
 

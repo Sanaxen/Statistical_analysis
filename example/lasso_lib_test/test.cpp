@@ -59,19 +59,19 @@ int main(int argc, char** argv)
 	Matrix<dnn_double> df = csv1.toMat();
 
 	df = df.removeCol(0);
-		header_str = csv1.getHeader();
-		header_str.erase(header_str.begin() + 0);
+	header_str = csv1.getHeader();
+	header_str.erase(header_str.begin() + 0);
 
-		y = df.Col(13);	//7
+	y = df.Col(13);	//7
 	y.print("", "%.3f ");
 
-		X = df.removeCol(13, -1);
+	X = df.removeCol(13, -1);
 	X.print("", "%.3f ");
 	printf("***%d\n", X.n);
 
-		Matrix<dnn_double> T = y;
-		T = T.appendCol(X);
-		T.print_csv("sample.csv", header_str);
+	Matrix<dnn_double> T = y;
+	T = T.appendCol(X);
+	T.print_csv("sample.csv", header_str);
 
 #ifdef USE_GNUPLOT
 	{
@@ -155,7 +155,6 @@ int main(int argc, char** argv)
 		fclose(fp);
 
 		CSVReader csv1(csvfile, ',', header);
-		if (header) header_str = csv1.getHeader();
 
 		Matrix<dnn_double> T = csv1.toMat_removeEmptyRow();
 		if (start_col)
@@ -168,12 +167,31 @@ int main(int argc, char** argv)
 		y = T.Col(0);
 		X = T.removeCol(0);
 
+		std::vector<std::string> header_names;
+		header_names.resize(X.n);
+		if (header && csv1.getHeader().size() > 0)
+		{
+			for (int i = 0; i < X.n; i++)
+			{
+				header_names[i] = csv1.getHeader(i + start_col);
+			}
+		}
+		else
+		{
+			for (int i = 0; i < X.n; i++)
+			{
+				char buf[32];
+				sprintf(buf, "%d", i);
+				header_names[i] = buf;
+			}
+		}
+
 		X.print("X");
 		y.print("y");
 		LassoRegression lasso_my(lambda1, max_iteration, tol);
 
 		lasso_my.fit(X, y);
-		lasso_my.report();
+		lasso_my.report(header_names);
 	}
 
 

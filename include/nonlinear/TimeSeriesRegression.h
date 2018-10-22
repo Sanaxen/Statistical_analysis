@@ -95,16 +95,19 @@ class TimeSeriesRegression
 		set_train(nn, sequence_length);
 
 #ifdef USE_GNUPLOT
-		std::string plot = std::string(GNUPLOT_PATH);
-		plot += " test_plot_capture1.plt";
-		system(plot.c_str());
+		if (capture)
+		{
+			std::string plot = std::string(GNUPLOT_PATH);
+			plot += " test_plot_capture1.plt";
+			system(plot.c_str());
 
-		char buf[256];
-		sprintf(buf, "images\\test_%04d.png", plot_count);
-		std::string cmd = "cmd.exe /c ";
-		cmd += "copy images\\test.png " + std::string(buf);
-		system(cmd.c_str());
-		printf("%s\n", cmd.c_str());
+			char buf[256];
+			sprintf(buf, "images\\test_%04d.png", plot_count);
+			std::string cmd = "cmd.exe /c ";
+			cmd += "copy images\\test.png " + std::string(buf);
+			system(cmd.c_str());
+			printf("%s\n", cmd.c_str());
+		}
 		plot_count++;
 #endif
 	}
@@ -115,6 +118,7 @@ class TimeSeriesRegression
 	int batch = 0;
 
 public:
+	bool capture = false;
 	bool progress = true;
 	float tolerance = 1.0e-6;
 	tiny_dnn::core::backend_t backend_type = tiny_dnn::core::backend_t::internal;
@@ -241,7 +245,7 @@ public:
 	}
 
 
-	void fit(int seq_length = 100, int rnn_layers = 2, int n_layers = 2, int input_unit = 32)
+	void fit(int seq_length = 30, int rnn_layers = 2, int n_layers = 2, int input_unit = 32)
 	{
 		if (seq_length < 0) seq_length = 30;
 		if (rnn_layers < 0) rnn_layers = 2;
@@ -382,6 +386,36 @@ public:
 		}
 		return y_predict;
 	}
+
+	void report(std::string& filename = std::string(""))
+	{
+		FILE* fp = fopen(filename.c_str(), "w");
+		if (fp == NULL)
+		{
+			fp = stdout;
+		}
+
+		double rmse = 0.0;
+		for (int i = 0; i < train_images.size(); i++)
+		{
+			tiny_dnn::vec_t& y = nn.predict(train_images[i]);
+			for (int k = 0; k < y.size(); k++)
+			{
+				float_t d;
+				d = (y[k] - train_labels[i][k])* Sigma[k];
+				rmse += d*d;
+			}
+		}
+		rmse /= (train_images.size() - 2);
+		rmse = sqrt(rmse);
+		fprintf(fp, "Status:%d\n", getStatus());
+		fprintf(fp, "--------------------------------------------------------------------\n");
+		fprintf(fp, "RMSE                :%f\n", rmse);
+		fprintf(fp, "--------------------------------------------------------------------\n");
+
+		if (fp != stdout) fclose(fp);
+	}
+
 };
 
 #endif

@@ -133,12 +133,31 @@ int main(int argc, char *argv[])
 	compc = X.n;
 	rows = X.m;
 
+	std::vector<std::string> header_names;
+	header_names.resize(X.n);
+	if (header && csv.getHeader().size() > 0)
+	{
+		for (int i = 0; i < X.n; i++)
+		{
+			header_names[i] = csv.getHeader(i+ start_col);
+		}
+	}
+	else
+	{
+		for (int i = 0; i < X.n; i++)
+		{
+			char buf[32];
+			sprintf(buf, "%d", i);
+			header_names[i] = buf;
+		}
+	}
+
 #ifdef USE_GNUPLOT
 	{
 		gnuPlot plot1(std::string(GNUPLOT_PATH));
 		plot1.linewidth = 1;
 		plot1.set_title("mixing signale");
-		plot1.plot_lines(X, std::vector<std::string>(), 2000);
+		plot1.plot_lines(X, header_names, 2000);
 		plot1.draw();
 	}
 #endif
@@ -177,13 +196,19 @@ int main(int argc, char *argv[])
 
 #ifdef USE_GNUPLOT
 	{
+		for (int i = 0; i < X.n; i++)
+		{
+			char buf[32];
+			sprintf(buf, "source%d", i);
+			header_names[i] = buf;
+		}
 		gnuPlot plot1(std::string(GNUPLOT_PATH));
 
 		plot1.linewidth = 1;
 		plot1.set_title("source signale");
 		for (int c = 0; c < compc; c++)
 		{
-			plot1.plot_lines(Xo[c], std::vector<std::string>(), 2000);
+			plot1.plot_lines(Xo[c], header_names, 2000);
 		}
 		plot1.draw();
 	}

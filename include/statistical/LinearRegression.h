@@ -301,7 +301,7 @@ public:
 		return error;
 	}
 
-	void report(double α = 0.05)
+	void report(std::vector<std::string>& header, double α = 0.05)
 	{
 		printf("--------------------------------------------------------------------\n");
 		printf("SE(残差)                :%f\n", se);
@@ -341,29 +341,41 @@ public:
 		//	printf("%f\n", les.x(i, 0) + t_distribution.p_value(α / 2.0)*se_ii[i]);
 		//}
 
-		printf("--------------------------------------------------------------------\n");
-		printf("     係数     標準誤差    t値      p値    下限(%.1f%%)  上限(%.1f%%)\n", 100 * (1 - α), 100 * (1 - α));
-		printf("--------------------------------------------------------------------\n");
-		printf("%10.4f", bias);
+		printf("---------------------------------------------------------------------------------------------\n");
+		printf("               係数     標準誤差    t値      p値    下限(%.1f%%)  上限(%.1f%%)  係数が0の可能性\n", 100 * (1 - α), 100 * (1 - α));
+		printf("---------------------------------------------------------------------------------------------\n");
+		printf("           %10.4f", bias);
 		printf("%10.4f", se_ii[A.n]);
 		printf("%10.4f", t_value[A.n]);
 		printf("%10.4f", p_value[A.n]);
-		printf("%10.4f", bias - t_distribution.p_value(α / 2.0)*se_ii[A.n]);
-		printf("%10.4f\n", bias + t_distribution.p_value(α / 2.0)*se_ii[A.n]);
+
+		double min_c = bias - t_distribution.p_value(α / 2.0)*se_ii[A.n];
+		double max_c = bias + t_distribution.p_value(α / 2.0)*se_ii[A.n];
+		printf("%10.4f", min_c);
+		printf("%10.4f", max_c);
+		if (min_c*max_c < 0.0) printf("          True\n");
+		else printf("          False\n");
+
 		for (int i = 0; i < A.n; i++)
 		{
-			printf("%10.4f", les.coef(i, 0));
+			printf("%-10.10s %10.4f", header[i + 1].c_str(), les.coef(i, 0));
 			printf("%10.4f", se_ii[i]);
 			printf("%10.4f", t_value[i]);
 			printf("%10.4f", p_value[i]);
-			printf("%10.4f", les.coef(i, 0) - t_distribution.p_value(α / 2.0)*se_ii[i]);
-			printf("%10.4f\n", les.coef(i, 0) + t_distribution.p_value(α / 2.0)*se_ii[i]);
+
+			double min_c = les.coef(i, 0) - t_distribution.p_value(α / 2.0)*se_ii[i];
+			double max_c = les.coef(i, 0) + t_distribution.p_value(α / 2.0)*se_ii[i];
+
+			printf("%10.4f", min_c);
+			printf("%10.4f", max_c);
+			if (min_c*max_c < 0.0) printf("          True\n");
+			else printf("          False\n");
 		}
-		printf("--------------------------------------------------------------------\n");
+		printf("--------------------------------------------------------------------------------------------\n");
 
 		printf("※p値が小さいほど係数はゼロでは無いと考えられる．\n");
 		printf("※AICの値は小さいほど当てはまりがよいとされている\n");
-
+		printf("※データ点外で線形の関係が成り立つ保証はありません。\n");
 	}
 };
 #endif

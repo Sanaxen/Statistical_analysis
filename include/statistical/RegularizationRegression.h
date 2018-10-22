@@ -48,7 +48,7 @@ public:
 		return error;
 	}
 
-	void report()
+	void report(std::vector<std::string>& header= std::vector<std::string>())
 	{
 		printf("--------------\n");
 		printf("     ŒW”     \n");
@@ -56,9 +56,21 @@ public:
 		printf("(intercept)%10.4f\n", coef(0, coef.n - 1));
 		for (int i = 0; i < coef.n - 1; i++)
 		{
-			printf("%10.4f\n", coef(0, i));
+			printf("%10.10s %10.4f\n", header[i].c_str(), coef(0, i));
 		}
 		printf("--------------\n");
+
+		printf("•K—v‚Èà–¾•Ï”\n");
+		int num = 0;
+		for (int i = 0; i < coef.n - 1; i++)
+		{
+			if (fabs(coef(0, i)) > 1.0e-6)
+			{
+				num++;
+				printf("%10.10s %10.4f\n", header[i].c_str(), coef(0, i));
+			}
+		}
+		printf("à–¾•Ï”:%d -> %d\n", coef.n - 1, num);
 	}
 
 	virtual int fit(Matrix<dnn_double>& X, Matrix<dnn_double>& y)

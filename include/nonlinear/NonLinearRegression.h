@@ -87,16 +87,20 @@ class NonLinearRegression
 
 
 #ifdef USE_GNUPLOT
-		std::string plot = std::string(GNUPLOT_PATH);
-		plot += " test_plot_capture1.plt";
-		system(plot.c_str());
+		if (capture)
+		{
+			printf("capture\n");
+			std::string plot = std::string(GNUPLOT_PATH);
+			plot += " test_plot_capture1.plt";
+			system(plot.c_str());
 
-		char buf[256];
-		sprintf(buf, "images\\test_%04d.png", plot_count);
-		std::string cmd = "cmd.exe /c ";
-		cmd += "copy images\\test.png " + std::string(buf);
-		system(cmd.c_str());
-		printf("%s\n", cmd.c_str());
+			char buf[256];
+			sprintf(buf, "images\\test_%04d.png", plot_count);
+			std::string cmd = "cmd.exe /c ";
+			cmd += "copy images\\test.png " + std::string(buf);
+			system(cmd.c_str());
+			printf("%s\n", cmd.c_str());
+		}
 		plot_count++;
 #endif
 	}
@@ -106,6 +110,7 @@ class NonLinearRegression
 	int plot_count = 0;
 	int batch = 0;
 public:
+	bool capture = false;
 	bool progress = true;
 	float tolerance = 1.0e-6;
 	tiny_dnn::core::backend_t backend_type = tiny_dnn::core::backend_t::internal;
@@ -141,6 +146,13 @@ public:
 		{
 			normalize(nX, Mean_x, Sigma_x);
 			normalize(nY, Mean_y, Sigma_y);
+		}
+		else
+		{
+			tiny_dnn::tensor_t dmyX = nX;
+			tiny_dnn::tensor_t dmyY = nY;
+			normalize(dmyX, Mean_x, Sigma_x);
+			normalize(dmyY, Mean_y, Sigma_y);
 		}
 	}
 	void visualize_loss(int n)
@@ -195,7 +207,7 @@ public:
 		}
 	}
 
-	void construct_net(int n_layers = 10)
+	void construct_net(int n_layers = 5)
 	{
 		using tanh = tiny_dnn::activation::tanh;
 		using recurrent = tiny_dnn::recurrent_layer;
@@ -234,9 +246,9 @@ public:
 	}
 
 
-	void fit(int n_layers = 2, int input_unit = 32)
+	void fit(int n_layers = 5, int input_unit = 32)
 	{
-		if (n_layers < 0) n_layers = 2;
+		if (n_layers < 0) n_layers = 5;
 		if (input_unit < 0) input_unit = 32;
 		
 		input_size = input_unit;
@@ -396,6 +408,45 @@ public:
 			}
 		}
 	}
+
+	void report(std::string& filename = std::string(""))
+	{
+		FILE* fp = fopen(filename.c_str(), "w");
+		if (fp == NULL)
+		{
+			fp = stdout;
+		}
+
+		double rmse = 0.0;
+		for (int i = 0; i < train_images.size(); i++)
+		{
+			tiny_dnn::vec_t& y = nn.predict(train_images[i]);
+			for (int k = 0; k < y.size(); k++)
+			{
+				float_t d;
+				if (NormalizeData)
+				{
+					d = (y[k] - train_labels[i][k])* Sigma_y[k];
+				}
+				else
+				{
+					d = (y[k] - train_labels[i][k]);
+				}
+				rmse += d*d;
+			}
+		}
+		rmse /= (train_images.size() - 2);
+		rmse = sqrt(rmse);
+
+		fprintf(fp, "Status:%d\n", getStatus());
+		fprintf(fp, "--------------------------------------------------------------------\n");
+		fprintf(fp, "RMSE                :%f\n", rmse);
+		fprintf(fp, "--------------------------------------------------------------------\n");
+		fprintf(fp, "※データ点外での予測が正しい保証はありません。\n");
+
+		if (fp != stdout) fclose(fp);
+	}
+
 };
 
 #endif

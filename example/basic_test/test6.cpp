@@ -83,12 +83,31 @@ int main(int argc, char** argv)
 	A.print("A");
 	B.print("B");
 
+	std::vector<std::string> header_names;
+	header_names.resize(A.n);
+	if (header && csv1.getHeader().size() > 0)
+	{
+		for (int i = 0; i < A.n; i++)
+		{
+			header_names[i] = csv1.getHeader(i + start_col);
+		}
+	}
+	else
+	{
+		for (int i = 0; i < A.n; i++)
+		{
+			char buf[32];
+			sprintf(buf, "%d", i);
+			header_names[i] = buf;
+		}
+	}
+
 
 	multiple_regression mreg;
 
 	mreg.set(A.n);
 	mreg.fit(A, B);
-	mreg.report(0.05);
+	mreg.report(header_names, 0.05);
 
 	printf("multiple_regression END\n\n");
 	return 0;
