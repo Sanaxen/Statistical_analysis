@@ -129,10 +129,10 @@ public:
 
 		if (headers.size())
 		{
-			title = (char*)headers[0].c_str();
+			title = headers[0];
 			if (title[0] != '\"')
 			{
-				title = (std::string("t \"") + headers[0] + std::string("\"")).c_str();
+				title = (std::string("t \"") + headers[0] + std::string("\""));
 			}
 		}
 
@@ -149,10 +149,10 @@ public:
 			title = "";
 			if (headers.size() > i)
 			{
-				title = (char*)headers[i].c_str();
+				title = headers[i];
 				if (title[0] != '\"')
 				{
-					title = (std::string("t \"") + headers[i] + std::string("\"")).c_str();
+					title = (std::string("t \"") + headers[i] + std::string("\""));
 				}
 		}
 			fprintf(script,"replot '%s' %s using %d %s with lines linewidth %.1f %s\n",
