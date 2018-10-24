@@ -9,11 +9,25 @@ class CSVReader
 public:
 	CSVReader(char* filename, char separator = ',', bool use_header = true)
 	{
-		csvfile_ = new csv::Parser(std::string(filename), csv::DataType::eFILE, separator, use_header);
+		try
+		{
+			csvfile_ = new csv::Parser(std::string(filename), csv::DataType::eFILE, separator, use_header);
+		}
+		catch (csv::Error& e)
+		{
+			printf("CSVReader error:%s\n", e.what());
+		}
 	}
 	CSVReader(std::string filename, char separator = ',', bool use_header = true)
 	{
-		csvfile_ = new csv::Parser(filename, csv::DataType::eFILE, separator, use_header);
+		try
+		{
+			csvfile_ = new csv::Parser(filename, csv::DataType::eFILE, separator, use_header);
+		}
+		catch (csv::Error& e)
+		{
+			printf("CSVReader error:%s\n", e.what());
+		}
 	}
 	~CSVReader()
 	{

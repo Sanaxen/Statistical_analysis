@@ -3248,24 +3248,28 @@ inline Matrix<T> zca_whitening_matrix2(Matrix<T>& X, const double eps = 1.0e-5, 
 }
 #endif
 
-inline Matrix<dnn_double> Histogram(Matrix<dnn_double>& X, dnn_double bin_width)
+inline Matrix<dnn_double> Histogram(Matrix<dnn_double>& X, int num)
 {
 	dnn_double max_ = X.Max();
 	dnn_double min_ = X.Min();
 
-	int num_bins = int((max_ - min_) / bin_width);
+	dnn_double num_bins = ((max_ - min_) / (double)num);
 
-	Matrix<dnn_double>& h = Matrix<dnn_double>(num_bins, 2);
-	h = h.zeros(num_bins, 2);
+	Matrix<dnn_double>& h = Matrix<dnn_double>(num, 2);
+	h = h.zeros(num, 2);
+
+	for (int k = 0; k < num; k++)
+	{
+		h(k, 0) = k*num_bins + min_;
+	}
 
 	int mn = X.m*X.n;
 	for (int i = 0; i < mn; i++)
 	{
-		int k = int((X.v[i] - min_) / bin_width + 0.5);
+		int k = int((X.v[i] - min_) / num_bins + 0.5);
 		if (k < 0) k = 0;
-		if (k >= num_bins) k = num_bins - 1;
+		if (k >= num) k = num - 1;
 		h(k, 1) += 1;
-		h(k, 0) = k*bin_width + min_;
 	}
 	return h;
 }

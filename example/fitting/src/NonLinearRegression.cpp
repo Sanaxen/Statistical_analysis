@@ -159,6 +159,6 @@ int main(int argc, char** argv)
 		<< std::endl;
 
 	regression.fit(n_layers, input_unit);
-	regression.report(report_file);
+	regression.report(0.05, report_file);
 	return 0;
 }

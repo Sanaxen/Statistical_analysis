@@ -71,6 +71,9 @@ inline double gamma(const double x, int &ier)
 	return g;
 }
 
+//Reference material
+//http://www.sist.ac.jp/~suganuma/kougi/other_lecture/SE/math/prob/prob.htm
+
 class Distribution
 {
 public:
@@ -564,6 +567,124 @@ public:
 	}
 };
 
+class Chi_distribution :public Distribution
+{
+	int dof;      // Degree of freedom
+
+
+	inline double func(double p, double x)
+	{
+		double y;
+
+		return distribution(x, &y) - 1.0 + p;
+	}
+
+	inline double d_func(double x)
+	{
+		double y, z;
+
+		z = distribution(x, &y);
+
+		return y;
+	}
+
+	Standard_normal_distribution nrm;
+
+public:
+
+	inline Chi_distribution(int dof_) :dof(dof_)
+	{
+		if (dof_ <= 0)
+		{
+			printf("Chi-distribution degree of freedom ERROR\n");
+		}
+		if (dof <= 0) dof = 1;
+		status = -1;
+	}
+
+	/*
+	Calculation of Chi distribution（P(X = tt), P(X < tt)）
+	dd : P(X = tt)
+	df : Degree of freedom
+	return : P(X < tt)
+	*/
+	inline double distribution(double ff, double *dd)
+	{
+		const double pi = M_PI;
+		double chs, pis, pp, x, y, u;
+		int ia, i1;
+
+		if (ff < 1.0e-10)
+			ff = 1.0e-10;
+
+		pis = sqrt(pi);
+		chs = sqrt(ff);
+		x = 0.5 * ff;
+
+		if (dof % 2 != 0) {
+			u = sqrt(x) * exp(-x) / pis;
+			pp = 2.0 * (nrm.distribution(chs, &y) - 0.5);
+			ia = 1;
+		}
+
+		else {
+			u = x * exp(-x);
+			pp = 1.0 - exp(-x);
+			ia = 2;
+		}
+
+		if (ia != dof) {
+			for (i1 = ia; i1 <= dof - 2; i1 += 2) {
+				pp -= 2.0 * u / i1;
+				u *= (ff / i1);
+			}
+		}
+
+		*dd = u / ff;
+		return pp;
+	}
+
+	/*
+	The p% value of the F distribution （P(X > u) = 0.01p）
+	*/
+	inline double p_value(double p)
+	{
+		status = 0;
+		double po, x, xx = 0.0, x0, w;
+		// Degree of freedom = 1 (using normal distribution)
+		if (dof == 1) 
+		{
+			po = p;
+			p *= 0.5;
+			x = nrm.p_value(p);
+			status = nrm.status;
+			xx = x * x;
+			p = po;
+		}
+
+		else {
+			// Degree of freedom = 2
+			if (dof == 2)
+				xx = -2.0 * log(p);
+			// Degree of freedom > 2
+			else {
+
+				x = nrm.p_value(p);
+				status = nrm.status;
+
+				if (status==0) 
+				{
+
+					w = 2.0 / (9.0 * dof);
+					x = 1.0 - w + x * sqrt(w);
+					x0 = pow(x, 3.0) * dof;
+					xx = newton(p, x0);
+				}
+			}
+		}
+		return xx;
+	}
+};
 
 
 #endif

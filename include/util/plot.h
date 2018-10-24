@@ -130,9 +130,13 @@ public:
 		if (headers.size())
 		{
 			title = headers[0];
-			if (title[0] != '\"')
+			if (title.c_str()[0] != '\"')
 			{
 				title = (std::string("t \"") + headers[0] + std::string("\""));
+			}
+			else
+			{
+				title = "t " + headers[0];
 			}
 		}
 
@@ -150,11 +154,15 @@ public:
 			if (headers.size() > i)
 			{
 				title = headers[i];
-				if (title[0] != '\"')
+				if (title.c_str()[0] != '\"')
 				{
 					title = (std::string("t \"") + headers[i] + std::string("\""));
 				}
-		}
+				else
+				{
+					title = "t " + headers[i];
+				}
+			}
 			fprintf(script,"replot '%s' %s using %d %s with lines linewidth %.1f %s\n",
 				data_name.c_str(), every.c_str(), i+1, title.c_str(), linewidth, linecolor.c_str());
 		}
@@ -179,10 +187,14 @@ public:
 		}
 		if (headers.size())
 		{
-			title = (char*)headers[0].c_str();
-			if (title[0] != '\"')
+			title = headers[0];
+			if (title.c_str()[0] != '\"')
 			{
 				title = (std::string("t \"") + headers[0] + std::string("\"")).c_str();
+			}
+			else
+			{
+				title = "t " + headers[0];
 			}
 		}
 
@@ -192,7 +204,7 @@ public:
 		}
 
 		const char* plot = (plot_count) ? "replot" : "plot";
-		fprintf(script, "%s '%s' %s using %d t %s with points pointsize %.1f %s\n",
+		fprintf(script, "%s '%s' %s using %d %s with points pointsize %.1f %s\n",
 			plot, data_name.c_str(), every.c_str(), 1, title, pointsize, linecolor.c_str());
 
 		for (int i = 1; i < X.n; i++)
@@ -200,36 +212,115 @@ public:
 			title = "";
 			if (headers.size() > i)
 			{
-				title = (char*)headers[i].c_str();
-				if (title[0] != '\"')
+				title = headers[i];
+				if (title.c_str()[0] != '\"')
 				{
 					title = (std::string("t \"") + headers[i] + std::string("\"")).c_str();
-		}
+				}
+				else
+				{
+					title = "t " + headers[i];
+				}
 			}
-			fprintf(script, "replot '%s' %s using %d t %s with points pointsize %.1f %s\n",
+			fprintf(script, "replot '%s' %s using %d %s with points pointsize %.1f %s\n",
 				data_name.c_str(), every.c_str(), i+1, title, pointsize, linecolor.c_str());
 		}
 		linecolor = "";
 		plot_count++;
 	}
 
-	void scatter(Matrix<dnn_double>&X, Matrix<dnn_double>&Y, char* label_text, int pointtype=6, char* palette ="rgbformulae 34,35,36", int maxpoint = -1)
+	void multi_scatter(Matrix<dnn_double>&X, std::vector<std::string>& headers, int pointtype = 2, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
+	{
+		script_reopen();
+		if (script == NULL) return;
+		fprintf(script, "set datafile separator \",\"\n");
+		fprintf(script, "set multiplot layout %d,%d\n", X.n, X.n);
+		fprintf(script, "set nokey\n");
+		fprintf(script, "unset xtics\n");
+		fprintf(script, "unset ytics\n");
+
+		
+		std::string every = "";
+
+		if (maxpoint > 0)
+		{
+			int every_num = X.m / maxpoint;
+			every = "every " + std::to_string(every_num);
+		}
+
+
+		X.print_csv((char*)data_name.c_str());
+		for (int i = 0; i < X.n; i++)
+		{
+			for (int j = 0; j < X.n; j++)
+			{
+				std::string x, y;
+
+				if (headers.size())
+				{
+					y = headers[i];
+					if (y.c_str()[0] != '\"')
+					{
+						y = (std::string("\"") + headers[i] + std::string("\""));
+					}
+
+					x = headers[j];
+					if (x.c_str()[0] != '\"')
+					{
+						x = (std::string("\"") + headers[j] + std::string("\""));
+					}
+				}
+
+				fprintf(script, "unset xlabel\n");
+				fprintf(script, "unset ylabel\n");
+				if (j > i)
+				{
+					fprintf(script, "unset border\n");
+					fprintf(script, "plot - 1 notitle lc rgb \"white\"\n");
+					fprintf(script, "set border\n");
+					continue;
+				}
+				if (j == i)
+				{
+					Matrix<dnn_double> &h = Histogram(X.Col(j), 10);
+					char histogram_name[256];
+					sprintf(histogram_name, "plot_(%d)%d_hist.dat", plot_count, i);
+					h.print_csv(histogram_name);
+
+					fprintf(script, "#set style fill solid border  lc rgb \"black\"\n");
+					fprintf(script, "plot '%s' using 1:2 %s with boxes linewidth %.1f %s\n",
+						histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/, linecolor.c_str());
+
+					continue;
+				}
+				fprintf(script, "set xlabel %s\n", x.c_str());
+				fprintf(script, "set ylabel %s\n", y.c_str());
+				fprintf(script, "plot '%s' %s using %d:%d %s with points pointsize %.1f pt %d\n",
+					data_name.c_str(), every.c_str(), i+1, j+1, title.c_str(), pointsize, pointtype);
+				fflush(script);
+			}
+		}
+		fprintf(script, "unset multiplot\n");
+		plot_count++;
+	}
+
+	void scatter(Matrix<dnn_double>&X, int col1, int col2, std::vector<std::string>& headers, int pointtype=6, char* palette ="rgbformulae 34,35,36", int maxpoint = -1)
 	{
 		script_reopen();
 		if (script == NULL) return;
 		fprintf(script, "set datafile separator \",\"\n");
 
-		Matrix<dnn_double> x = X.Col(0);
-		Matrix<dnn_double>& y = Y.Col(0);
+		Matrix<dnn_double> x = X.Col(col1);
+		Matrix<dnn_double> y = X.Col(col2);
 
-		x = x.appendCol(Y.Col(0));
+		x = x.appendCol(y);
 		if (palette)
 		{
-			x = x.appendCol(Y.Col(0));
+			x = x.appendCol(y);
 			set_palette(palette);
 		}
-		y = y / (y.Max() - y.Min());
-		x = x.appendCol(y);
+		//y = y / (y.Max() - y.Min());
+		//x = x.appendCol(y);
 		x.print_csv((char*)data_name.c_str());
 
 		std::string every = "";
@@ -241,11 +332,33 @@ public:
 		}
 
 		std::string label = "";
-		if (label_text)
+		if (headers.size())
 		{
-			label = "t \"" + std::string(label_text) + "\"";
+			label = "t " + headers[col2];
+			if (headers[col2].c_str()[0] != '\"')
+			{
+				label = "t \"" + headers[col2] + "\"";
+			}
+		}
+		std::string xx, yy;
+
+		if (headers.size())
+		{
+			yy = headers[col2];
+			if (yy.c_str()[0] != '\"')
+			{
+				yy = (std::string("\"") + headers[col2] + std::string("\""));
+			}
+
+			xx = headers[col1];
+			if (xx.c_str()[0] != '\"')
+			{
+				xx = (std::string("\"") + headers[col1] + std::string("\""));
+			}
 		}
 
+		fprintf(script, "set xlabel %s\n", xx.c_str());
+		fprintf(script, "set ylabel %s\n", yy.c_str());
 		const char* plot = (plot_count) ? "replot" : "plot";
 		if (palette)
 		{

@@ -114,7 +114,7 @@ int main()
 		gnuPlot plot1(std::string(GNUPLOT_PATH), 0, true);
 		plot1.set_label_x("X");
 		plot1.set_label_y("W");
-		plot1.scatter(xs.Col(4), xs.Col(3), "X->W", 4, NULL);
+		plot1.scatter(xs, 4, 3, names);
 		plot1.draw();
 
 		system("cmd.exe /c gr.bat");

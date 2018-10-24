@@ -39,6 +39,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NonLinearRegression", "..\f
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TimeSeriesRegression", "..\fitting\TimeSeriesRegression.vcxproj", "{D7A4EF0F-3401-4A4F-8F26-FF8BB2D40EC6}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "multi_scatter", "..\multi_scatter\multi_scatter.vcxproj", "{DCEC2C8C-CCD5-4442-A8D5-F9520F17597B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -191,6 +193,14 @@ Global
 		{D7A4EF0F-3401-4A4F-8F26-FF8BB2D40EC6}.Release|x64.Build.0 = Release|x64
 		{D7A4EF0F-3401-4A4F-8F26-FF8BB2D40EC6}.Release|x86.ActiveCfg = Release|Win32
 		{D7A4EF0F-3401-4A4F-8F26-FF8BB2D40EC6}.Release|x86.Build.0 = Release|Win32
+		{DCEC2C8C-CCD5-4442-A8D5-F9520F17597B}.Debug|x64.ActiveCfg = Debug|x64
+		{DCEC2C8C-CCD5-4442-A8D5-F9520F17597B}.Debug|x64.Build.0 = Debug|x64
+		{DCEC2C8C-CCD5-4442-A8D5-F9520F17597B}.Debug|x86.ActiveCfg = Debug|Win32
+		{DCEC2C8C-CCD5-4442-A8D5-F9520F17597B}.Debug|x86.Build.0 = Debug|Win32
+		{DCEC2C8C-CCD5-4442-A8D5-F9520F17597B}.Release|x64.ActiveCfg = Release|x64
+		{DCEC2C8C-CCD5-4442-A8D5-F9520F17597B}.Release|x64.Build.0 = Release|x64
+		{DCEC2C8C-CCD5-4442-A8D5-F9520F17597B}.Release|x86.ActiveCfg = Release|Win32
+		{DCEC2C8C-CCD5-4442-A8D5-F9520F17597B}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

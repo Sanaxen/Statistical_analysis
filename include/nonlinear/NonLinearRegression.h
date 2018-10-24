@@ -2,6 +2,8 @@
 
 #define _NonLinearRegression_H
 
+#include "../../include/util/mathutil.h"
+
 class NonLinearRegression
 {
 	int error = 0;
@@ -409,7 +411,7 @@ public:
 		}
 	}
 
-	void report(std::string& filename = std::string(""))
+	void report(double α=0.05, std::string& filename = std::string(""))
 	{
 		FILE* fp = fopen(filename.c_str(), "w");
 		if (fp == NULL)
@@ -435,15 +437,54 @@ public:
 				rmse += d*d;
 			}
 		}
-		rmse /= (train_images.size() - 2);
+		rmse /= (train_images.size()*train_labels[0].size());
 		rmse = sqrt(rmse);
+
+		double chi_square = 0.0;
+		for (int i = 0; i < train_images.size(); i++)
+		{
+			tiny_dnn::vec_t& y = nn.predict(train_images[i]);
+			for (int k = 0; k < y.size(); k++)
+			{
+				float_t d;
+				if (NormalizeData)
+				{
+					d = (y[k] - train_labels[i][k])* Sigma_y[k];
+				}
+				else
+				{
+					d = (y[k] - train_labels[i][k]);
+				}
+				chi_square += d*d/(Sigma_y[k]* Sigma_y[k]);
+			}
+		}
+
+		Chi_distribution chi_distribution(train_images.size()*train_labels[0].size());
+		double chi_pdf = chi_distribution.p_value(α);
 
 		fprintf(fp, "Status:%d\n", getStatus());
 		fprintf(fp, "--------------------------------------------------------------------\n");
-		fprintf(fp, "RMSE                :%f\n", rmse);
+		fprintf(fp, "RMSE             :%f\n", rmse);
+		fprintf(fp, "chi square       :%f\n", chi_square);
+		fprintf(fp, "p value          :%f\n", chi_pdf);
 		fprintf(fp, "--------------------------------------------------------------------\n");
-		fprintf(fp, "※データ点外での予測が正しい保証はありません。\n");
 
+
+		if (chi_distribution.status != 0)
+		{
+			fprintf(fp, "chi_distribution status:%d\n", chi_distribution.status);
+		}
+		if (chi_square < chi_pdf)
+		{
+			fprintf(fp, "χ2値:%f < χ2(%.2f)=[%.2f]", chi_square, α, chi_pdf);
+			fprintf(fp, "=>良いフィッティングでしょう。\n予測に有効と思われます\n");
+			fprintf(fp, "ただし、データ点範囲外での予測が正しい保証はありません。\n");
+		}
+		else
+		{
+			fprintf(fp, "χ2値:%f < χ2(%.2f)=[%.2f]", chi_square, α, chi_pdf);
+			fprintf(fp, "=>良いとは言えないフィッティングでしょう。\n予測に有効とは言えないと思われます\n");
+		}
 		if (fp != stdout) fclose(fp);
 	}
 

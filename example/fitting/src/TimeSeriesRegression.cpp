@@ -174,7 +174,7 @@ int main(int argc, char** argv)
 		<< std::endl;
 
 	timeSeries.fit(sequence_length, n_rnn_layers, n_layers, input_unit);
-	timeSeries.report(report_file);
+	timeSeries.report(0.05, report_file);
 
 	return 0;
 }

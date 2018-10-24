@@ -82,15 +82,15 @@ int main(int argc, char** argv)
 		gnuPlot plot2(std::string(GNUPLOT_PATH), 1);
 		plot2.set_label_x("crim[”Æß—¦]");
 		plot2.set_label_y("mdev[Z‘î‰¿Ši‚Ì’†‰›’l]");
-		plot2.scatter(X, y, "crim", 6, NULL);
-		plot2.scatter(X.Col(1), y, "zn", 5, NULL);
+		plot2.scatter(X, 0, y, header_str, 6, NULL);
+		plot2.scatter(X, 1, y, header_str, 5, NULL);
 		plot2.draw();
 
 		plot2 = gnuPlot(std::string(GNUPLOT_PATH), 2);
 		plot2.set_label_x("crim[”Æß—¦]");
 		plot2.set_label_y("mdev[Z‘î‰¿Ši‚Ì’†‰›’l]");
-		plot2.scatter(X, y, "crim", 6);
-		plot2.scatter(X.Col(1), y, "zn", 5);
+		plot2.scatter(X, 0, y, header_str, 6);
+		plot2.scatter(X, 1, y, header_str, 5);
 		plot2.draw();
 
 		gnuPlot plot3(std::string(GNUPLOT_PATH), 3);
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 	LassoRegression lasso_my(1.0, 1000, 0.0001);
 
 	lasso_my.fit(X, y);
-	lasso_my.report();
+	lasso_my.report(header_str);
 
 	printf("scikit-learn\n");
 	printf("22.5328063241\n"
@@ -116,7 +116,7 @@ int main(int argc, char** argv)
 	LassoRegression lasso_my2(0.0, 1000, 0.0001);
 
 	lasso_my2.fit(X, y);
-	lasso_my2.report();
+	lasso_my2.report(header_str);
 	printf("scikit-learn\n");
 	printf("22.5328063241\n"
 		"[-0.92906457  1.08263896  0.14103943  0.68241438 - 2.05875361  2.67687661\n"
@@ -164,21 +164,48 @@ int main(int argc, char** argv)
 				T = T.removeCol(0);
 			}
 		}
-		y = T.Col(0);
-		X = T.removeCol(0);
 
 		std::vector<std::string> header_names;
-		header_names.resize(X.n);
+		header_names.resize(T.n);
 		if (header && csv1.getHeader().size() > 0)
 		{
-			for (int i = 0; i < X.n; i++)
+			for (int i = 0; i < T.n; i++)
 			{
 				header_names[i] = csv1.getHeader(i + start_col);
 			}
 		}
 		else
 		{
-			for (int i = 0; i < X.n; i++)
+			for (int i = 0; i < T.n; i++)
+			{
+				char buf[32];
+				sprintf(buf, "%d", i);
+				header_names[i] = buf;
+			}
+		}
+
+#ifdef USE_GNUPLOT
+		{
+			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 5, false);
+			plot1.multi_scatter(T, header_names, 2);
+			plot1.draw();
+		}
+#endif		
+
+		y = T.Col(0);
+		X = T.removeCol(0);
+
+		header_names.resize(T.n);
+		if (header && csv1.getHeader().size() > 0)
+		{
+			for (int i = 0; i < T.n; i++)
+			{
+				header_names[i] = csv1.getHeader(i + start_col);
+			}
+		}
+		else
+		{
+			for (int i = 0; i < T.n; i++)
 			{
 				char buf[32];
 				sprintf(buf, "%d", i);
@@ -192,6 +219,14 @@ int main(int argc, char** argv)
 
 		lasso_my.fit(X, y);
 		lasso_my.report(header_names);
+
+#ifdef USE_GNUPLOT
+		{
+			gnuPlot plot2 = gnuPlot(std::string(GNUPLOT_PATH), 6, false);
+			plot2.scatter(T, 7, 0, header_names);
+			plot2.draw();
+		}
+#endif		
 	}
 
 

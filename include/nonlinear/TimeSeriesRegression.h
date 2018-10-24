@@ -1,6 +1,8 @@
 #ifndef _TimeSeriesRegression_H
 #define _TimeSeriesRegression_H
 
+#include "../../include/util/mathutil.h"
+
 #define OUT_SEQ_LEN	1
 
 class TimeSeriesRegression
@@ -379,6 +381,7 @@ public:
 
 	tiny_dnn::vec_t predict_next(tiny_dnn::vec_t& pre)
 	{
+		set_test(nn, OUT_SEQ_LEN);
 		tiny_dnn::vec_t& y_predict = nn.predict(pre);
 		for (int k = 0; k < y_predict.size(); k++)
 		{
@@ -387,7 +390,7 @@ public:
 		return y_predict;
 	}
 
-	void report(std::string& filename = std::string(""))
+	void report(double α=0.05, std::string& filename = std::string(""))
 	{
 		FILE* fp = fopen(filename.c_str(), "w");
 		if (fp == NULL)
@@ -395,10 +398,11 @@ public:
 			fp = stdout;
 		}
 
+		set_test(nn, OUT_SEQ_LEN);
 		double rmse = 0.0;
-		for (int i = 0; i < train_images.size(); i++)
+		for (int i = 1; i < train_images.size(); i++)
 		{
-			tiny_dnn::vec_t& y = nn.predict(train_images[i]);
+			tiny_dnn::vec_t& y = nn.predict(train_images[i-1]);
 			for (int k = 0; k < y.size(); k++)
 			{
 				float_t d;
@@ -406,12 +410,47 @@ public:
 				rmse += d*d;
 			}
 		}
-		rmse /= (train_images.size() - 2);
+		rmse /= (train_images.size()*train_labels[0].size());
 		rmse = sqrt(rmse);
+
+		set_test(nn, OUT_SEQ_LEN);
+		double chi_square = 0.0;
+		for (int i = 1; i < train_images.size(); i++)
+		{
+			tiny_dnn::vec_t& y = nn.predict(train_images[i-1]);
+			for (int k = 0; k < y.size(); k++)
+			{
+				float_t d;
+				d = (y[k] - train_labels[i][k])* Sigma[k];
+
+				chi_square += d*d / (Sigma[k] * Sigma[k]);
+			}
+		}
+
+		Chi_distribution chi_distribution(train_images.size()*train_labels[0].size());
+		double chi_pdf = chi_distribution.p_value(α);
+
 		fprintf(fp, "Status:%d\n", getStatus());
 		fprintf(fp, "--------------------------------------------------------------------\n");
-		fprintf(fp, "RMSE                :%f\n", rmse);
+		fprintf(fp, "RMSE             :%f\n", rmse);
+		fprintf(fp, "chi square       :%f\n", chi_square);
+		fprintf(fp, "p value          :%f\n", chi_pdf);
 		fprintf(fp, "--------------------------------------------------------------------\n");
+		if (chi_distribution.status != 0)
+		{
+			fprintf(fp, "chi_distribution status:%d\n", chi_distribution.status);
+		}
+		if (chi_square < chi_pdf)
+		{
+			fprintf(fp, "χ2値:%f < χ2(%.2f)=[%.2f]", chi_square, α, chi_pdf);
+			fprintf(fp, "=>良いフィッティングでしょう。\n予測に有効と思われます\n");
+		}
+		else
+		{
+			fprintf(fp, "χ2値:%f > χ2(%.2f)=[%.2f]", chi_square, α, chi_pdf);
+			fprintf(fp, "=>良いとは言えないフィッティングでしょう。\n予測に有効とは言えないと思われます\n");
+		}
+
 
 		if (fp != stdout) fclose(fp);
 	}
