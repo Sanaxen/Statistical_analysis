@@ -6,7 +6,7 @@
 #ifdef USE_GNUPLOT
 #include "../../include/util/plot.h"
 
-#define GNUPLOT_PATH "\"C:\\Program Files (x86)\\gnuplot\\bin\\wgnuplot.exe\""
+#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
 #endif
 
 int main(int argc, char** argv)
@@ -76,27 +76,20 @@ int main(int argc, char** argv)
 #ifdef USE_GNUPLOT
 	{
 		gnuPlot plot1(std::string(GNUPLOT_PATH), 0);
-			plot1.plot_lines(X, header_str);
+		plot1.plot_lines(X, header_str);
 		plot1.draw();
 
 		gnuPlot plot2(std::string(GNUPLOT_PATH), 1);
 		plot2.set_label_x("crim[”Æß—¦]");
 		plot2.set_label_y("mdev[Z‘î‰¿Ši‚Ì’†‰›’l]");
-		plot2.scatter(X, 0, y, header_str, 6, NULL);
-		plot2.scatter(X, 1, y, header_str, 5, NULL);
+		plot2.scatter(T, 0, 13, header_str, 6, "rgbformulae 31, 13, 10");
 		plot2.draw();
 
-		plot2 = gnuPlot(std::string(GNUPLOT_PATH), 2);
-		plot2.set_label_x("crim[”Æß—¦]");
-		plot2.set_label_y("mdev[Z‘î‰¿Ši‚Ì’†‰›’l]");
-		plot2.scatter(X, 0, y, header_str, 6);
-		plot2.scatter(X, 1, y, header_str, 5);
-		plot2.draw();
 
 		gnuPlot plot3(std::string(GNUPLOT_PATH), 3);
 		plot3.linecolor = "rgb \"light-cyan\"";
 		plot3.set_label_x("mdev[Z‘î‰¿Ši‚Ì’†‰›’l]");
-			plot3.plot_histogram(Histogram(y, 5), "mdev-histogram");
+		plot3.plot_histogram(Histogram(y, 5), "mdev-histogram");
 		plot3.draw();
 	}
 #endif
@@ -187,7 +180,9 @@ int main(int argc, char** argv)
 #ifdef USE_GNUPLOT
 		{
 			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 5, false);
-			plot1.multi_scatter(T, header_names, 2);
+			
+			plot1.pointsize = 0.2;
+			plot1.multi_scatter(T, header_names, 2, "rgbformulae 4, 4, 4");
 			plot1.draw();
 		}
 #endif		
@@ -222,8 +217,18 @@ int main(int argc, char** argv)
 
 #ifdef USE_GNUPLOT
 		{
+			std::vector<int> indexs;
+			int num = 0;
+			for (int i = 0; i < lasso_my.coef.n - 1; i++)
+			{
+				if (fabs(lasso_my.coef(0, i)) > 1.0e-6)
+				{
+					indexs.push_back(i + 1);
+				}
+			}
+
 			gnuPlot plot2 = gnuPlot(std::string(GNUPLOT_PATH), 6, false);
-			plot2.scatter(T, 7, 0, header_names);
+			plot2.multi_scatter_for_list(indexs, T, header_names);
 			plot2.draw();
 		}
 #endif		

@@ -1,12 +1,13 @@
 #define _cublas_Init_def
 #include "../../include/Matrix.hpp"
 #include "../../include/statistical/RegularizationRegression.h"
+#include "../../include/statistical/LinearRegression.h"
 #include "../../include/util/csvreader.h"
 
 #ifdef USE_GNUPLOT
 #include "../../include/util/plot.h"
 
-#define GNUPLOT_PATH "\"C:\\Program Files (x86)\\gnuplot\\bin\\wgnuplot.exe\""
+#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
 #endif
 
 int main(int argc, char** argv)
@@ -17,6 +18,8 @@ int main(int argc, char** argv)
 	Matrix<dnn_double> y;
 	std::vector<std::string> header_str;
 
+	bool linear_regression = false;
+	char* palette = NULL;
 	int col1=-1, col2=-1;
 	int start_col = 0;
 	bool header = false;
@@ -41,7 +44,15 @@ int main(int argc, char** argv)
 		if (argname == "--col2") {
 			col2 = atoi(argv[count + 1]);
 		}
-		else {
+		else
+			if (argname == "--palette") {
+				palette = argv[count + 1];
+			}
+		else
+			if (argname == "--linear_regression") {
+				linear_regression = atoi(argv[count + 1]) == 0 ? false : true;
+			}
+			else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
 			return -1;
@@ -83,7 +94,7 @@ int main(int argc, char** argv)
 	{
 #ifdef USE_GNUPLOT
 		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 5, false);
-		plot1.multi_scatter(T, header_names, 2);
+		plot1.multi_scatter(T, header_names, 2, palette);
 		plot1.draw();
 #endif		
 		return 0;
@@ -101,9 +112,40 @@ int main(int argc, char** argv)
 	printf("=========\n\n");
 #ifdef USE_GNUPLOT
 	{
-		gnuPlot plot2 = gnuPlot(std::string(GNUPLOT_PATH), 6, false);
-		plot2.scatter(T, col1, col2, header_names, 6, NULL);
-		plot2.draw();
+		if (linear_regression)
+		{
+			multiple_regression mreg;
+
+			mreg.set(X.n);
+			mreg.fit(X, y);
+
+
+			double max_x = X.Max();
+			double min_x = X.Min();
+			double step = (max_x - min_x) / 3.0;
+			Matrix<dnn_double> x(4, 2);
+			Matrix<dnn_double> v(1, 1);
+			for (int i = 0; i < 4; i++)
+			{
+				v(0, 0) = min_x + i*step;
+				x(i, 0) = v(0, 0);
+				x(i, 1) = mreg.predict(v);
+			}
+			std::vector<std::string> line_header_names(1);
+			line_header_names[0] = "linear regression";
+			
+			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6, false);
+			plot1.plot_lines2(x, line_header_names);
+
+			plot1.scatter(T, col1, col2, header_names, 7, palette);
+			plot1.draw();
+		}
+		else
+		{
+			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6, false);
+			plot1.scatter(T, col1, col2, header_names, 6, palette);
+			plot1.draw();
+		}
 	}
 #endif		
 

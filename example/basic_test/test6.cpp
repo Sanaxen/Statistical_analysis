@@ -84,17 +84,17 @@ int main(int argc, char** argv)
 	B.print("B");
 
 	std::vector<std::string> header_names;
-	header_names.resize(A.n);
+	header_names.resize(T.n);
 	if (header && csv1.getHeader().size() > 0)
 	{
-		for (int i = 0; i < A.n; i++)
+		for (int i = 0; i < T.n; i++)
 		{
 			header_names[i] = csv1.getHeader(i + start_col);
 		}
 	}
 	else
 	{
-		for (int i = 0; i < A.n; i++)
+		for (int i = 0; i < T.n; i++)
 		{
 			char buf[32];
 			sprintf(buf, "%d", i);
@@ -109,6 +109,26 @@ int main(int argc, char** argv)
 	mreg.fit(A, B);
 	mreg.report(header_names, 0.05);
 
+	A.Cor().print_csv("cor.csv");
+	//A = A.Cor();
+
+	//int channel = 3;
+	//Matrix<dnn_double> S(A.m, A.n*channel);
+	//for (int i = 0; i < A.m; i++)
+	//{
+	//	for (int j = 0; j < A.n; j++)
+	//	{
+	//		int pos = (i*A.n + j);
+
+	//		for (int k = 0; k < channel; k++)
+	//		{
+	//			S.v[channel * pos + k] = A(i, j);
+	//		}
+	//	}
+	//}
+	//S = S * 255.0;
+	////A = Abs(A.Cor())*255.0;
+	//S.saveImage("cor.png", 3);
 	printf("multiple_regression END\n\n");
 	return 0;
 }

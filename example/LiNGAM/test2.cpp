@@ -5,7 +5,7 @@
 #ifdef USE_GNUPLOT
 #include "../../include/util/plot.h"
 
-#define GNUPLOT_PATH "\"C:\\Program Files (x86)\\gnuplot\\bin\\wgnuplot.exe\""
+#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
 #endif
 
 void read_csv(int n, char* filename, Matrix<dnn_double>& x)

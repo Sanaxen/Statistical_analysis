@@ -3,6 +3,7 @@
 
 #define _cublas_Init_def
 #include "../../include/Matrix.hpp"
+#include "../../include/statistical/LinearRegression.h"
 #include <string>
 
 class gnuPlot
@@ -170,6 +171,65 @@ public:
 		plot_count++;
 	}
 
+	void plot_lines2(Matrix<dnn_double>&X, std::vector<std::string>& headers, int maxpoint = -1)
+	{
+		script_reopen();
+		if (script == NULL) return;
+		fprintf(script, "set datafile separator \",\"\n");
+		X.print_csv((char*)data_name.c_str());
+
+		std::string title = "";
+		std::string every = "";
+
+		if (maxpoint > 0)
+		{
+			int every_num = X.m / maxpoint;
+			every = "every " + std::to_string(every_num);
+		}
+
+		if (headers.size())
+		{
+			title = headers[0];
+			if (title.c_str()[0] != '\"')
+			{
+				title = (std::string("t \"") + headers[0] + std::string("\""));
+			}
+			else
+			{
+				title = "t " + headers[0];
+			}
+		}
+
+		if (linecolor != "")
+		{
+			linecolor = "lc " + linecolor;
+		}
+		const char* plot = (plot_count) ? "replot" : "plot";
+		fprintf(script, "%s '%s' %s using 1:%d %s with lines linewidth %.1f %s\n",
+			plot, data_name.c_str(), every.c_str(), 2, title.c_str(), linewidth, linecolor.c_str());
+
+		for (int i = 1; i < X.n-1; i++)
+		{
+			title = "";
+			if (headers.size() > i)
+			{
+				title = headers[i];
+				if (title.c_str()[0] != '\"')
+				{
+					title = (std::string("t \"") + headers[i] + std::string("\""));
+				}
+				else
+				{
+					title = "t " + headers[i];
+				}
+			}
+			fprintf(script, "replot '%s' %s using 1:%d %s with lines linewidth %.1f %s\n",
+				data_name.c_str(), every.c_str(), i + 2, title.c_str(), linewidth, linecolor.c_str());
+		}
+		linecolor = "";
+		plot_count++;
+	}
+
 	void plot_points(Matrix<dnn_double>&X, std::vector<std::string>& headers, int maxpoint = -1)
 	{
 		script_reopen();
@@ -229,7 +289,7 @@ public:
 		plot_count++;
 	}
 
-	void multi_scatter(Matrix<dnn_double>&X, std::vector<std::string>& headers, int pointtype = 2, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
+	void multi_scatter(Matrix<dnn_double>&X, std::vector<std::string>& headers, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
 	{
 		script_reopen();
 		if (script == NULL) return;
@@ -238,6 +298,10 @@ public:
 		fprintf(script, "set nokey\n");
 		fprintf(script, "unset xtics\n");
 		fprintf(script, "unset ytics\n");
+		if (palette)
+		{
+			set_palette(palette);
+		}
 
 		
 		std::string every = "";
@@ -287,7 +351,7 @@ public:
 					sprintf(histogram_name, "plot_(%d)%d_hist.dat", plot_count, i);
 					h.print_csv(histogram_name);
 
-					fprintf(script, "#set style fill solid border  lc rgb \"black\"\n");
+					fprintf(script, "set style fill solid border  lc rgb \"black\"\n");
 					fprintf(script, "plot '%s' using 1:2 %s with boxes linewidth %.1f %s\n",
 						histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/, linecolor.c_str());
 
@@ -295,10 +359,111 @@ public:
 				}
 				fprintf(script, "set xlabel %s\n", x.c_str());
 				fprintf(script, "set ylabel %s\n", y.c_str());
-				fprintf(script, "plot '%s' %s using %d:%d %s with points pointsize %.1f pt %d\n",
-					data_name.c_str(), every.c_str(), i+1, j+1, title.c_str(), pointsize, pointtype);
+
+				//{
+				//	multiple_regression mreg;
+
+				//	mreg.set(1);
+				//	mreg.fit(X.Col(j), X.Col(i));
+
+
+				//	double max_x = X.Col(j).Max();
+				//	double min_x = X.Col(j).Min();
+				//	double step = (max_x - min_x) / 3.0;
+				//	Matrix<dnn_double> x(4, 2);
+				//	Matrix<dnn_double> v(1, 1);
+				//	for (int i = 0; i < 4; i++)
+				//	{
+				//		v(0, 0) = min_x + i*step;
+				//		x(i, 0) = v(0, 0);
+				//		x(i, 1) = mreg.predict(v);
+				//	}
+				//	std::string line_header_names;
+				//	line_header_names = "t \"linear regression\"";
+
+				//	char buf[256];
+				//	sprintf(buf, "%s_%d_%d.dat", data_name.c_str(), i, j);
+				//	x.print_csv(buf);
+
+				//	fprintf(script, "plot '%s' %s using 1:%d %s with lines linewidth %.1f %s\n",
+				//		buf, every.c_str(), 2, line_header_names.c_str(), linewidth, linecolor.c_str());
+				//}
+				if (palette)
+				{
+					fprintf(script, "plot '%s' %s using %d:%d:%d %s with points pointsize %.1f pt %d lc palette\n",
+						data_name.c_str(), every.c_str(), i + 1, j + 1, j+1, title.c_str(), pointsize, pointtype);
+				}
+				else
+				{
+					fprintf(script, "plot '%s' %s using %d:%d %s with points pointsize %.1f pt %d\n",
+						data_name.c_str(), every.c_str(), i + 1, j + 1, title.c_str(), pointsize, pointtype);
+				}
 				fflush(script);
 			}
+		}
+		fprintf(script, "unset multiplot\n");
+		plot_count++;
+	}
+
+	void multi_scatter_for_list(std::vector<int> indexs, Matrix<dnn_double>&X, std::vector<std::string>& headers, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
+	{
+		script_reopen();
+		if (script == NULL) return;
+		fprintf(script, "set datafile separator \",\"\n");
+
+		fprintf(script, "set multiplot layout %d,%d\n", indexs.size(), 1);
+		fprintf(script, "set nokey\n");
+		fprintf(script, "unset xtics\n");
+		fprintf(script, "unset ytics\n");
+		if (palette)
+		{
+			set_palette(palette);
+		}
+
+
+		std::string every = "";
+
+		if (maxpoint > 0)
+		{
+			int every_num = X.m / maxpoint;
+			every = "every " + std::to_string(every_num);
+		}
+
+
+		X.print_csv((char*)data_name.c_str());
+		for (int i = 0; i < indexs.size(); i++)
+		{
+			std::string x, y;
+
+			if (headers.size())
+			{
+				y = headers[0];
+				if (y.c_str()[0] != '\"')
+				{
+					y = (std::string("\"") + headers[0] + std::string("\""));
+				}
+
+				x = headers[indexs[i]];
+				if (x.c_str()[0] != '\"')
+				{
+					x = (std::string("\"") + headers[indexs[i]] + std::string("\""));
+				}
+			}
+
+			fprintf(script, "set xlabel %s\n", x.c_str());
+			fprintf(script, "set ylabel %s\n", y.c_str());
+
+			if (palette)
+			{
+				fprintf(script, "plot '%s' %s using %d:%d:%d %s with points pointsize %.1f pt %d lc palette\n",
+					data_name.c_str(), every.c_str(), indexs[i], 1, 1, title.c_str(), pointsize, pointtype);
+			}
+			else
+			{
+				fprintf(script, "plot '%s' %s using %d:%d %s with points pointsize %.1f pt %d\n",
+					data_name.c_str(), every.c_str(), indexs[i], 1, title.c_str(), pointsize, pointtype);
+			}
+			fflush(script);
 		}
 		fprintf(script, "unset multiplot\n");
 		plot_count++;
@@ -373,6 +538,7 @@ public:
 		linecolor = "";
 		plot_count++;
 	}
+
 
 	void plot_histogram(Matrix<dnn_double>&X, char* label_text =NULL)
 	{

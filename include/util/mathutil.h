@@ -170,7 +170,7 @@ public:
 					else
 					{
 						status = -1;
-						printf("error:newton(gradient=0)\n");
+						printf("error:newton(gradient=0):%.16f\n", fabs(dg));
 						break;
 					}
 				}
@@ -200,7 +200,7 @@ public:
 	virtual double d_func(double x) = 0;
 
 	virtual double distribution(double x, double *w) = 0;
-	virtual double p_value(double p) = 0;
+	virtual double p_value(double p, double* initval = NULL) = 0;
 };
 
 
@@ -255,7 +255,7 @@ public:
 	/*
 	The p% value of the standard normal distribution N (0, 1)（P(X > u) = 0.01p）
 	*/
-	inline double p_value(double p)
+	inline double p_value(double p, double* initval = NULL)
 	{
 		return bisection(p, -7.0, 7.0);
 	}
@@ -336,7 +336,7 @@ public:
 	}
 
 	// p% value of t distribution（P(X > u) = 0.01p）
-	inline double p_value(double p)
+	inline double p_value(double p, double* initval = NULL)
 	{
 		const double pi = M_PI;
 		double c, df, df2, e, pis, p2, tt = 0.0, t0, x, yq;
@@ -501,7 +501,7 @@ public:
 	/*
 	The p% value of the F distribution （P(X > u) = 0.01p）
 	*/
-	inline double p_value(double p)
+	inline double p_value(double p, double* initval = NULL)
 	{
 		double a, a1, b, b1, df1, df2, e, ff = 0.0, f0, x, y1, y2, yq;
 		int sw = 0;
@@ -647,7 +647,7 @@ public:
 	/*
 	The p% value of the F distribution （P(X > u) = 0.01p）
 	*/
-	inline double p_value(double p)
+	inline double p_value(double p, double* initval=NULL)
 	{
 		status = 0;
 		double po, x, xx = 0.0, x0, w;
@@ -674,11 +674,18 @@ public:
 
 				if (status==0) 
 				{
-
-					w = 2.0 / (9.0 * dof);
-					x = 1.0 - w + x * sqrt(w);
-					x0 = pow(x, 3.0) * dof;
-					xx = newton(p, x0);
+					if (initval == NULL)
+					{
+						w = 2.0 / (9.0 * dof);
+						x = 1.0 - w + x * sqrt(w);
+						x0 = pow(x, 3.0) * dof;
+						//printf("%.16f\n", x0);
+						xx = newton(p, x0);
+					}
+					else
+					{
+						xx = newton(p, *initval);
+					}
 				}
 			}
 		}
@@ -686,5 +693,51 @@ public:
 	}
 };
 
-
+//inline double p_nor(double z)  /* 正規分布の下側累積確率 */
+//{
+//	int i;
+//	double z2, prev, p, t;
+//
+//	z2 = z * z;
+//	t = p = z * exp(-0.5 * z2) / sqrt(2 * M_PI);
+//	for (i = 3; i < 200; i += 2) {
+//		prev = p;  t *= z2 / i;  p += t;
+//		if (p == prev) return 0.5 + p;
+//	}
+//	return (z > 0);
+//}
+//
+//inline double q_nor(double z)  /* 正規分布の上側累積確率 */
+//{
+//	return 1 - p_nor(z);
+//}
+//
+//inline double q_chi2(int df, double chi2)  /* 上側累積確率 */
+//{
+//	int k;
+//	double s, t, chi;
+//
+//	if (df & 1) {  /* 自由度が奇数 */
+//		chi = sqrt(chi2);
+//		if (df == 1) return 2 * q_nor(chi);
+//		s = t = chi * exp(-0.5 * chi2) / sqrt(2 * M_PI);
+//		for (k = 3; k < df; k += 2) {
+//			t *= chi2 / k;  s += t;
+//		}
+//		return 2 * (q_nor(chi) + s);
+//	}
+//	else {      /* 自由度が偶数 */
+//		s = t = exp(-0.5 * chi2);
+//		for (k = 2; k < df; k += 2) {
+//			t *= chi2 / k;  s += t;
+//		}
+//		return s;
+//	}
+//}
+//
+//inline double p_chi2(int df, double chi2)  /* 下側累積確率 */
+//{
+//	return 1 - q_chi2(df, chi2);
+//}
+//
 #endif

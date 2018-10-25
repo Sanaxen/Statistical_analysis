@@ -301,6 +301,16 @@ public:
 		return error;
 	}
 
+	double predict(Matrix<dnn_double>& x)
+	{
+		dnn_double y = bias;
+		for (int j = 0; j < x.n; j++)
+		{
+			y += x(0, j)*les.coef(j, 0);
+		}
+		return y;
+	}
+
 	void report(std::vector<std::string>& header, double ƒ¿ = 0.05)
 	{
 		printf("--------------------------------------------------------------------\n");
@@ -358,7 +368,7 @@ public:
 
 		for (int i = 0; i < A.n; i++)
 		{
-			printf("%-10.10s %10.4f", header[i + 1].c_str(), les.coef(i, 0));
+			printf("%-10.10s %10.4f", header[i+1].c_str(), les.coef(i, 0));
 			printf("%10.4f", se_ii[i]);
 			printf("%10.4f", t_value[i]);
 			printf("%10.4f", p_value[i]);

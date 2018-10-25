@@ -616,11 +616,11 @@ struct Matrix
 			ret += v[Ni + 5] * v[Ni + 5];
 			ret += v[Ni + 6] * v[Ni + 6];
 			ret += v[Ni + 7] * v[Ni + 7];
-	}
+		}
 		if (mn % N)
 		{
 			for (int i = 8 * NN; i < mn; i += 1)
-	{
+			{
 				ret += v[i] * v[i];
 			}
 		}
@@ -1184,6 +1184,44 @@ struct Matrix
 		return cov;
 	}
 
+
+	Matrix<T> Cor()
+	{
+		Matrix<T>& X = *this;
+		Matrix<T>& meanX = X.Mean();
+
+		//X.print("X");
+		//meanX.print("mean");
+		//fflush(stdout);
+
+		Matrix<T> cor(X.n, X.n);
+#pragma omp parallel for
+		for (int i = 0; i < X.n; i++)
+		{
+			for (int j = 0; j < X.n; j++)
+			{
+				dnn_double xx = 0.0;
+				dnn_double xy = 0.0;
+				dnn_double yy = 0.0;
+				for (int k = 0; k < X.m; k++)
+				{
+					dnn_double x = (X(k, j) - meanX(0, j));
+					dnn_double y = (X(k, i) - meanX(0, j));
+
+					xy += x*y;
+					xx += x*x;
+					yy += y*y;
+				}
+				xx /= X.n;
+				xy /= X.n;
+				yy /= X.n;
+				cor(i, j) = xy / (sqrt(xx)*sqrt(yy));
+			}
+		}
+		return cor;
+	}
+		
+
 	//Global Contrast Normalization (GCN)
 	Matrix<dnn_double> whitening(const Matrix<dnn_double>& means, const Matrix<dnn_double>& sigma)
 	{
@@ -1375,8 +1413,6 @@ struct Matrix
 		}
 		return ret;
 	}
-
-
 
 	Matrix<dnn_double> removeCol(int col)
 	{
