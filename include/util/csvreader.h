@@ -74,6 +74,21 @@ public:
 		return mat;
 	}
 
+	std::vector<std::string> ItemCol(int col)
+	{
+		csv::Parser& csvfile = *csvfile_;
+
+		int m = csvfile.rowCount();
+		int n = csvfile.columnCount();
+
+		std::vector<std::string> items;
+		for (int i = 0; i < m; i++)
+		{
+			items.push_back(csvfile[i][col]);
+		}
+		return items;
+	}
+
 	Matrix<dnn_double> toMat(
 		int rowMax,
 		std::vector<int>& empty, std::vector<int>& nan)

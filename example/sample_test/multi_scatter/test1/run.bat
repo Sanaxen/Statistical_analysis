@@ -7,6 +7,7 @@ copy ..\..\..\..\third_party\bin\*.dll
 
 :pause
 
-%LDM%\multi_scatter.exe --csv Boston.csv  --header 1 --col 1 --col1 2 --col2 1
+%LDM%\multi_scatter.exe --csv Boston.csv  --header 1 --col 1 --col1 7 --col2 5 --palette "rgbformulae 4, 4, 4"
 
+%LDM%\multi_scatter.exe --csv Boston.csv  --header 1 --col 1 --col1 7 --col2 5 --palette "rgbformulae 4, 4, 4" --linear_regression 1
 del *.dll

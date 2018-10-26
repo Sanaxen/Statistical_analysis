@@ -71,7 +71,24 @@ public:
 		}
 	}
 	
-	
+	FILE* fp()
+	{
+		return script;
+	}
+	void set_label(float pos_x, float pos_y, int number, char* text)
+	{
+		script_reopen();
+		if (script == NULL) return;
+
+		std::string txt = text;
+		if (txt.c_str()[0] != '\"')
+		{
+			txt = "\"" + txt + "\"";
+		}
+		fprintf(script, "set label %d at graph %.2f,%.2f %s\n", number, pos_x, pos_y, txt.c_str());
+		fprintf(script, "set label %d font %s\n", number, "'Arial,30'");
+	}
+
 	void set_palette(char* palette)
 	{
 		script_reopen();
@@ -226,6 +243,44 @@ public:
 			fprintf(script, "replot '%s' %s using 1:%d %s with lines linewidth %.1f %s\n",
 				data_name.c_str(), every.c_str(), i + 2, title.c_str(), linewidth, linecolor.c_str());
 		}
+		linecolor = "";
+		plot_count++;
+	}
+
+	void plot_lines2d(Matrix<dnn_double>&X, std::string& name, int maxpoint = -1)
+	{
+		script_reopen();
+		if (script == NULL) return;
+		fprintf(script, "set datafile separator \",\"\n");
+		X.print_csv((char*)data_name.c_str());
+
+		std::string title = "";
+		std::string every = "";
+
+		if (maxpoint > 0)
+		{
+			int every_num = X.m / maxpoint;
+			every = "every " + std::to_string(every_num);
+		}
+
+		title = name;
+		if (title.c_str()[0] != '\"')
+		{
+			title = (std::string("t \"") + name + std::string("\""));
+		}
+		else
+		{
+			title = "t " + name;
+		}
+
+		if (linecolor != "")
+		{
+			linecolor = "lc " + linecolor;
+		}
+		const char* plot = (plot_count) ? "replot" : "plot";
+		fprintf(script, "%s '%s' %s using 1:%d %s with lines linewidth %.1f %s\n",
+			plot, data_name.c_str(), every.c_str(), 2, title.c_str(), linewidth, linecolor.c_str());
+
 		linecolor = "";
 		plot_count++;
 	}
@@ -600,6 +655,41 @@ public:
 		if (script ) fclose(script);
 		close();
 		system((gnuplot_exe_path + " " + script_name).c_str());
+	}
+
+	void Heatmap(Matrix<dnn_double>&X, std::vector<std::string>& headers, std::vector<std::string>& rows, char* palette = "rgbformulae 21,22,23", int maxpoint = -1)
+	{
+		script_reopen();
+		if (script == NULL) return;
+		fprintf(script, "set datafile separator \",\"\n");
+		FILE* fp = fopen((char*)data_name.c_str(), "w");
+		if (fp == NULL)
+		{
+			return;
+		}
+		fprintf(fp, "%s,", "MAP");
+		for (int j = 0; j < X.n-1; j++)
+		{
+			fprintf(fp, "%s,", headers[j]);
+		}
+		fprintf(fp, "%s\n", headers[X.n - 1]);
+
+		for (int i = 0; i < X.m; i++)
+		{
+			fprintf(fp, "%s,", rows[i]);
+			for (int j = 0; j < X.n-1; j++)
+			{
+				fprintf(fp, "%.3f,", X(i, j));
+			}
+			fprintf(fp, "%.3f\n", X(i, X.n-1));
+		}
+		fclose(fp);
+
+		set_palette(palette);
+		const char* plot = (plot_count) ? "replot" : "plot";
+		fprintf(script, "%s '%s' matrix rowheaders columnheaders using 1:2:3 with image\n",
+			plot, data_name.c_str());
+		plot_count++;
 	}
 };
 

@@ -260,6 +260,15 @@ struct Matrix
 			}
 			for (int j = 0; j < n; j++)
 			{
+				if (j == 3)
+				{
+					printf(" ... ");
+					continue;
+				}
+				if (j > 3 && j < n - 3)
+				{
+					continue;
+				}
 				printf("%10.6e ", v[n*i + j]);
 			}
 			printf("\n");
@@ -282,6 +291,15 @@ struct Matrix
 			}
 			for (int j = 0; j < n; j++)
 			{
+				if (j == 3)
+				{
+					printf(" ... ");
+					continue;
+				}
+				if (j > 3 && j < n - 3)
+				{
+					continue;
+				}
 				printf(format_, v[n*i + j]);
 			}
 			printf("\n");
@@ -1169,19 +1187,23 @@ struct Matrix
 		return Sqrt(Var(means));
 	}
 
-	Matrix<T> Cov(Matrix<T>& means, Matrix<T>& Y, Matrix<T>& meansY)
+	Matrix<T> Cov(Matrix<T>& means)
 	{
 		Matrix<T>& x = *this;
-		Matrix<T>& cov = Matrix<T>().zeros(1, n);
+		Matrix<T>& s = Matrix<T>().zeros(n, n);
 
-		for (int i = 0; i < m; i++)
-			for (int j = 0; j < n; j++)
-				cov.v[j] += (x(i, j) - means.v[j])*(Y(i, j) - meansY.v[j]);
+		for (int j = 0; j < n; j++)
+		{
+			for (int i = 0; i < n; i++)
+			{
+				for (int k = 0; k < m; k++)
+				{
+					s(i, j) += (x(k, i) - means.v[i])*(x(k, j) - means.v[j]) / (m);
+				}
+			}
+		}
 
-		for (int i = 0; i<n; i++)
-			cov.v[i] /= T(m - 1);
-
-		return cov;
+		return s;
 	}
 
 
