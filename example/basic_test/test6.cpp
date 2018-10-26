@@ -8,7 +8,11 @@
 //#include "../../include/util/mathutil.h"
 #include "../../include/util/csvreader.h"
 
+#ifdef USE_GNUPLOT
+#include "../../include/util/plot.h"
 
+#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
+#endif
 int main(int argc, char** argv)
 {
 	printf("multiple_regression START\n");
@@ -109,26 +113,15 @@ int main(int argc, char** argv)
 	mreg.fit(A, B);
 	mreg.report(header_names, 0.05);
 
-	A.Cor().print_csv("cor.csv");
-	//A = A.Cor();
+	Matrix<dnn_double> cor = A.Cor();
+	cor.print_csv("cor.csv");
+#ifdef USE_GNUPLOT
+	gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 1, false);
+	plot1.Heatmap(cor, header_names, header_names);
+	plot1.draw();
+#endif
 
-	//int channel = 3;
-	//Matrix<dnn_double> S(A.m, A.n*channel);
-	//for (int i = 0; i < A.m; i++)
-	//{
-	//	for (int j = 0; j < A.n; j++)
-	//	{
-	//		int pos = (i*A.n + j);
 
-	//		for (int k = 0; k < channel; k++)
-	//		{
-	//			S.v[channel * pos + k] = A(i, j);
-	//		}
-	//	}
-	//}
-	//S = S * 255.0;
-	////A = Abs(A.Cor())*255.0;
-	//S.saveImage("cor.png", 3);
 	printf("multiple_regression END\n\n");
 	return 0;
 }
