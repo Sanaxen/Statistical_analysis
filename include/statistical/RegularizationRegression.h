@@ -48,7 +48,7 @@ public:
 		return error;
 	}
 
-	void report(std::vector<std::string>& header= std::vector<std::string>())
+	void report(Matrix<dnn_double>& A, std::vector<std::string>& header)
 	{
 		printf("--------------\n");
 		printf("     係数     \n");
@@ -71,6 +71,40 @@ public:
 			}
 		}
 		printf("説明変数:%d -> %d\n", coef.n - 1, num);
+
+		bool war = false;
+		Matrix<dnn_double>& cor = A.Cor();
+		for (int i = 0; i < cor.m; i++)
+		{
+			for (int j = i + 1; j < cor.n; j++)
+			{
+				if (fabs(cor(i, j)) > 0.5 && fabs(cor(i, j)) < 0.6)
+				{
+
+					war = true;
+					printf("%-10.10s & %-10.10s", header[i + 1].c_str(), header[j + 1].c_str());
+					printf(" => %10.4f multicollinearity(多重共線性)の疑いがあります\n", cor(i, j));
+				}
+				if (fabs(cor(i, j)) >= 0.6 && fabs(cor(i, j)) < 0.8)
+				{
+					war = true;
+					printf("%-10.10s & %-10.10s", header[i + 1].c_str(), header[j + 1].c_str());
+					printf(" => %10.4f multicollinearity(多重共線性)の疑いがかなりあります\n", cor(i, j));
+				}
+				if (fabs(cor(i, j)) >= 0.8)
+				{
+					war = true;
+					printf("%-10.10s & %-10.10s", header[i + 1].c_str(), header[j + 1].c_str());
+					printf(" => %10.4f multicollinearity(多重共線性)の強い疑いがあります\n", cor(i, j));
+				}
+			}
+		}
+		if (war)
+		{
+			printf("\nmulticollinearity(多重共線性)の疑いがある説明変数がある場合は\n");
+			printf("どちらか一方を外して再度分析することで、多重共線性を解消する場合があります。\n");
+		}
+
 	}
 
 	virtual int fit(Matrix<dnn_double>& X, Matrix<dnn_double>& y)

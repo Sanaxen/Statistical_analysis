@@ -368,7 +368,7 @@ public:
 
 		for (int i = 0; i < A.n; i++)
 		{
-			printf("%-10.10s %10.4f", header[i+1].c_str(), les.coef(i, 0));
+			printf("%-10.10s %10.4f", header[i + 1].c_str(), les.coef(i, 0));
 			printf("%10.4f", se_ii[i]);
 			printf("%10.4f", t_value[i]);
 			printf("%10.4f", p_value[i]);
@@ -385,7 +385,148 @@ public:
 
 		printf("※p値が小さいほど係数はゼロでは無いと考えられる．\n");
 		printf("※AICの値は小さいほど当てはまりがよいとされている\n");
-		printf("※データ点外で線形の関係が成り立つ保証はありません。\n");
+		printf("※データ点外で線形の関係が成り立つ保証はありません。\n\n");
+
+		if (r2 <= 0.6)
+		{
+			printf("決定係数は0.6以下なので目的変数をうまく説明できていないかも知れません。\n");
+		}
+		if (r2 > 0.6 && r2 < 0.7)
+		{
+			printf("決定係数は0.6を超えているので目的変数を比較的よく説明できています。\n");
+		}
+		if (r2 >= 0.7 && r2 < 0.9)
+		{
+			printf("決定係数は0.7以上なので目的変数を良く説明できています。\n");
+		}
+		if (r2 >= 0.9)
+		{
+			printf("決定係数は0.9以上なので目的変数を非常に良く説明できています。\n");
+		}
+		printf("※決定係数は説明変数を追加すれば，それが何であれ(無意味なものでも)必ず増加する点に注意して下さい\n");
+		printf("\n");
+
+		bool war = false;
+		Matrix<dnn_double>& cor = A.Cor();
+
+		printf("[相関係数(多重共線性の可能性評価)]\n");
+		printf("%-10.10s", "");
+		for (int j = 0; j < A.n; j++)
+		{
+			printf("%-10.10s", header[j + 1].c_str());
+		}
+		printf("\n");
+		printf("--------------------------------------------------------------------------------------------\n");
+		for (int i = 0; i < A.n; i++)
+		{
+			printf("%-5.10s", header[i + 1].c_str());
+			for (int j = 0; j < A.n; j++)
+			{
+				printf("%10.4f", cor(i, j));
+			}
+			printf("\n");
+		}
+		printf("--------------------------------------------------------------------------------------------\n");
+
+		for (int i = 0; i < cor.m; i++)
+		{
+			for (int j = i + 1; j < cor.n; j++)
+			{
+				if (fabs(cor(i, j)) > 0.5 && fabs(cor(i, j)) < 0.6)
+				{
+
+					war = true;
+					printf("%-10.10s & %-10.10s", header[i + 1].c_str(), header[j + 1].c_str());
+					printf(" => %10.4f multicollinearity(多重共線性)の疑いがあります\n", cor(i, j));
+				}
+				if (fabs(cor(i, j)) >= 0.6 && fabs(cor(i, j)) < 0.8)
+				{
+					war = true;
+					printf("%-10.10s & %-10.10s", header[i + 1].c_str(), header[j + 1].c_str());
+					printf(" => %10.4f multicollinearity(多重共線性)の疑いがかなりあります\n", cor(i, j));
+				}
+				if (fabs(cor(i, j)) >= 0.8)
+				{
+					war = true;
+					printf("%-10.10s & %-10.10s", header[i + 1].c_str(), header[j + 1].c_str());
+					printf(" => %10.4f multicollinearity(多重共線性)の強い疑いがあります\n", cor(i, j));
+				}
+			}
+		}
+		if (war)
+		{
+			printf("multicollinearity(多重共線性)の疑いがある説明変数がある場合は\n");
+			printf("どちらか一方を外して再度分析することで、多重共線性を解消する場合があります。\n");
+		}
+		else
+		{
+			printf("multicollinearity(多重共線性)の疑いがある説明変数は無さそうです\n");
+		}
+
+
+		Matrix<dnn_double>& vif = cor;
+		for (int i = 0; i < A.n; i++)
+		{
+			for (int j = 0; j < A.n; j++)
+			{
+				if (cor(i, j) > 1.0 - 1.0e-10)
+				{
+					vif(i, j) = 1.0 / 1.0e-10;
+					continue;
+				}
+				vif(i, j) = 1.0 / (1.0 - cor(i, j));
+			}
+		}
+
+		printf("\n");
+		printf("多重共線性の深刻さを定量化した評価");
+		printf("[分散拡大係数(variance inflation factor)VIF(多重共線性の可能性評価)]\n");
+		printf("%-10.10s", "");
+		for (int j = 0; j < A.n; j++)
+		{
+			printf("%-10.10s", header[j + 1].c_str());
+		}
+		printf("\n");
+		printf("--------------------------------------------------------------------------------------------\n");
+		for (int i = 0; i < A.n; i++)
+		{
+			printf("%-5.10s", header[i + 1].c_str());
+			for (int j = 0; j < A.n; j++)
+			{
+				if (i == j) printf("%10.4s", "-----");
+				else printf("%10.4f", vif(i, j));
+			}
+			printf("\n");
+		}
+		printf("--------------------------------------------------------------------------------------------\n");
+
+		bool war2 = false;
+		for (int i = 0; i < cor.m; i++)
+		{
+			for (int j = i + 1; j < cor.n; j++)
+			{
+				if (fabs(cor(i, j)) >= 10)
+				{
+					war2 = true;
+					printf("%-10.10s & %-10.10s", header[i + 1].c_str(), header[j + 1].c_str());
+					printf(" => %10.4f multicollinearity(多重共線性)の強い疑いがあります\n", cor(i, j));
+				}
+			}
+		}
+		if (war2)
+		{
+			printf("multicollinearity(多重共線性)の疑いがある説明変数がある場合は\n");
+			printf("どちらか一方を外して再度分析することで、多重共線性を解消する場合があります。\n");
+		}
+		else
+		{
+			printf("VIF値からもmulticollinearity(多重共線性)の疑いがある説明変数は無さそうです\n");
+		}
+
+		if (war || war2)
+		{
+			printf("multicollinearity(多重共線性)が解消できない場合はLasso回帰も試して下さい。\n");
+		}
 	}
 };
 #endif
