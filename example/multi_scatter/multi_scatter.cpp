@@ -214,7 +214,7 @@ int main(int argc, char** argv)
 
 			if (ellipse)
 			{
-				plot1.plot_lines2d(XYeli, std::string("95% confidence ellipse / probability ellipse"));
+				plot1.probability_ellipse(T, col1, col2);
 			}
 			plot1.draw();
 		}
@@ -223,6 +223,11 @@ int main(int argc, char** argv)
 			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6, false);
 			plot1.set_label(0.5, 0.5, 1, text);
 			plot1.scatter(T, col1, col2, header_names, 6, palette);
+			if (ellipse)
+			{
+				plot1.probability_ellipse(T, col1, col2);
+			}
+
 			plot1.draw();
 		}
 	}

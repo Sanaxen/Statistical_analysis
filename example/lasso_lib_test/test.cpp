@@ -97,7 +97,7 @@ int main(int argc, char** argv)
 	LassoRegression lasso_my(1.0, 1000, 0.0001);
 
 	lasso_my.fit(X, y);
-	lasso_my.report(header_str);
+	lasso_my.report(X, header_str);
 
 	printf("scikit-learn\n");
 	printf("22.5328063241\n"
@@ -109,7 +109,7 @@ int main(int argc, char** argv)
 	LassoRegression lasso_my2(0.0, 1000, 0.0001);
 
 	lasso_my2.fit(X, y);
-	lasso_my2.report(header_str);
+	lasso_my2.report(X, header_str);
 	printf("scikit-learn\n");
 	printf("22.5328063241\n"
 		"[-0.92906457  1.08263896  0.14103943  0.68241438 - 2.05875361  2.67687661\n"
@@ -213,7 +213,7 @@ int main(int argc, char** argv)
 		LassoRegression lasso_my(lambda1, max_iteration, tol);
 
 		lasso_my.fit(X, y);
-		lasso_my.report(header_names);
+		lasso_my.report(X, header_names);
 
 #ifdef USE_GNUPLOT
 		{

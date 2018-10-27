@@ -5,6 +5,12 @@
 #include "../../include/statistical/pca.h"
 #include "../../include/util/csvreader.h"
 
+#ifdef USE_GNUPLOT
+#include "../../include/util/plot.h"
+
+#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
+#endif
+
 int main(int argc, char** argv)
 {
 	Matrix<dnn_double> x, coef;
@@ -37,6 +43,25 @@ int main(int argc, char** argv)
 			x = x.removeCol(0);
 		}
 	}
+	std::vector<std::string> header_names;
+	header_names.resize(x.n);
+	if (header && csv.getHeader().size() > 0)
+	{
+		for (int i = 0; i < x.n; i++)
+		{
+			header_names[i] = csv.getHeader(i + start_col);
+		}
+	}
+	else
+	{
+		for (int i = 0; i < x.n; i++)
+		{
+			char buf[32];
+			sprintf(buf, "%d", i);
+			header_names[i] = buf;
+		}
+	}
+
 	variablesNum = x.n;
 	n = x.m;
 	x.print();
@@ -56,5 +81,16 @@ int main(int argc, char** argv)
 	pca2.Report();
 
 	pca2.principal_component().print_csv("output2.csv");
+
+#ifdef USE_GNUPLOT
+
+	gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6, false);
+	header_names[0] = "First principal component";
+	header_names[1] = "Second principal component";
+	plot1.scatter(pca2.principal_component(), 0, 1, header_names, 6);
+	plot1.probability_ellipse(pca2.principal_component(), 0, 1);
+	plot1.draw();
+#endif
+
 }
 

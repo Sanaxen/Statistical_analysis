@@ -691,6 +691,76 @@ public:
 			plot, data_name.c_str());
 		plot_count++;
 	}
+
+	void probability_ellipse(Matrix<dnn_double>& T, int col1, int col2, dnn_double p=0.05)
+	{
+		Matrix<dnn_double> a = T.Col(col1);
+		a = a.appendCol(T.Col(col2));
+		//a.print();
+
+		Matrix<dnn_double>& cor = a.Cor();
+		cor.print();
+		char text[32];
+		sprintf(text, "r=%.3f", cor(0, 1));
+
+
+		int NN = 100;
+		Matrix<dnn_double> XYeli(NN + 1, 2);
+		{
+			Matrix<dnn_double>& x = T.Col(col1);
+			x = x.appendCol(T.Col(col2));
+
+			Matrix<dnn_double>& xmean = x.Mean();
+			Matrix<dnn_double> xCovMtx = x.Cov(xmean);
+
+			xmean.print("xmean");
+			xCovMtx.print("xCovMtx");
+
+			eigenvalues eig;
+			eig.set(xCovMtx);
+			eig.calc(true);
+
+			Matrix<dnn_double> xy(NN + 1, 2);
+			double s = 2.0*M_PI / NN;
+			Matrix<dnn_double>& lambda = eig.getRealValue();
+
+			lambda.print("lambda");
+			for (int i = 0; i <= NN; i++)
+			{
+				xy(i, 0) = sqrt(lambda.v[0])*cos(i*s);
+				xy(i, 1) = sqrt(lambda.v[1])*sin(i*s);
+			}
+			std::vector<Matrix<dnn_double>>&vecs0 = eig.getRightVector(0);
+			std::vector<Matrix<dnn_double>>&vecs1 = eig.getRightVector(1);
+
+			vecs0[0].print("Re vecs0[0]");
+			vecs0[1].print("Im vecs0[1]");
+			vecs1[0].print("Re vecs1[0]");
+			vecs1[1].print("Im vecs1[1]");
+			Matrix<dnn_double> stdElc(NN + 1, 2);
+
+			for (int i = 0; i <= NN; i++)
+			{
+				stdElc(i, 0) = vecs0[0](0, 0)*xy(i, 0) + vecs1[0](0, 0)*xy(i, 1);
+				stdElc(i, 1) = vecs0[0](1, 0)*xy(i, 0) + vecs1[0](1, 0)*xy(i, 1);
+			}
+			stdElc.print("stdElc");
+
+			int N = x.m;
+			int c1 = 2 * (N - 1) / N * (N + 1) / (N - 2);
+
+			F_distribution f_distribution(2, N - 2);
+			double F = sqrt(c1*f_distribution.p_value(p));
+
+			printf("F:%f\n", F);
+			for (int i = 0; i <= NN; i++)
+			{
+				XYeli(i, 0) = F*stdElc(i, 0) + xmean.v[0];
+				XYeli(i, 1) = F*stdElc(i, 1) + xmean.v[1];
+			}
+		}
+		plot_lines2d(XYeli, std::string("95% confidence ellipse / probability ellipse"));
+	}
 };
 
 #endif

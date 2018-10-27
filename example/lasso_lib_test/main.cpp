@@ -27,8 +27,6 @@ void test1()
 	::Matrix<dnn_double>& Y_ = lasso_.predict(X_test);
 	Y.print("lasso");
 	(Y - Y_).print();
-
-	lasso.report();
 }
 
 void test2()
@@ -52,7 +50,6 @@ void test2()
 	::Matrix<dnn_double>& t_ = lasso_.predict(X_test);
 	t.print("lasso");
 	(t - t_).print();
-	lasso.report();
 }
 
 void test3()
@@ -77,7 +74,6 @@ void test3()
 	::Matrix<dnn_double>& t_ = ridge_.predict(X_test);
 	t.print("ridge");
 	(t - t_).print();
-	ridge.report();
 }
 
 void test4()
@@ -102,7 +98,6 @@ void test4()
 	::Matrix<dnn_double>& t_ = elasticNet_.predict(X_test);
 	t.print("elasticNet");
 	(t - t_).print();
-	elasticNet.report();
 }
 
 int main(int argc, char** argv)
