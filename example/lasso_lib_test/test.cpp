@@ -82,7 +82,7 @@ int main(int argc, char** argv)
 		gnuPlot plot2(std::string(GNUPLOT_PATH), 1);
 		plot2.set_label_x("crim[”Æß—¦]");
 		plot2.set_label_y("mdev[Z‘î‰¿Ši‚Ì’†‰›’l]");
-		plot2.scatter(T, 0, 13, header_str, 6, "rgbformulae 31, 13, 10");
+		plot2.scatter(T, 0, 13, 1, 30, header_str, 6, "rgbformulae 31, 13, 10");
 		plot2.draw();
 
 

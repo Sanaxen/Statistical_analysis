@@ -18,6 +18,8 @@ int main(int argc, char** argv)
 	Matrix<dnn_double> y;
 	std::vector<std::string> header_str;
 
+	int grid = 30;
+	float pointsize = 1.0;
 	bool ellipse = false;
 	bool linear_regression = false;
 	char* palette = NULL;
@@ -51,13 +53,21 @@ int main(int argc, char** argv)
 		}
 		else
 		if (argname == "--ellipse") {
-			ellipse = argv[count + 1];
+			ellipse = atoi(argv[count + 1]) == 0 ? false : true;
+		}
+		else
+		if (argname == "--pointsize") {
+			pointsize = atof(argv[count + 1]);
+		}
+		else
+		if (argname == "--grid") {
+			grid = atoi(argv[count + 1]);
 		}
 		else
 			if (argname == "--linear_regression") {
-				linear_regression = atoi(argv[count + 1]) == 0 ? false : true;
-			}
-			else {
+			linear_regression = atoi(argv[count + 1]) == 0 ? false : true;
+		}
+		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
 			return -1;
@@ -128,62 +138,6 @@ int main(int argc, char** argv)
 		sprintf(text, "r=%.3f", cor(0, 1));
 
 
-		int NN = 100;
-		Matrix<dnn_double> XYeli(NN + 1, 2);
-		if(ellipse )
-		{
-			Matrix<dnn_double>& x = T.Col(col1);
-			x = x.appendCol(T.Col(col2));
-
-			Matrix<dnn_double>& xmean = x.Mean();
-			Matrix<dnn_double> xCovMtx = x.Cov(xmean);
-
-			xmean.print("xmean");
-			xCovMtx.print("xCovMtx");
-
-			eigenvalues eig;
-			eig.set(xCovMtx);
-			eig.calc(true);
-
-			Matrix<dnn_double> xy(NN+1, 2);
-			double s = 2.0*M_PI / NN;
-			Matrix<dnn_double>& lambda = eig.getRealValue();
-
-			lambda.print("lambda");
-			for (int i = 0; i <= NN; i++)
-			{
-				xy(i, 0) = sqrt(lambda.v[0])*cos(i*s);
-				xy(i, 1) = sqrt(lambda.v[1])*sin(i*s);
-			}
-			std::vector<Matrix<dnn_double>>&vecs0 = eig.getRightVector(0);
-			std::vector<Matrix<dnn_double>>&vecs1 = eig.getRightVector(1);
-
-			vecs0[0].print("Re vecs0[0]");
-			vecs0[1].print("Im vecs0[1]");
-			vecs1[0].print("Re vecs1[0]");
-			vecs1[1].print("Im vecs1[1]");
-			Matrix<dnn_double> stdElc(NN+1, 2);
-
-			for (int i = 0; i <= NN; i++)
-			{
-				stdElc(i, 0) = vecs0[0](0, 0)*xy(i, 0) + vecs1[0](0, 0)*xy(i, 1);
-				stdElc(i, 1) = vecs0[0](1, 0)*xy(i, 0) + vecs1[0](1, 0)*xy(i, 1);
-			}
-			stdElc.print("stdElc");
-
-			int N = x.m;
-			int c1 = 2 * (N - 1) / N * (N + 1) / (N - 2);
-
-			F_distribution f_distribution(2, N - 2);
-			double F95 = sqrt(c1*f_distribution.p_value(0.05));
-
-			printf("F95:%f\n", F95);
-			for (int i = 0; i <= NN; i++)
-			{
-				XYeli(i, 0) = F95*stdElc(i, 0) + xmean.v[0];
-				XYeli(i, 1) = F95*stdElc(i, 1) + xmean.v[1];
-			}
-		}
 		if (linear_regression)
 		{
 			multiple_regression mreg;
@@ -210,7 +164,7 @@ int main(int argc, char** argv)
 			plot1.set_label(0.5, 0.85, 1, text);
 			plot1.plot_lines2(x, line_header_names);
 
-			plot1.scatter(T, col1, col2, header_names, 7, palette);
+			plot1.scatter(T, col1, col2, pointsize, grid, header_names, 5, palette);
 
 			if (ellipse)
 			{
@@ -222,7 +176,7 @@ int main(int argc, char** argv)
 		{
 			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6, false);
 			plot1.set_label(0.5, 0.5, 1, text);
-			plot1.scatter(T, col1, col2, header_names, 6, palette);
+			plot1.scatter(T, col1, col2, pointsize, grid, header_names, 5, palette);
 			if (ellipse)
 			{
 				plot1.probability_ellipse(T, col1, col2);

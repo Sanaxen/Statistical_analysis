@@ -87,7 +87,7 @@ int main(int argc, char** argv)
 	gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6, false);
 	header_names[0] = "First principal component";
 	header_names[1] = "Second principal component";
-	plot1.scatter(pca2.principal_component(), 0, 1, header_names, 6);
+	plot1.scatter(pca2.principal_component(), 0, 1, 1, 30, header_names, 6);
 	plot1.probability_ellipse(pca2.principal_component(), 0, 1);
 	plot1.draw();
 #endif

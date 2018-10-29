@@ -6,6 +6,20 @@
 #include "../../include/statistical/LinearRegression.h"
 #include <string>
 
+class ScatterWrk
+{
+public:
+	float depth;
+	int id=-1;
+	ScatterWrk()
+	{
+		depth = 0;
+	}
+	bool operator<(const ScatterWrk& right) const {
+		return depth < right.depth;
+	}
+};
+
 class gnuPlot
 {
 	std::string gnuplot_exe_path;
@@ -524,7 +538,7 @@ public:
 		plot_count++;
 	}
 
-	void scatter(Matrix<dnn_double>&X, int col1, int col2, std::vector<std::string>& headers, int pointtype=6, char* palette ="rgbformulae 34,35,36", int maxpoint = -1)
+	void scatter(Matrix<dnn_double>&X, int col1, int col2, float point_size, int grid, std::vector<std::string>& headers, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
 	{
 		script_reopen();
 		if (script == NULL) return;
@@ -533,12 +547,66 @@ public:
 		Matrix<dnn_double> x = X.Col(col1);
 		Matrix<dnn_double> y = X.Col(col2);
 
+		double x_min = x.Min();
+		double x_max = x.Max();
+		double y_min = y.Min();
+		double y_max = y.Max();
+
+		double N = grid;
+		if (grid <= 0) N = 10;
+		double dx = (x_max - x_min) / (N - 1);
+		double dy = (y_max - y_min) / (N - 1);
+
 		x = x.appendCol(y);
+
+		Matrix<dnn_double>& z = Matrix<dnn_double>().ones(N, N);
+		for (int i = 0; i < x.m; i++)
+		{
+			int idx = (x(i, 0) - x_min) / dx;
+			int idy = (x(i, 1) - y_min) / dy;
+			if (idx < 0) idx = 0;
+			if (idy < 0) idy = 0;
+			if (idx >= N - 1) idx = N - 1;
+			if (idy >= N - 1) idy = N - 1;
+			z(idy, idx) += 1;
+		}
+		std::vector<ScatterWrk> wrk;
+		for (int i = 0; i < x.m; i++)
+		{
+			int idx = (x(i, 0) - x_min) / dx;
+			int idy = (x(i, 1) - y_min) / dy;
+			if (idx < 0) idx = 0;
+			if (idy < 0) idy = 0;
+			if (idx >= N - 1) idx = N - 1;
+			if (idy >= N - 1) idy = N - 1;
+			ScatterWrk d;
+			d.id = i;
+			d.depth = z(idy, idx);
+			wrk.push_back(d);
+		}
+		std::sort(wrk.begin(), wrk.end());
+		Matrix<dnn_double>& z_tmp = Matrix<dnn_double>(x.m, 1);
+		Matrix<dnn_double> x_tmp = x;
+		for (int i = 0; i < x.m; i++)
+		{
+			z_tmp(i, 0) = wrk[i].depth;
+			x_tmp(i, 0) = x(wrk[i].id, 0);
+			x_tmp(i, 1) = x(wrk[i].id, 1);
+		}
+		x = x_tmp;
+		z = z_tmp;
+
 		if (palette)
 		{
-			x = x.appendCol(y);
+			x = x.appendCol(z);
 			set_palette(palette);
 		}
+		else
+		{
+			command(std::string("rgb(r,g,b)=int(r)*65536+int(g)*256+int(b)"));
+			x = x.appendCol(z);
+		}
+
 		//y = y / (y.Max() - y.Min());
 		//x = x.appendCol(y);
 		x.print_csv((char*)data_name.c_str());
@@ -582,13 +650,22 @@ public:
 		const char* plot = (plot_count) ? "replot" : "plot";
 		if (palette)
 		{
+
+#if 10
 			fprintf(script, "%s '%s' %s using 1:2:3 %s with points pointsize %.1f pt %d lc palette\n",
-				plot, data_name.c_str(), every.c_str(), label.c_str(), pointsize, pointtype);
+				plot, data_name.c_str(), every.c_str(), label.c_str(), point_size, pointtype);
+#else			
+			fprintf(script, "set style circle radius graph 0.005\n");
+			fprintf(script, "%s '%s' %s using 1:2:3 %s with circles fs transparent solid 0.85 lw 0.1 pal\n",
+				plot, data_name.c_str(), every.c_str(), label.c_str());
+#endif
 		}
 		else
 		{
+			//fprintf(script, "%s '%s' %s using 1:2:(rgb(255,$3*255,$3*255)) %s with points pointsize %.1f pt %d rgb variable\n",
+			//	plot, data_name.c_str(), every.c_str(), label.c_str(), point_size, pointtype);
 			fprintf(script, "%s '%s' %s using 1:2 %s with points pointsize %.1f pt %d\n",
-				plot, data_name.c_str(), every.c_str(), label.c_str(), pointsize, pointtype);
+				plot, data_name.c_str(), every.c_str(), label.c_str(), point_size, pointtype);
 		}
 		linecolor = "";
 		plot_count++;

@@ -170,7 +170,7 @@ public:
 		//printf("error=%d\n", les.fit(Sa, Sb));
 		//les.x.print("x");
 
-		error = les.fit2(Sa, Sb);
+		error = les.fit(Sa, Sb);
 		printf("error=%d\n", error);
 		//les.x.print("x");
 		if (error != 0) return error;
@@ -368,7 +368,7 @@ public:
 
 		for (int i = 0; i < A.n; i++)
 		{
-			printf("%-10.10s %10.4f", header[i + 1].c_str(), les.coef(i, 0));
+			printf("%-10.8s %10.4f", header[i + 1].c_str(), les.coef(i, 0));
 			printf("%10.4f", se_ii[i]);
 			printf("%10.4f", t_value[i]);
 			printf("%10.4f", p_value[i]);
@@ -410,16 +410,16 @@ public:
 		Matrix<dnn_double>& cor = A.Cor();
 
 		printf("[‘ŠŠÖŒW”(‘½d‹¤ü«‚Ì‰Â”\«•]‰¿)]\n");
-		printf("%-10.10s", "");
+		printf("    %-10.8s", "");
 		for (int j = 0; j < A.n; j++)
 		{
-			printf("%-10.10s", header[j + 1].c_str());
+			printf("%-10.8s", header[j + 1].c_str());
 		}
 		printf("\n");
 		printf("--------------------------------------------------------------------------------------------\n");
 		for (int i = 0; i < A.n; i++)
 		{
-			printf("%-5.10s", header[i + 1].c_str());
+			printf("%-10.8s", header[i + 1].c_str());
 			for (int j = 0; j < A.n; j++)
 			{
 				printf("%10.4f", cor(i, j));
@@ -481,19 +481,19 @@ public:
 		printf("\n");
 		printf("‘½d‹¤ü«‚Ì[‚³‚ğ’è—Ê‰»‚µ‚½•]‰¿");
 		printf("[•ªUŠg‘åŒW”(variance inflation factor)VIF(‘½d‹¤ü«‚Ì‰Â”\«•]‰¿)]\n");
-		printf("%-10.10s", "");
+		printf("    %-10.8s", "");
 		for (int j = 0; j < A.n; j++)
 		{
-			printf("%-10.10s", header[j + 1].c_str());
+			printf("%-10.8s", header[j + 1].c_str());
 		}
 		printf("\n");
 		printf("--------------------------------------------------------------------------------------------\n");
 		for (int i = 0; i < A.n; i++)
 		{
-			printf("%-5.10s", header[i + 1].c_str());
+			printf("%-10.8s", header[i + 1].c_str());
 			for (int j = 0; j < A.n; j++)
 			{
-				if (i == j) printf("%10.4s", "-----");
+				if (i == j) printf("%10.8s", "-----");
 				else printf("%10.4f", vif(i, j));
 			}
 			printf("\n");
@@ -520,7 +520,7 @@ public:
 		}
 		else
 		{
-			printf("VIF’l‚©‚ç‚àmulticollinearity(‘½d‹¤ü«)‚Ì‹^‚¢‚ª‚ ‚éà–¾•Ï”‚Í–³‚³‚»‚¤‚Å‚·\n");
+			printf("VIF’l‚©‚ç‚Ímulticollinearity(‘½d‹¤ü«)‚Ì‹^‚¢‚ª‚ ‚éà–¾•Ï”‚Í–³‚³‚»‚¤‚Å‚·\n");
 		}
 
 		if (war || war2)

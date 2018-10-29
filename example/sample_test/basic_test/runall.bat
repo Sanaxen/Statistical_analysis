@@ -20,4 +20,5 @@ cd ..
 
 cd test6
 call run
+call run2
 cd ..
