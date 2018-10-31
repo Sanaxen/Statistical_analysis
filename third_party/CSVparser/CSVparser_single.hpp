@@ -277,7 +277,32 @@ namespace csv
 			std::string item;
 
 			while (std::getline(ss, item, _sep))
-				_header.push_back(item);
+			{
+				if (item.c_str()[0] == '\"')
+				{
+					size_t len = strlen(item.c_str());
+					if (item.c_str()[len - 1] == '\"')
+					{
+						_header.push_back(item);
+						continue;
+					}
+					else
+					{
+						std::string wrk;
+						std::getline(ss, wrk, _sep);
+						size_t len = strlen(wrk.c_str());
+						if (wrk.c_str()[len - 1] == '\"')
+						{
+							_header.push_back(item+"," + wrk);
+							continue;
+						}
+					}
+				}
+				else
+				{
+					_header.push_back(item);
+				}
+			}
 		}
 		void Parser::parseContent(void)
 		{
