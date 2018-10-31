@@ -9,6 +9,7 @@
 #include "../../include/hungarian-algorithm/Hungarian.h"
 #include "../../include/statistical/LinearRegression.h"
 #include "../../include/statistical/RegularizationRegression.h"
+#include "../../include/util/utf8_printf.hpp"
 
 //#define USE_EIGEN
 
@@ -288,30 +289,31 @@ public:
 			item[i] = column_names[replacement[i]];
 		}
 
+		utf8str utf8;
 		FILE* fp = fopen(filename, "w");
 		fprintf(fp, "digraph {\n");
 		if (background_Transparent)
 		{
-			fprintf(fp, "graph[bgcolor=\"#00000000\"];\n");
+			utf8.fprintf(fp, "graph[bgcolor=\"#00000000\"];\n");
 		}
 		if (sideways)
 		{
-			fprintf(fp, "graph[rankdir=\"LR\"];\n");
+			utf8.fprintf(fp, "graph[rankdir=\"LR\"];\n");
 		}
-		fprintf(fp, "node [fontname=\"MS UI Gothic\" layout=circo shape=circle]\n");
+		utf8.fprintf(fp, "node [fontname=\"MS UI Gothic\" layout=circo shape=circle]\n");
 
 		for (int i = 0; i < B_tmp.n; i++)
 		{
-			fprintf(fp, "\"%s\"[color=blue shape=circle]\n", item[i].c_str());
+			utf8.fprintf(fp, "\"%s\"[color=blue shape=circle]\n", item[i].c_str());
 			for (int j = 0; j < B_tmp.n; j++)
 			{
 				if (B_tmp(i, j) != 0.0)
 				{
-					fprintf(fp, "\"%s\"-> \"%s\" [label=\"%8.3f\" color=black]\n", item[j].c_str(), item[i].c_str(), B_tmp(i, j));
+					utf8.fprintf(fp, "\"%s\"-> \"%s\" [label=\"%8.3f\" color=black]\n", item[j].c_str(), item[i].c_str(), B_tmp(i, j));
 				}
 			}
 		}
-		fprintf(fp, "}\n");
+		utf8.fprintf(fp, "}\n");
 		fclose(fp);
 	}
 
