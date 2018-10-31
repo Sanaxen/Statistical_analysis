@@ -781,6 +781,7 @@ public:
 		fprintf(script, "set datafile separator \",\"\n");
 		fprintf(script, "#unset autoscale x\n");
 		fprintf(script, "#unset autoscale y\n");
+		fprintf(script, "set yrange [] reverse\n");
 		//fprintf(script, "set yrange[0:%d]\n", X.m);
 		//fprintf(script, "set xrange[0:%d]\n", X.n);
 
