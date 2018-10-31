@@ -44,12 +44,17 @@ public:
 		return csvfile_->getHeaderElement(index);
 	}
 
+	std::vector<int> empty_cell;
+	std::vector<int> nan_cell;
 	Matrix<dnn_double> toMat(int rowMax=-1)
 	{
 		std::vector<int> empty;
 		std::vector<int> nan;
 
-		return toMat(rowMax, empty, nan);
+		Matrix<dnn_double>& M =  toMat(rowMax, empty, nan);
+		empty_cell = empty;
+		nan_cell = nan;
+		return M;
 	}
 	Matrix<dnn_double> toMat_removeEmptyRow()
 	{
