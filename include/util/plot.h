@@ -739,6 +739,11 @@ public:
 		script_reopen();
 		if (script == NULL) return;
 		fprintf(script, "set datafile separator \",\"\n");
+		fprintf(script, "#unset autoscale x\n");
+		fprintf(script, "#unset autoscale y\n");
+		//fprintf(script, "set yrange[0:%d]\n", X.m);
+		//fprintf(script, "set xrange[0:%d]\n", X.n);
+
 		FILE* fp = fopen((char*)data_name.c_str(), "w");
 		if (fp == NULL)
 		{
@@ -751,7 +756,7 @@ public:
 		}
 		fprintf(fp, "%s\n", headers[X.n - 1]);
 
-		for (int i = 0; i < X.m; i++)
+		for (int i = X.m-1; i >= 0; i--)
 		{
 			fprintf(fp, "%s,", rows[i]);
 			for (int j = 0; j < X.n-1; j++)
@@ -766,6 +771,48 @@ public:
 		const char* plot = (plot_count) ? "replot" : "plot";
 		fprintf(script, "%s '%s' matrix rowheaders columnheaders using 1:2:3 with image\n",
 			plot, data_name.c_str());
+		plot_count++;
+	}
+
+	void error_map(Matrix<dnn_double>&X, float point_size = 2, int pointtype = 5, char* palette = "rgbformulae 22, 13, -31", int maxpoint = -1)
+	{
+		script_reopen();
+		if (script == NULL) return;
+		fprintf(script, "set datafile separator \",\"\n");
+		fprintf(script, "#unset autoscale x\n");
+		fprintf(script, "#unset autoscale y\n");
+		//fprintf(script, "set yrange[0:%d]\n", X.m);
+		//fprintf(script, "set xrange[0:%d]\n", X.n);
+
+		FILE* fp = fopen((char*)data_name.c_str(), "w");
+		if (fp == NULL)
+		{
+			return;
+		}
+
+		for (int i = 0; i < X.m; i++)
+		{
+			for (int j = 0; j < X.n; j++)
+			{
+				if (X(i, j) == 1)
+				{
+					fprintf(fp, "%d,%d,1\n", j, i);
+				}
+				if (X(i, j) == -1)
+				{
+					fprintf(fp, "%d,%d,-1\n", j, i);
+				}
+			}
+		}
+		fclose(fp);
+
+		set_palette(palette);
+		const char* plot = (plot_count) ? "replot" : "plot";
+		fprintf(script, "%s '%s' using 1:2:3 t \"error\" with points pointsize %.1f pt %d lc palette\n",
+			plot, data_name.c_str(), point_size, pointtype);
+		//fprintf(script, "%s '%s' using 1:2:3 t \"error\" with points pointsize %.1f pt %d\n",
+		//	plot, data_name.c_str(), point_size, pointtype);
+
 		plot_count++;
 	}
 
