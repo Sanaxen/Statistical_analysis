@@ -222,6 +222,7 @@ public:
 		max_iteration = max_iteration_;
 		tolerance = tolerance_;
 		error = 0;
+		printf("LassoRegression\n");
 	}
 
 
@@ -311,6 +312,7 @@ public:
 		max_iteration = max_iteration_;
 		tolerance = tolerance_;
 		error = 0;
+		printf("ElasticNetRegression\n");
 	}
 
 	virtual int fit(Matrix<dnn_double>& X, Matrix<dnn_double>& y)
@@ -397,6 +399,7 @@ public:
 		max_iteration = max_iteration_;
 		tolerance = tolerance_;
 		error = 0;
+		printf("RidgeRegression\n");
 	}
 
 	virtual int fit( Matrix<dnn_double>& X, Matrix<dnn_double>& y)

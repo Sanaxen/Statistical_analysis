@@ -21,7 +21,9 @@ int main(int argc, char** argv)
 	bool header = false;
 	int max_iteration = 1000;
 	double tol = 0.001;
-	double lambda1 = 0.0001;
+	double lambda1 = 0.001;
+	double lambda2 = 0.001;
+	std::string solver_name = "lasso";
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -43,6 +45,12 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--L1") {
 			lambda1 = atof(argv[count + 1]);
+		}
+		else if (argname == "--L2") {
+			lambda2 = atof(argv[count + 1]);
+		}
+		else if (argname == "--solver") {
+			solver_name = argv[count + 1];
 		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
@@ -210,18 +218,31 @@ int main(int argc, char** argv)
 
 		X.print("X");
 		y.print("y");
-		LassoRegression lasso_my(lambda1, max_iteration, tol);
+		RegressionBase* solver = NULL;
 
-		lasso_my.fit(X, y);
-		lasso_my.report(X, header_names);
+		if (solver_name == "lasso")
+		{
+			solver = new LassoRegression(lambda1, max_iteration, tol);
+		}
+		if (solver_name == "elasticnet")
+		{
+			solver = new ElasticNetRegression(lambda1, lambda2, max_iteration, tol);
+		}
+		if (solver_name == "ridge")
+		{
+			solver = new RidgeRegression(lambda1, max_iteration, tol);
+		}
+
+		solver->fit(X, y);
+		solver->report(X, header_names);
 
 #ifdef USE_GNUPLOT
 		{
 			std::vector<int> indexs;
 			int num = 0;
-			for (int i = 0; i < lasso_my.coef.n - 1; i++)
+			for (int i = 0; i < solver->coef.n - 1; i++)
 			{
-				if (fabs(lasso_my.coef(0, i)) > 1.0e-6)
+				if (fabs(solver->coef(0, i)) > 1.0e-6)
 				{
 					indexs.push_back(i + 1);
 				}
@@ -231,7 +252,8 @@ int main(int argc, char** argv)
 			plot2.multi_scatter_for_list(indexs, T, header_names);
 			plot2.draw();
 		}
-#endif		
+#endif
+		if (solver) delete solver;
 	}
 
 
