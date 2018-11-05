@@ -73,18 +73,18 @@ public:
 
 		script = fopen(script_name.c_str(), "w");
 
-		
+
 		fprintf(script, "set border lc rgb \"black\"\n");
 		fprintf(script, "set grid lc rgb \"#D8D8D8\" lt 2\n");
 		//fprintf(script, "set colorsequence default\n");
 		fprintf(script, "set colorsequence podo\n");
-		
+
 		if (save_image)
 		{
 			fprintf(script, "set terminal png\n");
 		}
 	}
-	
+
 	FILE* fp()
 	{
 		return script;
@@ -372,7 +372,7 @@ public:
 			set_palette(palette);
 		}
 
-		
+
 		std::string every = "";
 
 		if (maxpoint > 0)
@@ -538,7 +538,7 @@ public:
 		plot_count++;
 	}
 
-	void scatter(Matrix<dnn_double>&X, int col1, int col2, float point_size, int grid, std::vector<std::string>& headers, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
+	void scatter(Matrix<dnn_double>&X, int col1, int col2, float point_size, int grid, std::vector<std::string>& headers, int pointtype = 6, char* palette = "rgbformulae 22, 13, -31", int maxpoint = -1)
 	{
 		script_reopen();
 		if (script == NULL) return;
@@ -704,7 +704,7 @@ public:
 		if (script == NULL) return;
 		fprintf(script, "%s\n", command.c_str());
 	}
-	
+
 	void close()
 	{
 		if (script == NULL) return;
@@ -721,12 +721,14 @@ public:
 		}
 		else
 		{
-		fprintf(script, "pause 3\n");
+			fprintf(script, "pause 1000\n");
+			//fprintf(script, "pause -1\n");
+			//fprintf(script, "mouse keypress\n");
 		}
 		close();
 		system((gnuplot_exe_path + " " + script_name).c_str());
 	}
-	
+
 	void newplot()
 	{
 		if (script ) fclose(script);

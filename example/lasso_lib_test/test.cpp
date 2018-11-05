@@ -17,6 +17,7 @@ int main(int argc, char** argv)
 	Matrix<dnn_double> y;
 	std::vector<std::string> header_str;
 
+	std::string y_var = "";
 	int start_col = 0;
 	bool header = false;
 	int max_iteration = 1000;
@@ -51,6 +52,9 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--solver") {
 			solver_name = argv[count + 1];
+		}
+		else if (argname == "--y_var") {
+			y_var = argv[count + 1];
 		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
@@ -194,9 +198,34 @@ int main(int argc, char** argv)
 			plot1.draw();
 		}
 #endif		
+		int y_var_idx = 0;
+		if (y_var != "")
+		{
+			for (int j = 0; j < header_names.size(); j++)
+			{
+				if (y_var == header_names[j])
+				{
+					y_var_idx = j;
+				}
+				else
+				{
+					char buf[32];
+					sprintf(buf, "%d", j);
+					if (y_var == std::string(buf))
+					{
+						y_var_idx = j;
+					}
+					sprintf(buf, "\"%d\"", j);
+					if (y_var == std::string(buf))
+					{
+						y_var_idx = j;
+					}
+				}
+			}
+		}
 
-		y = T.Col(0);
-		X = T.removeCol(0);
+		y = T.Col(y_var_idx);
+		X = T.removeCol(y_var_idx);
 
 		header_names.resize(T.n);
 		if (header && csv1.getHeader().size() > 0)
@@ -215,6 +244,19 @@ int main(int argc, char** argv)
 				header_names[i] = buf;
 			}
 		}
+		{
+			int k = 0;
+			std::vector<std::string> header_names_tmp;
+
+			header_names_tmp.push_back(header_names[y_var_idx]);
+			for (int i = 0; i < T.n; i++, k++)
+			{
+				if (i == y_var_idx) continue;
+				header_names_tmp.push_back(header_names[k]);
+			}
+			header_names = header_names_tmp;
+		}
+		printf("y_var:%s\n", header_names[0].c_str());
 
 		X.print("X");
 		y.print("y");

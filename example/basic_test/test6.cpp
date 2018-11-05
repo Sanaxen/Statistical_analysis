@@ -123,9 +123,14 @@ int main(int argc, char** argv)
 				}
 				else
 				{
-					std::string t = "\"";
-					t = t + x_var[i] + t;
-					if (t == header_names[j])
+					char buf[32];
+					sprintf(buf, "%d", j);
+					if (x_var[i] == std::string(buf))
+					{
+						x_var_idx.push_back(j);
+					}
+					sprintf(buf, "\"%d\"", j);
+					if (x_var[i] == std::string(buf))
 					{
 						x_var_idx.push_back(j);
 					}
@@ -145,6 +150,8 @@ int main(int argc, char** argv)
 			return -1;
 		}
 	}
+	//printf("y_var=%s\n", y_var.c_str());
+	//printf("header_names.size():%d\n", header_names.size());
 	if (y_var != "")
 	{
 		for (int j = 0; j < header_names.size(); j++)
@@ -155,9 +162,14 @@ int main(int argc, char** argv)
 			}
 			else
 			{
-				std::string t = "\"";
-				t = t + y_var + t;
-				if (t == header_names[j])
+				char buf[32];
+				sprintf(buf, "%d", j);
+				if (y_var == std::string(buf))
+				{
+					y_var_idx = j;
+				}
+				sprintf(buf, "\"%d\"", j);
+				if (y_var == std::string(buf))
 				{
 					y_var_idx = j;
 				}
