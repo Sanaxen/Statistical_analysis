@@ -688,7 +688,14 @@ public:
 		std::string label = "";
 		if (label_text)
 		{
-			label = "t \"" + std::string(label_text) + "\"";
+			if (label_text[0] != '\"')
+			{
+				label = "t \"" + std::string(label_text) + "\"";
+			}
+			else
+			{
+				label = "t " + std::string(label_text);
+			}
 		}
 		const char* plot = (plot_count) ? "replot" : "plot";
 		fprintf(script, "%s '%s' using 1:2 %s with boxes linewidth %.1f %s\n",
