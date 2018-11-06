@@ -277,7 +277,7 @@ public:
 		return error;
 	}
 
-	void digraph(const std::vector<std::string>& column_names, const char* filename, bool sideways = false, bool background_Transparent=false)
+	void digraph(const std::vector<std::string>& column_names, const char* filename, bool sideways = false, int size=30, char* outformat="png", bool background_Transparent=false)
 	{
 		Matrix<dnn_double> B_tmp = B.chop(0.001);
 		B_tmp.print_e();
@@ -291,11 +291,12 @@ public:
 
 		utf8str utf8;
 		FILE* fp = fopen(filename, "w");
-		fprintf(fp, "digraph {\n");
+		utf8.fprintf(fp, "digraph {\n");
 		if (background_Transparent)
 		{
 			utf8.fprintf(fp, "graph[bgcolor=\"#00000000\"];\n");
 		}
+		utf8.fprintf(fp, "size=\"%d!\"\n", size);
 		if (sideways)
 		{
 			utf8.fprintf(fp, "graph[rankdir=\"LR\"];\n");
@@ -315,6 +316,11 @@ public:
 		}
 		utf8.fprintf(fp, "}\n");
 		fclose(fp);
+#ifdef USE_GRAPHVIZ_DOT
+		char cmd[512];
+		sprintf(cmd, "dot.exe -T%s %s -o Digraph.%s", outformat, filename, outformat);
+		system(cmd);
+#endif
 	}
 
 	void report(const std::vector<std::string>& column_names)

@@ -1,12 +1,11 @@
 #define _cublas_Init_def
-
+#define NOMINMAX
 #include "../../../include/Matrix.hpp"
 #include "../../../include/statistical/fastICA.h"
 #include "../../../include/util/csvreader.h"
 #ifdef USE_GNUPLOT
 #include "../../../include/util/plot.h"
 
-#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
 #endif
 
 #include <iostream>

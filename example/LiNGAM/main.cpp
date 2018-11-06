@@ -74,6 +74,10 @@ int main(int argc, char** argv)
 	double ica_tolerance = TOLERANCE;
 	double lasso = 0.0;
 
+	bool sideways = false;
+	int diaglam_size = 20;
+	char* output_diaglam_type = "png";
+
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
 		if (argname == "--csv") {
@@ -93,6 +97,15 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--lasso") {
 			lasso = atof(argv[count + 1]);
+		}
+		else if (argname == "--sideways") {
+			sideways = atoi(argv[count + 1]) != 0 ? true : false;
+		}
+		else if (argname == "--output_diaglam_type") {
+			output_diaglam_type = argv[count + 1];
+		}
+		else if (argname == "--diaglam_size") {
+			diaglam_size = atoi(argv[count + 1]);
 		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
@@ -132,6 +145,6 @@ int main(int argc, char** argv)
 
 	LiNGAM.B.print_e("B");
 
-	LiNGAM.digraph(header_names, "digraph.txt");
+	LiNGAM.digraph(header_names, "digraph.txt", sideways, diaglam_size, output_diaglam_type);
 	LiNGAM.report(header_names);
 }

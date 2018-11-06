@@ -6,6 +6,9 @@
 #include "../../include/statistical/LinearRegression.h"
 #include <string>
 
+//#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
+#define GNUPLOT_PATH "start wgnuplot.exe"
+
 class ScatterWrk
 {
 public:
@@ -156,7 +159,10 @@ public:
 		if (maxpoint > 0)
 		{
 			int every_num = X.m / maxpoint;
-			every = "every " + std::to_string(every_num);
+			if (every_num != 0)
+			{
+				every = "every " + std::to_string(every_num);
+			}
 		}
 
 		if (headers.size())
@@ -214,8 +220,8 @@ public:
 
 		if (maxpoint > 0)
 		{
-			int every_num = X.m / maxpoint;
-			every = "every " + std::to_string(every_num);
+			//int every_num = X.m / maxpoint;
+			//every = "every " + std::to_string(every_num);
 		}
 
 		if (headers.size())
@@ -271,10 +277,13 @@ public:
 		std::string title = "";
 		std::string every = "";
 
-		if (maxpoint > 0)
+		if (maxpoint < 0)
 		{
 			int every_num = X.m / maxpoint;
-			every = "every " + std::to_string(every_num);
+			if (every_num != 0)
+			{
+				every = "every " + std::to_string(every_num);
+			}
 		}
 
 		title = name;
@@ -378,7 +387,10 @@ public:
 		if (maxpoint > 0)
 		{
 			int every_num = X.m / maxpoint;
-			every = "every " + std::to_string(every_num);
+			if (every_num != 0)
+			{
+				every = "every " + std::to_string(every_num);
+			}
 		}
 
 
@@ -495,7 +507,10 @@ public:
 		if (maxpoint > 0)
 		{
 			int every_num = X.m / maxpoint;
-			every = "every " + std::to_string(every_num);
+			if (every_num != 0)
+			{
+				every = "every " + std::to_string(every_num);
+			}
 		}
 
 
