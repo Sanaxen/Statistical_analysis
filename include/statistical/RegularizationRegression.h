@@ -5,6 +5,7 @@
 
 #include "../../include/Matrix.hpp"
 #include "../../include/util/mathutil.h"
+#include "../../include/util/utf8_printf.hpp"
 
 
 inline double _soft_thresholding_operator(const double x, const double lambda)
@@ -123,6 +124,59 @@ public:
 			printf("\nmulticollinearity(多重共線性)の疑いがある説明変数がある場合は\n");
 			printf("どちらか一方を外して再度分析することで、多重共線性を解消する場合があります。\n");
 		}
+
+#ifdef USE_GRAPHVIZ_DOT
+		{
+			bool background_Transparent = false;
+			int size = 20;
+			bool sideways = true;
+			char* filename = "multicollinearity.txt";
+			char* outformat = "png";
+
+			utf8str utf8;
+			FILE* fp = fopen(filename, "w");
+			utf8.fprintf(fp, "digraph {\n");
+			if (background_Transparent)
+			{
+				utf8.fprintf(fp, "graph[bgcolor=\"#00000000\"];\n");
+			}
+			utf8.fprintf(fp, "size=\"%d!\"\n", size);
+			if (sideways)
+			{
+				utf8.fprintf(fp, "graph[rankdir=\"LR\"];\n");
+			}
+			utf8.fprintf(fp, "node [fontname=\"MS UI Gothic\" layout=circo shape=component]\n");
+
+			for (int i = 0; i < cor.m; i++)
+			{
+				//utf8.fprintf(fp, "\"%s\"[color=blue shape=circle]\n", header[i + 1].c_str());
+				for (int j = i + 1; j < cor.n; j++)
+				{
+					if (fabs(cor(i, j)) > 0.5 && fabs(cor(i, j)) < 0.6)
+					{
+						utf8.fprintf(fp, "\"%s\" -> \"%s\" [label=\"%8.3f\" color=olivedrab1]\n", header[j + 1].c_str(), header[i + 1].c_str(), cor(i, j));
+						utf8.fprintf(fp, "\"%s\" -> \"%s\" [color=olivedrab1]\n", header[i + 1].c_str(), header[j + 1].c_str());
+					}
+					if (fabs(cor(i, j)) >= 0.6 && fabs(cor(i, j)) < 0.8)
+					{
+						utf8.fprintf(fp, "\"%s\" -> \"%s\" [label=\"%8.3f\" color=goldenrod3]\n", header[j + 1].c_str(), header[i + 1].c_str(), cor(i, j));
+						utf8.fprintf(fp, "\"%s\" -> \"%s\" [color=goldenrod3]\n", header[i + 1].c_str(), header[j + 1].c_str());
+					}
+					if (fabs(cor(i, j)) >= 0.8)
+					{
+						utf8.fprintf(fp, "\"%s\" -> \"%s\" [label=\"%8.3f\" color=red]\n", header[j + 1].c_str(), header[i + 1].c_str(), cor(i, j));
+						utf8.fprintf(fp, "\"%s\" -> \"%s\" [color=red]\n", header[i + 1].c_str(), header[j + 1].c_str());
+					}
+				}
+			}
+			utf8.fprintf(fp, "}\n");
+			fclose(fp);
+
+			char cmd[512];
+			sprintf(cmd, "dot.exe -T%s %s -o multicollinearity.%s", outformat, filename, outformat);
+			system(cmd);
+		}
+#endif
 
 		Matrix<dnn_double>& vif = cor;
 		for (int i = 0; i < A.n; i++)

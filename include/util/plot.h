@@ -713,7 +713,7 @@ public:
 			}
 		}
 		const char* plot = (plot_count) ? "replot" : "plot";
-		fprintf(script, "%s '%s' using 1:2 %s with boxes linewidth %.1f %s\n",
+		fprintf(script, "%s '%s' using 1:2 %s with boxes lc rgb \"chartreuse\" linewidth %.1f %s\n",
 			plot, data_name.c_str(), label.c_str(), linewidth, linecolor.c_str());
 
 		linecolor = "";
@@ -776,13 +776,13 @@ public:
 		fprintf(fp, "%s,", "MAP");
 		for (int j = 0; j < X.n-1; j++)
 		{
-			fprintf(fp, "%s,", headers[j]);
+			fprintf(fp, "%s,", headers[j].c_str());
 		}
-		fprintf(fp, "%s\n", headers[X.n - 1]);
+		fprintf(fp, "%s\n", headers[X.n - 1].c_str());
 
 		for (int i = X.m-1; i >= 0; i--)
 		{
-			fprintf(fp, "%s,", rows[i]);
+			fprintf(fp, "%s,", rows[i].c_str());
 			for (int j = 0; j < X.n-1; j++)
 			{
 				fprintf(fp, "%.3f,", X(i, j));

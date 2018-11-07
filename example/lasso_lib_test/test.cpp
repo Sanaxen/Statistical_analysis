@@ -191,11 +191,11 @@ int main(int argc, char** argv)
 
 #ifdef USE_GNUPLOT
 		{
-			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 5, false);
-			
-			plot1.pointsize = 0.2;
-			plot1.multi_scatter(T, header_names, 2, "rgbformulae 4, 4, 4");
-			plot1.draw();
+			//gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 5, false);
+			//
+			//plot1.pointsize = 0.2;
+			//plot1.multi_scatter(T, header_names, 2, "rgbformulae 4, 4, 4");
+			//plot1.draw();
 		}
 #endif		
 		int y_var_idx = 0;

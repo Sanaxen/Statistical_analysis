@@ -466,6 +466,7 @@ public:
 				printf("multicollinearity(ëΩèdã§ê¸ê´)ÇÃã^Ç¢Ç™Ç†ÇÈê‡ñæïœêîÇÕñ≥Ç≥ÇªÇ§Ç≈Ç∑\n");
 			}
 
+#ifdef USE_GRAPHVIZ_DOT
 			{
 				bool background_Transparent = false;
 				int size = 20;
@@ -485,7 +486,7 @@ public:
 				{
 					utf8.fprintf(fp, "graph[rankdir=\"LR\"];\n");
 				}
-				utf8.fprintf(fp, "node [fontname=\"MS UI Gothic\" layout=circo shape=circle]\n");
+				utf8.fprintf(fp, "node [fontname=\"MS UI Gothic\" layout=circo shape=component]\n");
 				
 				for (int i = 0; i < cor.m; i++)
 				{
@@ -494,26 +495,29 @@ public:
 					{
 						if (fabs(cor(i, j)) > 0.5 && fabs(cor(i, j)) < 0.6)
 						{
-							utf8.fprintf(fp, "\"%s\" -- \"%s\" [label=\"%8.3f\" color=black]\n", header[j + 1].c_str(), header[i + 1].c_str(), cor(i, j));
+							utf8.fprintf(fp, "\"%s\" -> \"%s\" [label=\"%8.3f\" color=olivedrab1]\n", header[j + 1].c_str(), header[i + 1].c_str(), cor(i, j));
+							utf8.fprintf(fp, "\"%s\" -> \"%s\" [color=olivedrab1]\n", header[i + 1].c_str(), header[j + 1].c_str());
 						}
 						if (fabs(cor(i, j)) >= 0.6 && fabs(cor(i, j)) < 0.8)
 						{
-							utf8.fprintf(fp, "\"%s\" -- \"%s\" [label=\"%8.3f\" color=orenge]\n", header[j + 1].c_str(), header[i + 1].c_str(), cor(i, j));
+							utf8.fprintf(fp, "\"%s\" -> \"%s\" [label=\"%8.3f\" color=goldenrod3]\n", header[j + 1].c_str(), header[i + 1].c_str(), cor(i, j));
+							utf8.fprintf(fp, "\"%s\" -> \"%s\" [color=goldenrod3]\n", header[i + 1].c_str(), header[j + 1].c_str());
 						}
 						if (fabs(cor(i, j)) >= 0.8)
 						{
-							utf8.fprintf(fp, "\"%s\" -- \"%s\" [label=\"%8.3f\" color=red]\n", header[j + 1].c_str(), header[i + 1].c_str(), cor(i, j));
+							utf8.fprintf(fp, "\"%s\" -> \"%s\" [label=\"%8.3f\" color=red]\n", header[j + 1].c_str(), header[i + 1].c_str(), cor(i, j));
+							utf8.fprintf(fp, "\"%s\" -> \"%s\" [color=red]\n", header[i + 1].c_str(), header[j + 1].c_str());
 						}
 					}
 				}
 				utf8.fprintf(fp, "}\n");
 				fclose(fp);
-#ifdef USE_GRAPHVIZ_DOT
+
 				char cmd[512];
 				sprintf(cmd, "dot.exe -T%s %s -o multicollinearity.%s", outformat, filename, outformat);
 				system(cmd);
-#endif
 			}
+#endif
 
 
 			Matrix<dnn_double>& vif = cor;

@@ -301,11 +301,11 @@ public:
 		{
 			utf8.fprintf(fp, "graph[rankdir=\"LR\"];\n");
 		}
-		utf8.fprintf(fp, "node [fontname=\"MS UI Gothic\" layout=circo shape=circle]\n");
+		utf8.fprintf(fp, "node [fontname=\"MS UI Gothic\" layout=circo shape=note]\n");
 
 		for (int i = 0; i < B_tmp.n; i++)
 		{
-			utf8.fprintf(fp, "\"%s\"[color=blue shape=circle]\n", item[i].c_str());
+			utf8.fprintf(fp, "\"%s\"[color=blue shape=note]\n", item[i].c_str());
 			for (int j = 0; j < B_tmp.n; j++)
 			{
 				if (B_tmp(i, j) != 0.0)
