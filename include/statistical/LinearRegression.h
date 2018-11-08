@@ -476,10 +476,10 @@ public:
 
 				utf8str utf8;
 				FILE* fp = fopen(filename, "w");
-				utf8.fprintf(fp, "digraph {\n");
+				utf8.fprintf(fp, "digraph  {\n");
 				if (background_Transparent)
 				{
-					utf8.fprintf(fp, "graph[bgcolor=\"#00000000\"];\n");
+					utf8.fprintf(fp, "digraph[bgcolor=\"#00000000\"];\n");
 				}
 				utf8.fprintf(fp, "size=\"%d!\"\n", size);
 				if (sideways)
@@ -493,20 +493,29 @@ public:
 					//utf8.fprintf(fp, "\"%s\"[color=blue shape=circle]\n", header[i + 1].c_str());
 					for (int j = i + 1; j < cor.n; j++)
 					{
+						std::string hd1 = header[j + 1];
+						std::string hd2 = header[i + 1];
+						if (hd1.c_str()[0] != '\"')
+						{
+							hd1 = "\"" + hd1 + "\"";
+						}
+						if (hd2.c_str()[0] != '\"')
+						{
+							hd2 = "\"" + hd2 + "\"";
+						}
 						if (fabs(cor(i, j)) > 0.5 && fabs(cor(i, j)) < 0.6)
 						{
-							utf8.fprintf(fp, "\"%s\" -> \"%s\" [label=\"%8.3f\" color=olivedrab1]\n", header[j + 1].c_str(), header[i + 1].c_str(), cor(i, j));
-							utf8.fprintf(fp, "\"%s\" -> \"%s\" [color=olivedrab1]\n", header[i + 1].c_str(), header[j + 1].c_str());
+							utf8.fprintf(fp, "%s -> %s [label=\"%8.3f\" color=olivedrab1 dir=\"both\"]\n", hd1.c_str(), hd2.c_str(), cor(i, j));
 						}
 						if (fabs(cor(i, j)) >= 0.6 && fabs(cor(i, j)) < 0.8)
 						{
-							utf8.fprintf(fp, "\"%s\" -> \"%s\" [label=\"%8.3f\" color=goldenrod3]\n", header[j + 1].c_str(), header[i + 1].c_str(), cor(i, j));
-							utf8.fprintf(fp, "\"%s\" -> \"%s\" [color=goldenrod3]\n", header[i + 1].c_str(), header[j + 1].c_str());
+							utf8.fprintf(fp, "%s -> %s [label=\"%8.3f\" color=goldenrod3 penwidth=\"2\" dir=\"both\"]\n", hd1.c_str(), hd2.c_str(), cor(i, j));
 						}
 						if (fabs(cor(i, j)) >= 0.8)
 						{
-							utf8.fprintf(fp, "\"%s\" -> \"%s\" [label=\"%8.3f\" color=red]\n", header[j + 1].c_str(), header[i + 1].c_str(), cor(i, j));
-							utf8.fprintf(fp, "\"%s\" -> \"%s\" [color=red]\n", header[i + 1].c_str(), header[j + 1].c_str());
+							utf8.fprintf(fp, "%s -> %s [label=\"%8.3f\" color=red penwidth=\"3\" dir=\"both\"]\n", hd1.c_str(), hd2.c_str(), cor(i, j));
+							utf8.fprintf(fp, "%s[color=red penwidth=\"3\"]\n", hd1.c_str());
+							utf8.fprintf(fp, "%s[color=red penwidth=\"3\"]\n", hd2.c_str());
 						}
 					}
 				}

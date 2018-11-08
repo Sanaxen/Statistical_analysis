@@ -367,10 +367,20 @@ public:
 		plot_count++;
 	}
 
-	void multi_scatter(Matrix<dnn_double>&X, std::vector<std::string>& headers, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
+	void multi_scatter(Matrix<dnn_double>&X, std::vector<std::string>& headers, int win_x=-1, int win_y=-1, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
 	{
 		script_reopen();
 		if (script == NULL) return;
+		/*
+		set term png size 3024,3024
+		set output "figure.png"
+		fprintf(script, "set term png size 3024,3024\n");
+		fprintf(script, "set output \"multi_scatter.png\"\n");
+		*/
+		if (win_x > 10 && win_y >= 10)
+		{
+			fprintf(script, "set term windows size %d,%d\n", win_x, win_y);
+		}
 		fprintf(script, "set datafile separator \",\"\n");
 		fprintf(script, "set multiplot layout %d,%d\n", X.n, X.n);
 		fprintf(script, "set nokey\n");

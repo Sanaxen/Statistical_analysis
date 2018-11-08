@@ -277,7 +277,7 @@ public:
 		return error;
 	}
 
-	void digraph(const std::vector<std::string>& column_names, const char* filename, bool sideways = false, int size=30, char* outformat="png", bool background_Transparent=false)
+	void digraph(const std::vector<std::string>& column_names, std::vector<std::string> x_var, const char* filename, bool sideways = false, int size=30, char* outformat="png", bool background_Transparent=false)
 	{
 		Matrix<dnn_double> B_tmp = B.chop(0.001);
 		B_tmp.print_e();
@@ -305,15 +305,42 @@ public:
 
 		for (int i = 0; i < B_tmp.n; i++)
 		{
-			utf8.fprintf(fp, "\"%s\"[color=blue shape=note]\n", item[i].c_str());
+			std::string item1 = item[i];
+			if (item1.c_str()[0] != '\"')
+			{
+				item1 = "\"" + item1 + "\"";
+			}
+
+			utf8.fprintf(fp, "%s[color=blue shape=note]\n", item1.c_str());
 			for (int j = 0; j < B_tmp.n; j++)
 			{
 				if (B_tmp(i, j) != 0.0)
 				{
-					utf8.fprintf(fp, "\"%s\"-> \"%s\" [label=\"%8.3f\" color=black]\n", item[j].c_str(), item[i].c_str(), B_tmp(i, j));
+					std::string item1 = item[i];
+					std::string item2 = item[j];
+					if (item1.c_str()[0] != '\"')
+					{
+						item1 = "\"" + item1 + "\"";
+					}
+					if (item2.c_str()[0] != '\"')
+					{
+						item2 = "\"" + item2 + "\"";
+					}
+					utf8.fprintf(fp, "%s-> %s [label=\"%8.3f\" color=black]\n", item2.c_str(), item1.c_str(), B_tmp(i, j));
 				}
 			}
 		}
+		for (int i = 0; i < x_var.size(); i++)
+		{
+			//€–Ú2[fillcolor="#ccddff", style="filled"];
+			std::string item1 = x_var[i];
+			if (item1.c_str()[0] != '\"')
+			{
+				item1 = "\"" + item1 + "\"";
+			}
+			utf8.fprintf(fp, "%s [fillcolor=\"#ccddff\", style=\"filled\"]\n", item1.c_str());
+		}
+
 		utf8.fprintf(fp, "}\n");
 		fclose(fp);
 #ifdef USE_GRAPHVIZ_DOT

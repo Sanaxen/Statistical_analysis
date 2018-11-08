@@ -5,7 +5,6 @@
 #ifdef USE_GNUPLOT
 #include "../../include/util/plot.h"
 
-#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
 #endif
 
 void read_csv(int n, char* filename, Matrix<dnn_double>& x)
@@ -106,7 +105,9 @@ int main()
 	LiNGAM.before_sorting();
 	LiNGAM.B.print_e("B");
 
-	LiNGAM.digraph(names, "digraph.txt");
+	std::vector<std::string> x_var;
+
+	LiNGAM.digraph(names, x_var, "digraph.txt");
 	LiNGAM.report(names);
 
 #ifdef USE_GNUPLOT

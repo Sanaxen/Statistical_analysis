@@ -278,6 +278,7 @@ int main(int argc, char** argv)
 		solver->fit(X, y);
 		solver->report(X, header_names);
 
+#if 0
 #ifdef USE_GNUPLOT
 		{
 			std::vector<int> indexs;
@@ -294,6 +295,7 @@ int main(int argc, char** argv)
 			plot2.multi_scatter_for_list(indexs, T, header_names);
 			plot2.draw();
 		}
+#endif
 #endif
 		if (solver) delete solver;
 	}

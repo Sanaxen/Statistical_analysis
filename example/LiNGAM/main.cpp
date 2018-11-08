@@ -76,6 +76,7 @@ int main(int argc, char** argv)
 	bool sideways = false;
 	int diaglam_size = 20;
 	char* output_diaglam_type = "png";
+	std::vector<std::string> x_var;
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -106,6 +107,9 @@ int main(int argc, char** argv)
 		else if (argname == "--diaglam_size") {
 			diaglam_size = atoi(argv[count + 1]);
 		}
+		else if (argname == "--x_var") {
+			x_var.push_back(argv[count + 1]);
+		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
@@ -132,6 +136,48 @@ int main(int argc, char** argv)
 		}
 	}
 
+	std::vector<int> x_var_idx;
+	int y_var_idx = -1;
+
+	if (x_var.size())
+	{
+		for (int i = 0; i < x_var.size(); i++)
+		{
+			for (int j = 0; j < header_names.size(); j++)
+			{
+				if (x_var[i] == header_names[j])
+				{
+					x_var_idx.push_back(j);
+				}
+				else
+				{
+					char buf[32];
+					sprintf(buf, "%d", j);
+					if (x_var[i] == std::string(buf))
+					{
+						x_var_idx.push_back(j);
+					}
+					sprintf(buf, "\"%d\"", j);
+					if (x_var[i] == std::string(buf))
+					{
+						x_var_idx.push_back(j);
+					}
+				}
+			}
+		}
+		if (x_var_idx.size() == 0)
+		{
+			for (int i = 0; i < x_var.size(); i++)
+			{
+				x_var_idx.push_back(atoi(x_var[i].c_str()));
+			}
+		}
+		if (x_var_idx.size() != x_var.size())
+		{
+			printf("--x_var ERROR\n");
+		}
+	}
+
 	LiNGAM.set(xs.n);
 	LiNGAM.fit(xs);
 
@@ -144,6 +190,6 @@ int main(int argc, char** argv)
 
 	LiNGAM.B.print_e("B");
 
-	LiNGAM.digraph(header_names, "digraph.txt", sideways, diaglam_size, output_diaglam_type);
+	LiNGAM.digraph(header_names, x_var, "digraph.txt", sideways, diaglam_size, output_diaglam_type);
 	LiNGAM.report(header_names);
 }

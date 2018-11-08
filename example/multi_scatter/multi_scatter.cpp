@@ -7,7 +7,6 @@
 #ifdef USE_GNUPLOT
 #include "../../include/util/plot.h"
 
-#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
 #endif
 
 int main(int argc, char** argv)
@@ -18,6 +17,7 @@ int main(int argc, char** argv)
 	Matrix<dnn_double> y;
 	std::vector<std::string> header_str;
 
+	int win_size[2] = { -1,-1 };
 	int grid = 30;
 	float pointsize = 1.0;
 	bool ellipse = false;
@@ -64,7 +64,11 @@ int main(int argc, char** argv)
 			grid = atoi(argv[count + 1]);
 		}
 		else
-			if (argname == "--linear_regression") {
+		if (argname == "--win_size") {
+			sscanf(argv[count + 1], "%d,%d", win_size, win_size + 1);
+		}
+		else
+		if (argname == "--linear_regression") {
 			linear_regression = atoi(argv[count + 1]) == 0 ? false : true;
 		}
 		else {
@@ -110,7 +114,7 @@ int main(int argc, char** argv)
 	{
 #ifdef USE_GNUPLOT
 		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 5, false);
-		plot1.multi_scatter(T, header_names, 2, palette);
+		plot1.multi_scatter(T, header_names, win_size[0], win_size[1], 2, palette);
 		plot1.draw();
 #endif		
 		return 0;
