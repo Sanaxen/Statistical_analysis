@@ -138,6 +138,7 @@ int main(int argc, char** argv)
 
 		Matrix<dnn_double>& cor = a.Cor();
 		cor.print();
+		cor.print_csv("cor.csv");
 		char text[32];
 		sprintf(text, "r=%.3f", cor(0, 1));
 
