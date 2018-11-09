@@ -61,12 +61,14 @@ public:
 		}
 		printf("--------------\n");
 
+		std::vector<int> var_indexs;
 		printf("•K—v‚Èà–¾•Ï”\n");
 		int num = 0;
 		for (int i = 0; i < coef.n - 1; i++)
 		{
 			if (fabs(coef(0, i)) > 1.0e-6)
 			{
+				var_indexs.push_back(i);
 				num++;
 				printf("[%03d]%-10.10s %10.4f\n", i+1, header[i+1].c_str(), coef(0, i));
 			}
@@ -98,6 +100,16 @@ public:
 		{
 			for (int j = i + 1; j < cor.n; j++)
 			{
+				bool skip = false;
+				for (int k = 0; k < var_indexs.size(); k++)
+				{
+					if (i == var_indexs[k])
+					{
+						skip = true;
+						break;
+					}
+				}
+				if (skip) continue;
 				if (fabs(cor(i, j)) > 0.5 && fabs(cor(i, j)) < 0.6)
 				{
 
@@ -152,6 +164,17 @@ public:
 				//utf8.fprintf(fp, "\"%s\"[color=blue shape=circle]\n", header[i + 1].c_str());
 				for (int j = i + 1; j < cor.n; j++)
 				{
+					bool skip = false;
+					for (int k = 0; k < var_indexs.size(); k++)
+					{
+						if (i == var_indexs[k])
+						{
+							skip = true;
+							break;
+						}
+					}
+					if (skip) continue;
+
 					std::string hd1 = header[j + 1];
 					std::string hd2 = header[i + 1];
 					if (hd1.c_str()[0] != '\"')
@@ -228,6 +251,17 @@ public:
 		{
 			for (int j = i + 1; j < cor.n; j++)
 			{
+				bool skip = false;
+				for (int k = 0; k < var_indexs.size(); k++)
+				{
+					if (i == var_indexs[k])
+					{
+						skip = true;
+						break;
+					}
+				}
+				if (skip) continue;
+
 				if (fabs(cor(i, j)) >= 10)
 				{
 					war2 = true;
