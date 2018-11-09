@@ -289,6 +289,10 @@ public:
 			item[i] = column_names[replacement[i]];
 		}
 
+		Matrix<dnn_double> XCor = input;
+		XCor = (XCor)*Substitution(replacement);
+		XCor = XCor.Cor();
+
 		utf8str utf8;
 		FILE* fp = fopen(filename, "w");
 		utf8.fprintf(fp, "digraph {\n");
@@ -326,7 +330,33 @@ public:
 					{
 						item2 = "\"" + item2 + "\"";
 					}
-					utf8.fprintf(fp, "%s-> %s [label=\"%8.3f\" color=black]\n", item2.c_str(), item1.c_str(), B_tmp(i, j));
+					bool out_line = false;
+					bool in_line = false;
+					for (int k = 0; k < x_var.size(); k++)
+					{
+						if (item[i] == x_var[k])
+						{
+							in_line = true;
+						}
+						if (item[j] == x_var[k])
+						{
+							out_line = true;
+						}
+					}
+
+					if (out_line)
+					{
+						utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=red penwidth=\"2\"]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j));
+					}
+					else
+						if (in_line)
+						{
+							utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=blue penwidth=\"2\"]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j));
+						}
+						else
+						{
+							utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=black]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i,j));
+						}
 				}
 			}
 		}
