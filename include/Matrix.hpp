@@ -1228,7 +1228,7 @@ struct Matrix
 				for (int k = 0; k < X.m; k++)
 				{
 					dnn_double x = (X(k, j) - meanX(0, j));
-					dnn_double y = (X(k, i) - meanX(0, j));
+					dnn_double y = (X(k, i) - meanX(0, i));
 
 					xy += x*y;
 					xx += x*x;
