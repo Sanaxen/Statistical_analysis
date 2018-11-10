@@ -284,14 +284,23 @@ public:
 
 		std::vector<std::string> item;
 		item.resize(B.n);
+
+#if 0
+		//for (int i = 0; i < B.n; i++)
+		//{
+		//	item[i] = column_names[replacement[i]];
+		//}
+
+		//Matrix<dnn_double> XCor = input;
+		//XCor = (XCor)*Substitution(replacement);
+		//XCor = XCor.Cor();
+#else
 		for (int i = 0; i < B.n; i++)
 		{
-			item[i] = column_names[replacement[i]];
+			item[i] = column_names[i];
 		}
-
-		Matrix<dnn_double> XCor = input;
-		XCor = (XCor)*Substitution(replacement);
-		XCor = XCor.Cor();
+		Matrix<dnn_double> XCor = input.Cor();
+#endif
 
 		utf8str utf8;
 		FILE* fp = fopen(filename, "w");
@@ -334,11 +343,17 @@ public:
 					bool in_line = false;
 					for (int k = 0; k < x_var.size(); k++)
 					{
-						if (item[i] == x_var[k])
+						std::string x = x_var[k];
+						if (x.c_str()[0] != '\"')
+						{
+							x = "\"" + x + "\"";
+						}
+
+						if (item1 == x)
 						{
 							in_line = true;
 						}
-						if (item[j] == x_var[k])
+						if (item2 == x)
 						{
 							out_line = true;
 						}
