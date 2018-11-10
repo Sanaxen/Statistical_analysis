@@ -21,6 +21,7 @@ int main(int argc, char** argv)
 	std::vector<std::string> x_var;
 	std::string y_var = "";
 
+	bool heat_map = false;
 	bool normalize = false;
 	int start_col = 0;
 	bool header = false;
@@ -44,7 +45,9 @@ int main(int argc, char** argv)
 		if (argname == "--normalize") {
 			normalize = (atoi(argv[count + 1]) != 0) ? true : false;
 		}
-		
+		if (argname == "--heat_map") {
+			heat_map = (atoi(argv[count + 1]) != 0) ? true : false;
+		}
 	}
 
 
@@ -258,9 +261,12 @@ int main(int argc, char** argv)
 #ifdef USE_GNUPLOT
 	if (A.n > 1)
 	{
-		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 1, false);
-		plot1.Heatmap(cor, header_names, header_names);
-		plot1.draw();
+		if (heat_map)
+		{
+			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 1, false);
+			plot1.Heatmap(cor, header_names, header_names);
+			plot1.draw();
+		}
 	}
 	else
 	{
