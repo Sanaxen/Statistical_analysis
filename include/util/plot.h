@@ -367,7 +367,7 @@ public:
 		plot_count++;
 	}
 
-	void multi_scatter(Matrix<dnn_double>&X, std::vector<std::string>& headers, int win_x=-1, int win_y=-1, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
+	void multi_scatter(Matrix<dnn_double>&X, std::vector<std::string>& headers, bool capture=false, int win_x=-1, int win_y=-1, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
 	{
 		script_reopen();
 		if (script == NULL) return;
@@ -380,6 +380,11 @@ public:
 		if (win_x > 10 && win_y >= 10)
 		{
 			fprintf(script, "set term windows size %d,%d\n", win_x, win_y);
+		}
+		if (capture)
+		{
+			fprintf(script, "set term png size %d,%d\n", win_x, win_y);
+			fprintf(script, "set output \"multi_scatter.png\"\n");
 		}
 		fprintf(script, "set datafile separator \",\"\n");
 		fprintf(script, "set multiplot layout %d,%d\n", X.n, X.n);
@@ -743,7 +748,7 @@ public:
 		fclose(script);
 		script = NULL;
 	}
-	void draw()
+	void draw(int pause=1000)
 	{
 		if (script == NULL) return;
 		if (save_image)
@@ -753,7 +758,7 @@ public:
 		}
 		else
 		{
-			fprintf(script, "pause 1000\n");
+			fprintf(script, "pause %d\n", pause);
 			//fprintf(script, "pause -1\n");
 			//fprintf(script, "mouse keypress\n");
 		}

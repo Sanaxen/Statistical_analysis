@@ -17,6 +17,7 @@ int main(int argc, char** argv)
 	Matrix<dnn_double> y;
 	std::vector<std::string> header_str;
 
+	bool capture = false;
 	int win_size[2] = { -1,-1 };
 	int grid = 30;
 	float pointsize = 1.0;
@@ -71,6 +72,10 @@ int main(int argc, char** argv)
 		if (argname == "--linear_regression") {
 			linear_regression = atoi(argv[count + 1]) == 0 ? false : true;
 		}
+		else
+		if (argname == "--capture") {
+			capture = atoi(argv[count + 1]) == 0 ? false : true;
+		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
@@ -114,8 +119,16 @@ int main(int argc, char** argv)
 	{
 #ifdef USE_GNUPLOT
 		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 5, false);
-		plot1.multi_scatter(T, header_names, win_size[0], win_size[1], 2, palette);
-		plot1.draw();
+		if (capture)
+		{
+			plot1.multi_scatter(T, header_names, true, win_size[0], win_size[1], 2, palette);
+			plot1.draw(0);
+		}
+		else
+		{
+			plot1.multi_scatter(T, header_names, false, win_size[0], win_size[1], 2, palette);
+			plot1.draw();
+		}
 #endif		
 		return 0;
 	}
