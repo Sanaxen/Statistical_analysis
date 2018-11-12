@@ -785,6 +785,22 @@ struct Matrix
 		return *this;
 	}
 
+	Matrix<T>& operator += (const T c)
+	{
+#pragma omp parallel for
+		for (int i = 0; i < mn; ++i) this->v[i] += c;
+
+		return *this;
+	}
+
+	Matrix<T>& operator -= (const T c)
+	{
+#pragma omp parallel for
+		for (int i = 0; i < mn; ++i) this->v[i] -= c;
+
+		return *this;
+	}
+
 	Matrix<T>& operator -= ( const Matrix<T>& m1 )
 	{
 		//Matrix<T> ret2 = *this;
@@ -942,6 +958,23 @@ struct Matrix
 		return ret;
 	}
 	
+	friend Matrix<T> operator + (const Matrix<T>& m1, const T c)
+	{
+		int m = m1.m, n = m1.n;
+
+		Matrix<T>& m2 = Matrix<T>().values(m, n, c);
+
+		return m1 + m2;
+	}
+	friend Matrix<T> operator - (const Matrix<T>& m1, const T c)
+	{
+		int m = m1.m, n = m1.n;
+
+		Matrix<T>& m2 = Matrix<T>().values(m, n, c);
+
+		return m1 - m2;
+	}
+
 	friend Matrix<T> operator - ( const Matrix<T>& m1, const Matrix<T>& m2 )
 	{
 		int m = m1.m, n = m1.n;
