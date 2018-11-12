@@ -338,8 +338,8 @@ public:
 			train = train.appendCol(bias);
 
 			//train.print("", "%.3f ");
-			beta = beta.zeros(1, train.n);
 		}
+			beta = beta.zeros(1, train.n);
 		const int N = train.m;
 
 		int varNum = train.n;
@@ -428,8 +428,8 @@ public:
 			train = train.appendCol(bias);
 
 			//train.print("", "%.3f ");
-			beta = beta.zeros(1, train.n);
 		}
+			beta = beta.zeros(1, train.n);
 		const int N = train.m;
 
 		int varNum = train.n;
@@ -515,8 +515,8 @@ public:
 			train = train.appendCol(bias);
 
 			//train.print("", "%.3f ");
-			beta = beta.zeros(1, train.n);
 		}
+			beta = beta.zeros(1, train.n);
 		const int N = train.m;
 
 		int varNum = train.n;

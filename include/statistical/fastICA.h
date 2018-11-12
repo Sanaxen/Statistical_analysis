@@ -165,10 +165,11 @@ public:
 		SVDcmp<dnn_double> svd1(xt*xx);
 		d.diag_vec(svd1.Sigma);
 
+		const dnn_double epsilon = 1.0e-12;
 #if 10
 		//xPCAwhite = diag(1. / sqrt(diag(S) + epsilon)) * U' * x;
 		// PCA
-		V = svd1.V.diag(InvSqrt(d).v)*svd1.U.transpose();
+		V = svd1.V.diag(InvSqrt(d+ epsilon).v)*svd1.U.transpose();
 		xx = V*xt;
 #else
 		//xZCAwhite = U * diag(1./sqrt(diag(S) + epsilon)) * U' * x;
