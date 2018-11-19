@@ -1276,6 +1276,42 @@ struct Matrix
 		return cor;
 	}
 		
+	Matrix<T> Cor(Matrix<T>& Y)
+	{
+		Matrix<T>& X = *this;
+		Matrix<T>& meanX = X.Mean();
+		Matrix<T>& meanY = Y.Mean();
+
+		//X.print("X");
+		//meanX.print("mean");
+		//fflush(stdout);
+
+		Matrix<T> cor(X.n, X.n);
+#pragma omp parallel for
+		for (int i = 0; i < X.n; i++)
+		{
+			for (int j = 0; j < X.n; j++)
+			{
+				dnn_double xx = 0.0;
+				dnn_double xy = 0.0;
+				dnn_double yy = 0.0;
+				for (int k = 0; k < X.m; k++)
+				{
+					dnn_double x = (X(k, j) - meanX(0, j));
+					dnn_double y = (Y(k, i) - meanY(0, i));
+
+					xy += x*y;
+					xx += x*x;
+					yy += y*y;
+				}
+				xx /= X.n;
+				xy /= X.n;
+				yy /= X.n;
+				cor(i, j) = xy / (sqrt(xx)*sqrt(yy));
+			}
+		}
+		return cor;
+	}
 
 	//Global Contrast Normalization (GCN)
 	Matrix<dnn_double> whitening(const Matrix<dnn_double>& means, const Matrix<dnn_double>& sigma)

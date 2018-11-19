@@ -73,6 +73,9 @@ int main(int argc, char** argv)
 	double ica_tolerance = TOLERANCE;
 	double lasso = 0.0;
 
+	bool error_distr = true;
+	int error_distr_size[2] = { 1,1 };
+	bool capture = false;
 	bool sideways = false;
 	int diaglam_size = 20;
 	char* output_diaglam_type = "png";
@@ -109,6 +112,15 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--x_var") {
 			x_var.push_back(argv[count + 1]);
+		}
+		else if (argname == "--error_distr") {
+			error_distr = atoi(argv[count + 1]) != 0 ? true : false;
+		}
+		else if (argname == "--capture") {
+			capture = atoi(argv[count + 1]) == 0 ? false : true;
+		}
+		else if (argname == "--error_distr_size") {
+			sscanf(argv[count + 1], "%d,%d", error_distr_size, error_distr_size + 1);
 		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
@@ -189,7 +201,38 @@ int main(int argc, char** argv)
 	LiNGAM.before_sorting();
 
 	LiNGAM.B.print_e("B");
+	//LiNGAM.B = LiNGAM.B.chop(0.1);
 
 	LiNGAM.digraph(header_names, x_var, "digraph.txt", sideways, diaglam_size, output_diaglam_type);
 	LiNGAM.report(header_names);
+
+	if (error_distr)
+	{
+		Matrix<dnn_double> r(xs.m, xs.n);
+		for (int j = 0; j < xs.m; j++)
+		{
+			Matrix<dnn_double> x(xs.n, 1);
+			for (int i = 0; i < xs.n; i++)
+			{
+				x(i, 0) = xs(j, i);
+			}
+			Matrix<dnn_double>& rr = x - LiNGAM.B*x;
+			for (int i = 0; i < xs.n; i++)
+			{
+				r(j, i) = rr(0, i);
+			}
+		}
+		r.print_csv("error_distr.csv", header_names);
+#ifdef USE_GNUPLOT
+		gnuPlot plot1(std::string(GNUPLOT_PATH), 3, false);
+		int win_x = error_distr_size[0];
+		int win_y = error_distr_size[1];
+		plot1.multi_histgram(r, header_names, capture, win_x, win_y);
+		if (capture)
+			plot1.draw(0);
+		else 
+			plot1.draw();
+
+#endif
+	}
 }

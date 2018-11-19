@@ -735,6 +735,102 @@ public:
 		plot_count++;
 	}
 
+	void multi_histgram(Matrix<dnn_double>&X, std::vector<std::string>& headers, bool capture = false, int win_x = -1, int win_y = -1, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
+	{
+		script_reopen();
+		if (script == NULL) return;
+		/*
+		set term png size 3024,3024
+		set output "figure.png"
+		fprintf(script, "set term png size 3024,3024\n");
+		fprintf(script, "set output \"multi_scatter.png\"\n");
+		*/
+		if (win_x > 10 && win_y >= 10)
+		{
+			fprintf(script, "set term windows size %d,%d\n", win_x, win_y);
+		}
+		if (capture)
+		{
+			fprintf(script, "set term png size %d,%d\n", win_x, win_y);
+			fprintf(script, "set output \"multi_histgram.png\"\n");
+		}
+		fprintf(script, "set datafile separator \",\"\n");
+		fprintf(script, "set multiplot layout %d,%d\n", (int)sqrt(X.n)+1, (int)sqrt(X.n) + 1);
+		fprintf(script, "set nokey\n");
+		fprintf(script, "unset xtics\n");
+		fprintf(script, "unset ytics\n");
+		if (palette)
+		{
+			set_palette(palette);
+		}
+
+
+		std::string every = "";
+
+		if (maxpoint > 0)
+		{
+			int every_num = X.m / maxpoint;
+			if (every_num != 0)
+			{
+				every = "every " + std::to_string(every_num);
+			}
+		}
+
+
+		X.print_csv((char*)data_name.c_str());
+		for (int i = 0; i < X.n; i++)
+		{
+			//for (int j = 0; j < X.n; j++)
+			{
+				std::string x, y;
+
+				if (headers.size())
+				{
+					y = headers[i];
+					if (y.c_str()[0] != '\"')
+					{
+						y = (std::string("\"") + headers[i] + std::string("\""));
+					}
+
+					//x = headers[j];
+					//if (x.c_str()[0] != '\"')
+					//{
+					//	x = (std::string("\"") + headers[j] + std::string("\""));
+					//}
+				}
+
+				fprintf(script, "unset xlabel\n");
+				fprintf(script, "unset ylabel\n");
+				//if (j > i)
+				//{
+				//	fprintf(script, "unset border\n");
+				//	fprintf(script, "plot - 1 notitle lc rgb \"white\"\n");
+				//	fprintf(script, "set border\n");
+				//	continue;
+				//}
+				//if (j == i)
+				{
+					fprintf(script, "set title %s\n", y.c_str());
+					Matrix<dnn_double> &h = Histogram(X.Col(i), 30);
+					char histogram_name[256];
+					sprintf(histogram_name, "plot_(%d)%d_hist.dat", plot_count, i);
+					h.print_csv(histogram_name);
+
+					fprintf(script, "set style fill solid border  lc rgb \"black\"\n");
+					fprintf(script, "plot '%s' using 1:2 %s with boxes lc rgb \"chartreuse\" linewidth %.1f %s\n",
+						histogram_name, (std::string("t ")+y).c_str(), 1/*linewidth*/, linecolor.c_str());
+
+					continue;
+				}
+				fprintf(script, "set xlabel %s\n", x.c_str());
+				fprintf(script, "set ylabel %s\n", y.c_str());
+				fflush(script);
+			}
+		}
+		fprintf(script, "unset multiplot\n");
+		plot_count++;
+	}
+
 	void command(std::string& command)
 	{
 		script_reopen();
