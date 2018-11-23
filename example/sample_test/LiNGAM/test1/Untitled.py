@@ -6,17 +6,17 @@
 import numpy as np
 import csv
 
-size = 1000
+size = 10000
 np.random.seed(123)
 x = np.random.uniform(size=size)
 
-np.random.seed(456)
+#np.random.seed(456)
 y = 3*x+ np.random.uniform(size=size)
 
-np.random.seed(789)
+#np.random.seed(789)
 z =  5*y+ np.random.uniform(size=size)
 
-np.random.seed(135)
+#np.random.seed(135)
 w = 2*x + 7*z+np.random.uniform(size=size)
 
 xs = np.array([x,y,z,w]).T

@@ -107,7 +107,8 @@ int main()
 
 	std::vector<std::string> x_var;
 
-	LiNGAM.digraph(names, x_var, "digraph.txt");
+	std::vector<int> residual_flag(xs.n, 0);
+	LiNGAM.digraph(names, x_var, residual_flag, "digraph.txt");
 	LiNGAM.report(names);
 
 #ifdef USE_GNUPLOT

@@ -1,6 +1,7 @@
 #define _cublas_Init_def
 #include "../../include/statistical/LiNGAM.h"
 #include "../../include/util/csvreader.h"
+#include "../../include/util/swilk.h"
 
 #ifdef USE_GNUPLOT
 #include "../../include/util/plot.h"
@@ -203,9 +204,7 @@ int main(int argc, char** argv)
 	LiNGAM.B.print_e("B");
 	//LiNGAM.B = LiNGAM.B.chop(0.1);
 
-	LiNGAM.digraph(header_names, x_var, "digraph.txt", sideways, diaglam_size, output_diaglam_type);
-	LiNGAM.report(header_names);
-
+	std::vector<int> residual_flag(xs.n, 0);
 	if (error_distr)
 	{
 		Matrix<dnn_double> r(xs.m, xs.n);
@@ -223,6 +222,33 @@ int main(int argc, char** argv)
 			}
 		}
 		r.print_csv("error_distr.csv", header_names);
+
+		{
+			printf("shapiro_wilk test(0.05) start\n");
+			shapiro_wilk shapiro;
+			for (int i = 0; i < xs.n; i++)
+			{
+
+				Matrix<dnn_double> tmp = r.Col(i);
+				//tmp = tmp.whitening(tmp.Mean(), tmp.Std(tmp.Mean()));
+				//tmp = tmp.Centers(tmp.Mean());
+
+				int stat = shapiro.test(tmp);
+				if (stat == 0)
+				{
+					printf("[%-20.20s]w:%-8.3f p_value:%-10.3f\n", header_names[i].c_str(), shapiro.get_w(), shapiro.p_value());
+					if (shapiro.p_value() > 0.05)
+					{
+						residual_flag[i] = 1;
+					}
+				}
+				else
+				{
+					printf("error shapiro.test=%d\n", stat);
+				}
+			}
+			printf("shapiro_wilk test end\n\n");
+		}
 #ifdef USE_GNUPLOT
 		gnuPlot plot1(std::string(GNUPLOT_PATH), 3, false);
 		int win_x = error_distr_size[0];
@@ -235,4 +261,8 @@ int main(int argc, char** argv)
 
 #endif
 	}
+	LiNGAM.digraph(header_names, x_var, residual_flag, "digraph.txt", sideways, diaglam_size, output_diaglam_type);
+	LiNGAM.report(header_names);
+
+
 }
