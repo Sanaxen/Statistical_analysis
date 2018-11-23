@@ -124,6 +124,10 @@ int main(int argc, char** argv)
 				{
 					x_var_idx.push_back(j);
 				}
+				else if ("\"" + x_var[i] + "\"" == header_names[j])
+				{
+					x_var_idx.push_back(j);
+				}
 				else
 				{
 					char buf[32];
@@ -160,6 +164,10 @@ int main(int argc, char** argv)
 		for (int j = 0; j < header_names.size(); j++)
 		{
 			if (y_var == header_names[j])
+			{
+				y_var_idx = j;
+			}
+			else if ("\"" + y_var + "\"" == header_names[j])
 			{
 				y_var_idx = j;
 			}
