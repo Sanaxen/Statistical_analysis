@@ -47,6 +47,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "csvmap", "..\csvmap\csvmap.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "histgram", "..\histgram\histgram.vcxproj", "{187987A7-11F0-4EA1-B315-998FD608C145}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "shapiro", "..\shapiro\shapiro.vcxproj", "{3B308AC7-F2E3-4684-A872-7D3715D2521B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -231,6 +233,14 @@ Global
 		{187987A7-11F0-4EA1-B315-998FD608C145}.Release|x64.Build.0 = Release|x64
 		{187987A7-11F0-4EA1-B315-998FD608C145}.Release|x86.ActiveCfg = Release|Win32
 		{187987A7-11F0-4EA1-B315-998FD608C145}.Release|x86.Build.0 = Release|Win32
+		{3B308AC7-F2E3-4684-A872-7D3715D2521B}.Debug|x64.ActiveCfg = Debug|x64
+		{3B308AC7-F2E3-4684-A872-7D3715D2521B}.Debug|x64.Build.0 = Debug|x64
+		{3B308AC7-F2E3-4684-A872-7D3715D2521B}.Debug|x86.ActiveCfg = Debug|Win32
+		{3B308AC7-F2E3-4684-A872-7D3715D2521B}.Debug|x86.Build.0 = Debug|Win32
+		{3B308AC7-F2E3-4684-A872-7D3715D2521B}.Release|x64.ActiveCfg = Release|x64
+		{3B308AC7-F2E3-4684-A872-7D3715D2521B}.Release|x64.Build.0 = Release|x64
+		{3B308AC7-F2E3-4684-A872-7D3715D2521B}.Release|x86.ActiveCfg = Release|Win32
+		{3B308AC7-F2E3-4684-A872-7D3715D2521B}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
