@@ -7,6 +7,10 @@
 #include <iostream>
 #include <limits>
 
+#ifdef USE_CDFLIB
+#include "../../third_party/cdflib/cdflib_single.h"
+#endif
+
 #define MAX_ITER 400
 
 //Gamma function
@@ -503,6 +507,23 @@ public:
 	*/
 	inline double p_value(double p, double* initval = NULL)
 	{
+#ifdef USE_CDFLIB
+		{
+			double f;
+			double dfn = dof1;
+			double dfd = dof2;
+
+			int which = 2;
+			double pp = 1.0 - p, qq = p;
+			//int status;
+			double bound;
+
+			cdff(&which, &pp, &qq, &f, &dfn, &dfd, &status, &bound);
+			//printf("status:%d p:%f %f f:%f\n", status, pp, qq, f);
+			return f;
+		}
+
+#endif
 		double a, a1, b, b1, df1, df2, e, ff = 0.0, f0, x, y1, y2, yq;
 		int sw = 0;
 
@@ -650,6 +671,22 @@ public:
 	inline double p_value(double p, double* initval=NULL)
 	{
 		status = 0;
+#ifdef USE_CDFLIB
+		{
+			double f;
+			double dfn = dof;
+
+			int which = 2;
+			double pp = 1.0 - p, qq = p;
+			//int status;
+			double bound;
+
+			cdfchi(&which, &pp, &qq, &f, &dfn, &status, &bound);
+			//printf("status:%d p:%f %f f:%f\n", status, pp, qq, f);
+			return f;
+		}
+#endif
+
 		double po, x, xx = 0.0, x0, w;
 		// Degree of freedom = 1 (using normal distribution)
 		if (dof == 1) 

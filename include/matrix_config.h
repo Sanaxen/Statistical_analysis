@@ -18,6 +18,7 @@
 //#define USE_EIGEN
 
 //#define USE_GPU	1	//use C++AMP
+#define USE_CDFLIB
 #define USE_GNUPLOT
 #define USE_GRAPHVIZ_DOT
 
