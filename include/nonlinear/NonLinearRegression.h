@@ -466,6 +466,7 @@ public:
 		fprintf(fp, "--------------------------------------------------------------------\n");
 		fprintf(fp, "RMSE             :%f\n", rmse);
 		fprintf(fp, "chi square       :%f\n", chi_square);
+		fprintf(fp, "freedom          :%d\n", train_images.size()*train_labels[0].size());
 		fprintf(fp, "p value          :%f\n", chi_pdf);
 		fprintf(fp, "--------------------------------------------------------------------\n");
 
