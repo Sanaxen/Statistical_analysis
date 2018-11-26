@@ -277,7 +277,7 @@ public:
 		return error;
 	}
 
-	void digraph(const std::vector<std::string>& column_names, std::vector<std::string> x_var, const char* filename, bool sideways = false, int size=30, char* outformat="png", bool background_Transparent=false)
+	void digraph(const std::vector<std::string>& column_names, std::vector<std::string> x_var, std::vector<int>& residual_flag, const char* filename, bool sideways = false, int size=30, char* outformat="png", bool background_Transparent=false)
 	{
 		Matrix<dnn_double> B_tmp = B.chop(0.001);
 		B_tmp.print_e();
@@ -359,18 +359,23 @@ public:
 						}
 					}
 
+					char* style = "";
+					if (residual_flag[i])
+					{
+						style = "style=\"dotted\"";
+					}
 					if (out_line)
 					{
-						utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=red penwidth=\"2\"]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j));
+						utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=red penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), style);
 					}
 					else
 						if (in_line)
 						{
-							utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=blue penwidth=\"2\"]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j));
+							utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=blue penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), style);
 						}
 						else
 						{
-							utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=black]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i,j));
+							utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=black %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i,j), style);
 						}
 				}
 			}
