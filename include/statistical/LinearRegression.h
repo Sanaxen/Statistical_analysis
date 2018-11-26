@@ -364,8 +364,8 @@ public:
 		double max_c = bias + t_distribution.p_value(ƒ¿ / 2.0)*se_ii[A.n];
 		printf("%10.4f", min_c);
 		printf("%10.4f", max_c);
-		if (min_c*max_c < 0.0) printf("          True\n");
-		else printf("          False\n");
+		if (min_c*max_c < 0.0) printf("          ›\n");
+		else printf("          ~\n");
 
 		for (int i = 0; i < A.n; i++)
 		{
@@ -379,8 +379,8 @@ public:
 
 			printf("%10.4f", min_c);
 			printf("%10.4f", max_c);
-			if (min_c*max_c < 0.0) printf("          True\n");
-			else printf("          False\n");
+			if (min_c*max_c < 0.0) printf("          ›\n");
+			else printf("          ~\n");
 		}
 		printf("--------------------------------------------------------------------------------------------\n");
 
