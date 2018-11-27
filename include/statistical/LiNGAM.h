@@ -324,7 +324,16 @@ public:
 				item1 = "\"" + item1 + "\"";
 			}
 
+			if (residual_flag[i])
+			{
+				utf8.fprintf(fp, "%s [fillcolor=lightgray, style=\"filled\"]\n", item1.c_str());
+				utf8.fprintf(fp, "%s[color=lightgray shape=rectangle]\n", item1.c_str());
+			}
+			else
+			{
 			utf8.fprintf(fp, "%s[color=blue shape=note]\n", item1.c_str());
+			}
+			
 			for (int j = 0; j < B_tmp.n; j++)
 			{
 				if (B_tmp(i, j) != 0.0)

@@ -735,7 +735,7 @@ public:
 		plot_count++;
 	}
 
-	void multi_histgram(Matrix<dnn_double>&X, std::vector<std::string>& headers, bool capture = false, int win_x = -1, int win_y = -1, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
+	void multi_histgram(Matrix<dnn_double>&X, std::vector<std::string>& headers, std::vector<int>& residual_flag, bool capture = false, int win_x = -1, int win_y = -1, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
 	{
 		script_reopen();
 		if (script == NULL) return;
@@ -816,10 +816,19 @@ public:
 					sprintf(histogram_name, "plot_(%d)%d_hist.dat", plot_count, i);
 					h.print_csv(histogram_name);
 
+					//fprintf(script, "set grid xtics mxtics ytics mytics\n");
 					fprintf(script, "set style fill solid border  lc rgb \"black\"\n");
-					fprintf(script, "plot '%s' using 1:2 %s with boxes lc rgb \"chartreuse\" linewidth %.1f %s\n",
-						histogram_name, (std::string("t ")+y).c_str(), 1/*linewidth*/, linecolor.c_str());
 
+					if (residual_flag[i])
+					{
+						fprintf(script, "plot '%s' using 1:2 %s with boxes lc rgb \"light-red\" linewidth %.1f %s\n",
+							histogram_name, (std::string("t ") + y).c_str(), 1/*linewidth*/, linecolor.c_str());
+					}
+					else
+					{
+					fprintf(script, "plot '%s' using 1:2 %s with boxes lc rgb \"chartreuse\" linewidth %.1f %s\n",
+							histogram_name, (std::string("t ") + y).c_str(), 1/*linewidth*/, linecolor.c_str());
+					}
 					continue;
 				}
 				fprintf(script, "set xlabel %s\n", x.c_str());

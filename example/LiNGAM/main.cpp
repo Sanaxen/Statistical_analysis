@@ -223,6 +223,7 @@ int main(int argc, char** argv)
 		}
 		r.print_csv("error_distr.csv", header_names);
 
+		std::vector<std::string> shapiro_wilk_values;
 		{
 			printf("shapiro_wilk test(0.05) start\n");
 			shapiro_wilk shapiro;
@@ -236,7 +237,12 @@ int main(int argc, char** argv)
 				int stat = shapiro.test(tmp);
 				if (stat == 0)
 				{
-					printf("[%-20.20s]w:%-8.3f p_value:%-10.3f\n", header_names[i].c_str(), shapiro.get_w(), shapiro.p_value());
+					char buf[256];
+					sprintf(buf,"w:%-4.4f p_value:%-.16g", shapiro.get_w(), shapiro.p_value());
+					shapiro_wilk_values.push_back(buf);
+					//printf("%s\n", buf);
+
+					printf("[%-20.20s]w:%-8.3f p_value:%-10.16f\n", header_names[i].c_str(), shapiro.get_w(), shapiro.p_value());
 					if (shapiro.p_value() > 0.05)
 					{
 						residual_flag[i] = 1;
@@ -253,7 +259,7 @@ int main(int argc, char** argv)
 		gnuPlot plot1(std::string(GNUPLOT_PATH), 3, false);
 		int win_x = error_distr_size[0];
 		int win_y = error_distr_size[1];
-		plot1.multi_histgram(r, header_names, capture, win_x, win_y);
+		plot1.multi_histgram(r, header_names, residual_flag, capture, win_x, win_y);
 		if (capture)
 			plot1.draw(0);
 		else 
