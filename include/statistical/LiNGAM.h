@@ -273,14 +273,14 @@ public:
 			X = X.appendCol(Y);
 			Y = xs.Col(replacement[i + 1]);
 		}
-		//B.print_e();
+		B.print_e("remove_redundancy");
 		return error;
 	}
 
 	void digraph(const std::vector<std::string>& column_names, std::vector<std::string> x_var, std::vector<int>& residual_flag, const char* filename, bool sideways = false, int size=30, char* outformat="png", bool background_Transparent=false)
 	{
 		Matrix<dnn_double> B_tmp = B.chop(0.001);
-		B_tmp.print_e();
+		B_tmp.print_e("remove 0.001");
 
 		std::vector<std::string> item;
 		item.resize(B.n);

@@ -253,19 +253,19 @@ struct Matrix
 		printf("%d x %d\n", m, n);
 		for (int i = 0; i < m; i++)
 		{
-			if (i > 3 && i < m - 4)
+			if (m > 4 && i > 3 && i < m - 4)
 			{
 				if ( i == 4 ) printf(".....\n");
 				continue;
 			}
 			for (int j = 0; j < n; j++)
 			{
-				if (j == 3)
+				if (n > 4 && j == 3)
 				{
 					printf(" ... ");
 					continue;
 				}
-				if (j > 3 && j < n - 3)
+				if (n > 4 && j > 3 && j < n - 3)
 				{
 					continue;
 				}
@@ -284,19 +284,19 @@ struct Matrix
 		printf("%d x %d\n", m, n);
 		for (int i = 0; i < m; i++)
 		{
-			if (i > 3 && i < m - 4)
+			if (m > 4 && i > 3 && i < m - 4)
 			{
 				if (i == 4) printf(".....\n");
 				continue;
 			}
 			for (int j = 0; j < n; j++)
 			{
-				if (j == 3)
+				if (n > 4 && j == 3)
 				{
 					printf(" ... ");
 					continue;
 				}
-				if (j > 3 && j < n - 3)
+				if (n > 4 && j > 3 && j < n - 3)
 				{
 					continue;
 				}

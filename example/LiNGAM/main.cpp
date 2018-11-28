@@ -74,6 +74,7 @@ int main(int argc, char** argv)
 	double ica_tolerance = TOLERANCE;
 	double lasso = 0.0;
 
+	double min_cor_delete = -1;
 	bool error_distr = true;
 	int error_distr_size[2] = { 1,1 };
 	bool capture = false;
@@ -123,6 +124,10 @@ int main(int argc, char** argv)
 		else if (argname == "--error_distr_size") {
 			sscanf(argv[count + 1], "%d,%d", error_distr_size, error_distr_size + 1);
 		}
+		else if (argname == "--min_cor_delete") {
+			min_cor_delete = atof(argv[count + 1]);
+		}
+		
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
@@ -202,7 +207,21 @@ int main(int argc, char** argv)
 	LiNGAM.before_sorting();
 
 	LiNGAM.B.print_e("B");
-	//LiNGAM.B = LiNGAM.B.chop(0.1);
+	if (min_cor_delete > 0)
+	{
+		Matrix<dnn_double> XCor = xs.Cor();
+		for (int i = 0; i < LiNGAM.B.m; i++)
+		{
+			for (int j = 0; j < LiNGAM.B.n; j++)
+			{
+				if (fabs(XCor(i, j)) < min_cor_delete)
+				{
+					LiNGAM.B(i, j) = 0.0;
+				}
+			}
+		}
+	}
+	LiNGAM.B.print_e("B");
 
 	std::vector<int> residual_flag(xs.n, 0);
 	if (error_distr)
