@@ -29,6 +29,9 @@ Since the GPU calculation is not an experimental level and the mounting method i
 ***progress***
 <img src="https://github.com/Sanaxen/Statistical_analysis/blob/master/images/progress.png"/> 
 
+***Update 2018/11/27***
+<img src="https://github.com/Sanaxen/Statistical_analysis/blob/master/images/LiNGAM_update1.png"/> 
+
 ----
 We use the following code according to the license.
 
