@@ -13,6 +13,9 @@
 
 #define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
 #endif
+
+
+
 int main(int argc, char** argv)
 {
 	printf("multiple_regression START\n");
@@ -29,24 +32,36 @@ int main(int argc, char** argv)
 		std::string argname(argv[count]);
 		if (argname == "--csv") {
 			csvfile = std::string(argv[count + 1]);
+			continue;
 		}
 		if (argname == "--header") {
 			header = (atoi(argv[count + 1]) != 0) ? true : false;
+			continue;
 		}
 		if (argname == "--col") {
 			start_col = atoi(argv[count + 1]);
+			continue;
 		}
 		if (argname == "--x_var") {
 			x_var.push_back(argv[count + 1]);
+			continue;
 		}
 		if (argname == "--y_var") {
 			y_var = argv[count + 1];
+			continue;
 		}
 		if (argname == "--normalize") {
 			normalize = (atoi(argv[count + 1]) != 0) ? true : false;
+			continue;
 		}
 		if (argname == "--heat_map") {
 			heat_map = (atoi(argv[count + 1]) != 0) ? true : false;
+			continue;
+		}
+		else {
+			std::cerr << "Invalid parameter specified - \"" << argname << "\""
+				<< std::endl;
+			return -1;
 		}
 	}
 

@@ -30,21 +30,26 @@ int main(int argc, char** argv)
 		std::string argname(argv[count]);
 		if (argname == "--csv") {
 			csvfile = std::string(argv[count + 1]);
+			continue;
 		}
 		else
 		if (argname == "--header") {
 			header = (atoi(argv[count + 1]) != 0) ? true : false;
+			continue;
 		}else
 		if (argname == "--col") {
 			start_col = atoi(argv[count + 1]);
+			continue;
 		}
 		else
 		if (argname == "--col1") {
 			col1 = atoi(argv[count + 1]);
+			continue;
 		}
 		else
 		if (argname == "--N") {
 			N = atoi(argv[count + 1]);
+			continue;
 		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""

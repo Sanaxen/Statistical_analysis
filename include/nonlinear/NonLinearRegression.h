@@ -46,11 +46,12 @@ class NonLinearRegression
 		}
 	}
 
+	float cost_min = 9999999.0;
 	void net_test()
 	{
 		tiny_dnn::network2<tiny_dnn::sequential> nn_test;
 
-		nn_test.load(model_file);
+		nn_test.load("tmp.model");
 		printf("layers:%zd\n", nn_test.depth());
 
 		set_test(nn_test, 1);
@@ -61,9 +62,10 @@ class NonLinearRegression
 		sprintf(plotName, "test.dat", plot_count);
 		FILE* fp_test = fopen(plotName, "w");
 
+		float cost = 0.0;
 		if (fp_test)
 		{
-			for (int i = 0; i < nY.size(); i++)
+			for (int i = 0; i < train_images.size(); i++)
 			{
 				tiny_dnn::vec_t x = nX[i];
 				tiny_dnn::vec_t& y_predict = nn_test.predict(x);
@@ -73,17 +75,53 @@ class NonLinearRegression
 				for (int k = 0; k < y_predict.size()-1; k++)
 				{
 					fprintf(fp_test, "%f %f ", y_predict[k]*Sigma_y[k] + Mean_y[k], y[k]);
+					cost += (y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k])*(y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k]);
 				}
 				fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1], y[y_predict.size() - 1]);
+				cost += (y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
 			}
 			fclose(fp_test);
+		}
+
+		sprintf(plotName, "predict.dat", plot_count);
+		fp_test = fopen(plotName, "w");
+
+		if (fp_test)
+		{
+			for (int i = train_images.size(); i < nY.size(); i++)
+			{
+				tiny_dnn::vec_t x = nX[i];
+				tiny_dnn::vec_t& y_predict = nn_test.predict(x);
+
+				tiny_dnn::vec_t& y = iY[i];
+				fprintf(fp_test, "%d ", i);
+				for (int k = 0; k < y_predict.size() - 1; k++)
+				{
+					fprintf(fp_test, "%f %f ", y_predict[k] * Sigma_y[k] + Mean_y[k], y[k]);
+					cost += (y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k])*(y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k]);
+				}
+				fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1], y[y_predict.size() - 1]);
+				cost += (y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
+			}
+			fclose(fp_test);
+		}
+		if (cost < cost_min)
+		{
+			nn_test.save("fit_bast.model");
+			cost_min = cost;
+		}
+		if (fp_error_loss)
+		{
+			fprintf(fp_error_loss, "%.10f\n", cost / nY.size());
+			fflush(fp_error_loss);
 		}
 	}
 
 	void gen_visualize_fit_state()
 	{
 		set_test(nn, 1);
-		nn.save(model_file);
+		nn.save("tmp.model");
+
 		net_test();
 		set_train(nn, 1);
 
@@ -176,6 +214,11 @@ public:
 
 	int data_set(float test = 0.3f)
 	{
+		train_images.clear();
+		train_labels.clear();
+		test_images.clear();
+		test_images.clear();
+
 		size_t dataAll = iY.size();
 		printf("dataset All:%d->", dataAll);
 		size_t test_Num = dataAll*test;
@@ -214,14 +257,14 @@ public:
 		using tanh = tiny_dnn::activation::tanh;
 		using recurrent = tiny_dnn::recurrent_layer;
 
-		int hidden_size = iX[0].size() * 50;
+		int hidden_size = train_images[0].size()  * 50;
 
 		// clip gradients
 		tiny_dnn::recurrent_layer_parameters params;
 		params.clip = 0;
 		params.bptt_max = 1e9;
 
-		size_t in_w = iX[0].size();
+		size_t in_w = train_images[0].size() ;
 		size_t in_h = 1;
 		size_t in_map = 1;
 
@@ -232,7 +275,7 @@ public:
 			nn << layers.add_fc(input_size);
 			nn << layers.tanh();
 		}
-		nn << layers.add_fc(iY[0].size());
+		nn << layers.add_fc(train_labels[0].size());
 
 		nn.weight_init(tiny_dnn::weight_init::xavier());
 		for (auto n : nn) n->set_parallelize(true);
@@ -281,46 +324,46 @@ public:
 				std::cout << "\nEpoch " << epoch << "/" << n_train_epochs << " finished. "
 					<< t.elapsed() << "s elapsed." << std::endl;
 
-				if (fp_error_loss)
-				{
-					set_test(nn, 1);
-					float_t loss;
-#if 0
-					float_t loss = nn.get_loss<train_loss>(train_images, train_labels) / train_images.size();
-#else
-					loss = 0;
-					for (int i = 0; i < train_images.size(); i++)
-					{
-						tiny_dnn::vec_t& y = nn.predict(train_images[i]);
-						for (int k = 0; k < y.size(); k++)
-						{
-							float_t d;
-							if (NormalizeData)
-							{
-								d = (y[k] - train_labels[i][k])* Sigma_y[k];
-							}
-							else
-							{
-								d = (y[k] - train_labels[i][k]);
-							}
-
-							loss += d*d;
-						}
-					}
-					loss /= train_images.size();
-#endif
-					set_train(nn, 1);
-
-					fprintf(fp_error_loss, "%d %.3f\n", epoch, loss);
-					fflush(fp_error_loss);
-
-					error = 1;
-					if (loss < tolerance)
-					{
-						nn.stop_ongoing_training();
-						error = 0;
-					}
-				}
+//				if (fp_error_loss)
+//				{
+//					set_test(nn, 1);
+//					float_t loss;
+//#if 0
+//					float_t loss = nn.get_loss<train_loss>(train_images, train_labels) / train_images.size();
+//#else
+//					loss = 0;
+//					for (int i = 0; i < train_images.size(); i++)
+//					{
+//						tiny_dnn::vec_t& y = nn.predict(train_images[i]);
+//						for (int k = 0; k < y.size(); k++)
+//						{
+//							float_t d;
+//							if (NormalizeData)
+//							{
+//								d = (y[k] - train_labels[i][k])* Sigma_y[k];
+//							}
+//							else
+//							{
+//								d = (y[k] - train_labels[i][k]);
+//							}
+//
+//							loss += d*d;
+//						}
+//					}
+//					loss /= train_images.size();
+//#endif
+//					set_train(nn, 1);
+//
+//					fprintf(fp_error_loss, "%d %.3f\n", epoch, loss);
+//					fflush(fp_error_loss);
+//
+//					error = 1;
+//					if (loss < tolerance)
+//					{
+//						nn.stop_ongoing_training();
+//						error = 0;
+//					}
+//				}
 			}
 			if (epoch >= 3 && plot && epoch % plot == 0)
 			{
@@ -382,6 +425,7 @@ public:
 		printf("loss:%.3f\n", loss);
 		set_train(nn, 1);
 
+		nn.load("fit_bast.model");
 		gen_visualize_fit_state();
 		std::cout << "end training." << std::endl;
 

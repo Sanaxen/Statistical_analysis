@@ -18,5 +18,5 @@ replot file using 1:7   t "Observation"  with lines linewidth 1 dt 5
 set terminal png size 1048, 480
 imgfile="images/test.png"
 set output imgfile
-replot
 pause 1
+replot

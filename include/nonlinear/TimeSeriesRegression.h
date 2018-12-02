@@ -4,6 +4,7 @@
 #include "../../include/util/mathutil.h"
 
 #define OUT_SEQ_LEN	1
+#define VARFIDATION_COEF	0.8
 
 class TimeSeriesRegression
 {
@@ -47,11 +48,12 @@ class TimeSeriesRegression
 		}
 	}
 
+	float cost_min = 9999999.0;
 	void net_test()
 	{
 		tiny_dnn::network2<tiny_dnn::sequential> nn_test;
 
-		nn_test.load(model_file);
+		nn_test.load("tmp.model");
 		printf("layers:%zd\n", nn_test.depth());
 
 		set_test(nn_test, OUT_SEQ_LEN);
@@ -63,11 +65,20 @@ class TimeSeriesRegression
 		tiny_dnn::vec_t y_pre = nY[0];
 		FILE* fp_test = fopen(plotName, "w");
 
+		float cost = 0.0;
 		if (fp_test)
 		{
-			for (int i = 0; i < iY.size() - 1; i++)
+			for (int i = 0; i < train_images.size(); i++)
 			{
-				tiny_dnn::vec_t& y_predict = nn_test.predict((i < train_images.size()) ? nY[i] : y_pre);
+				tiny_dnn::vec_t y_predict;
+				if (ref_prev)
+				{
+					y_predict = nn_test.predict(nY[i]);
+				}
+				else
+				{
+					y_predict = nn_test.predict((i < train_images.size()) ? nY[i] : y_pre);
+				}
 
 				y_pre = y_predict;
 
@@ -76,10 +87,12 @@ class TimeSeriesRegression
 				{
 					y_predict[k] = y_predict[k] * Sigma[k] + Mean[k];
 					y[k] = y[k] * Sigma[k] + Mean[k];
+
+					cost += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
 				}
 
-				fprintf(fp_test, "%f ", iX[i+1][0]);
-				for (int k = 0; k < y_predict.size()-1; k++)
+				fprintf(fp_test, "%f ", iX[i + 1][0]);
+				for (int k = 0; k < y_predict.size() - 1; k++)
 				{
 					fprintf(fp_test, "%f %f ", y_predict[k], y[k]);
 				}
@@ -87,12 +100,61 @@ class TimeSeriesRegression
 			}
 			fclose(fp_test);
 		}
+
+		sprintf(plotName, "predict.dat", plot_count);
+		fp_test = fopen(plotName, "w");
+
+		if (fp_test)
+		{
+			y_pre = nY[train_images.size()];
+			for (int i = train_images.size(); i < iY.size() - 1; i++)
+			{
+				tiny_dnn::vec_t y_predict;
+				if (ref_prev)
+				{
+					y_predict = nn_test.predict(nY[i]);
+				}
+				else
+				{
+					y_predict = nn_test.predict((i < train_images.size()) ? nY[i] : y_pre);
+				}
+
+				y_pre = y_predict;
+
+				tiny_dnn::vec_t y = nY[i + 1];
+				for (int k = 0; k < y_predict.size(); k++)
+				{
+					y_predict[k] = y_predict[k] * Sigma[k] + Mean[k];
+					y[k] = y[k] * Sigma[k] + Mean[k];
+					cost += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
+				}
+
+				fprintf(fp_test, "%f ", iX[i + 1][0]);
+				for (int k = 0; k < y_predict.size() - 1; k++)
+				{
+					fprintf(fp_test, "%f %f ", y_predict[k], y[k]);
+				}
+				fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1], y[y_predict.size() - 1]);
+			}
+			fclose(fp_test);
+		}
+		if (cost < cost_min)
+		{
+			nn_test.save("fit_bast.model");
+			cost_min = cost;
+		}
+		if (fp_error_loss)
+		{
+			fprintf(fp_error_loss, "%.10f\n", cost / nY.size());
+			fflush(fp_error_loss);
+		}
 	}
 
 	void gen_visualize_fit_state()
 	{
 		set_test(nn, OUT_SEQ_LEN);
-		nn.save(model_file);
+		nn.save("tmp.model");
+
 		net_test();
 		set_train(nn, sequence_length);
 
@@ -134,6 +196,7 @@ public:
 	std::vector<tiny_dnn::vec_t> train_labels, test_labels;
 	std::vector<tiny_dnn::vec_t> train_images, test_images;
 
+	bool ref_prev = false;
 	size_t input_size = 32;
 	size_t sequence_length = 100;
 	size_t n_minibatch = 30;
@@ -172,6 +235,11 @@ public:
 
 	int data_set(float test = 0.3f)
 	{
+		train_images.clear();
+		train_labels.clear();
+		test_images.clear();
+		test_images.clear();
+
 		size_t dataAll = iY.size();
 		printf("dataset All:%d->", dataAll);
 		size_t test_Num = dataAll*test;
@@ -188,11 +256,13 @@ public:
 
 		for (int i = 0; i < train_num_max; i++)
 		{
+			//if (train_images.size() == nY.size()) break;
 			train_images.push_back(nY[i]);
 			train_labels.push_back(nY[i + 1]);
 		}
-		for (int i = train_num_max - 1; i < dataAll - 1; i++)
+		for (int i = train_num_max; i < dataAll - 1; i++)
 		{
+			//if (test_images.size() == nY.size()) break;
 			test_images.push_back(nY[i]);
 			test_labels.push_back(nY[i + 1]);
 		}
@@ -203,7 +273,7 @@ public:
 		using tanh = tiny_dnn::activation::tanh;
 		using recurrent = tiny_dnn::recurrent_layer;
 
-		int hidden_size = iY[0].size() * 50;
+		int hidden_size = train_images[0].size() * 50;
 		if (input_size < hidden_size) input_size = hidden_size;
 
 		// clip gradients
@@ -211,7 +281,7 @@ public:
 		params.clip = 0;
 		params.bptt_max = 1e9;
 
-		size_t in_w = iY[0].size();
+		size_t in_w = train_images[0].size();
 		size_t in_h = 1;
 		size_t in_map = 1;
 
@@ -227,11 +297,11 @@ public:
 			nn << layers.add_fc(hidden_size);
 			nn << layers.tanh();
 		}
-		nn << layers.add_fc(iY[0].size() * 10);
+		nn << layers.add_fc(train_labels[0].size() * 10);
 		nn << layers.tanh();
-		nn << layers.add_fc(iY[0].size() * 5);
+		nn << layers.add_fc(train_labels[0].size() * 5);
 		nn << layers.tanh();
-		nn << layers.add_fc(iY[0].size());
+		nn << layers.add_fc(train_labels[0].size());
 
 		nn.weight_init(tiny_dnn::weight_init::xavier());
 		for (auto n : nn) n->set_parallelize(true);
@@ -272,6 +342,7 @@ public:
 		optimizer.reset();
 		tiny_dnn::timer t;
 
+		float_t loss_min = 9999999999.0;
 		tiny_dnn::progress_display disp(nn.get_input_size());
 
 		auto on_enumerate_epoch = [&]() {
@@ -284,39 +355,55 @@ public:
 				std::cout << "\nEpoch " << epoch << "/" << n_train_epochs << " finished. "
 					<< t.elapsed() << "s elapsed." << std::endl;
 
-				if (fp_error_loss)
-				{
-					set_test(nn, OUT_SEQ_LEN);
-					float_t loss;
-#if 0
-					float_t loss = nn.get_loss<train_loss>(train_images, train_labels) / train_images.size();
-#else
-					loss = 0;
-					for (int i = 0; i < train_images.size(); i++)
-					{
-						tiny_dnn::vec_t& y = nn.predict(train_images[i]);
-						for (int k = 0; k < y.size(); k++)
-						{
-							float_t d = (y[k] - train_labels[i][k])* Sigma[k];
-							loss += d*d;
-						}
-					}
-					loss /= train_images.size();
-#endif
-					set_train(nn, seq_length);
-
-					fprintf(fp_error_loss, "%d %.3f\n", epoch, loss);
-					fflush(fp_error_loss);
-
-					error = 1;
-					if (loss < tolerance)
-					{
-						nn.stop_ongoing_training();
-						error = 0;
-					}
-				}
+//				if (fp_error_loss)
+//				{
+//					set_test(nn, OUT_SEQ_LEN);
+//					float_t loss;
+//#if 0
+//					float_t loss = nn.get_loss<train_loss>(train_images, train_labels) / train_images.size();
+//#else
+//					loss = 0;
+//					for (int i = 0; i < train_images.size(); i++)
+//					{
+//						tiny_dnn::vec_t& y = nn.predict(train_images[i]);
+//						for (int k = 0; k < y.size(); k++)
+//						{
+//							float_t d = (y[k] - train_labels[i][k])* Sigma[k];
+//							loss += d*d;
+//						}
+//					}
+//					for (int i = 0; i < test_images.size()*VARFIDATION_COEF; i++)
+//					{
+//						tiny_dnn::vec_t& y = nn.predict(test_images[i]);
+//						for (int k = 0; k < y.size(); k++)
+//						{
+//							float_t d = (y[k] - test_labels[i][k])* Sigma[k];
+//							loss += d*d;
+//						}
+//					}
+//
+//					loss /= (train_images.size() + test_images.size()*VARFIDATION_COEF);
+//#endif
+//					if (loss < loss_min)
+//					{
+//						nn.save(model_file);
+//						loss_min = loss;
+//						printf("=====>(model save!!) loss_min:%f\n", loss);
+//					}
+//					set_train(nn, seq_length);
+//
+//					fprintf(fp_error_loss, "%d %.10f\n", epoch, loss);
+//					fflush(fp_error_loss);
+//
+//					error = 1;
+//					if (loss < tolerance)
+//					{
+//						nn.stop_ongoing_training();
+//						error = 0;
+//					}
+//				}
 			}
-			if (epoch >= 3 && plot && epoch % plot == 0)
+			if (plot && epoch % plot == 0)
 			{
 				gen_visualize_fit_state();
 			}
@@ -329,7 +416,7 @@ public:
 		auto on_enumerate_minibatch = [&]() {
 			if (progress) disp += n_minibatch;
 
-			if (epoch < 3 && plot && batch % plot == 0)
+			if (plot && batch % plot == 0)
 			{
 				gen_visualize_fit_state();
 			}
@@ -365,11 +452,21 @@ public:
 				loss += d*d;
 			}
 		}
-		loss /= train_images.size();
+		for (int i = 0; i < test_images.size()*VARFIDATION_COEF; i++)
+		{
+			tiny_dnn::vec_t& y = nn.predict(test_images[i]);
+			for (int k = 0; k < y.size(); k++)
+			{
+				float_t d = (y[k] - test_labels[i][k])* Sigma[k];
+				loss += d*d;
+			}
+		}
+		loss /= (train_images.size()+ test_images.size()*VARFIDATION_COEF);
 		printf("loss:%.3f\n", loss);
 
 		set_train(nn, seq_length);
 
+		nn.load("fit_bast.model");
 		gen_visualize_fit_state();
 		std::cout << "end training." << std::endl;
 
@@ -434,6 +531,7 @@ public:
 		fprintf(fp, "--------------------------------------------------------------------\n");
 		fprintf(fp, "RMSE             :%f\n", rmse);
 		fprintf(fp, "chi square       :%f\n", chi_square);
+		fprintf(fp, "freedom          :%d\n", train_images.size()*train_labels[0].size());
 		fprintf(fp, "p value          :%f\n", chi_pdf);
 		fprintf(fp, "--------------------------------------------------------------------\n");
 		if (chi_distribution.status != 0)
