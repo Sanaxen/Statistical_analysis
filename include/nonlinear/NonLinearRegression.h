@@ -6,6 +6,7 @@
 
 class NonLinearRegression
 {
+	bool convergence = false;
 	int error = 0;
 	FILE* fp_error_loss = NULL;
 	bool visualize_state_flag = true;
@@ -109,6 +110,10 @@ class NonLinearRegression
 		{
 			nn_test.save("fit_bast.model");
 			cost_min = cost;
+		}
+		if (cost_min / nY.size() < tolerance)
+		{
+			convergence = true;
 		}
 		if (fp_error_loss)
 		{
@@ -369,6 +374,11 @@ public:
 			{
 				gen_visualize_fit_state();
 			}
+			if (convergence)
+			{
+				nn.stop_ongoing_training();
+				error = 0;
+			}
 
 			if (progress) disp.restart(nn.get_input_size());
 			t.restart();
@@ -381,6 +391,11 @@ public:
 			if (epoch < 3 && plot && batch % plot == 0)
 			{
 				gen_visualize_fit_state();
+			}
+			if (convergence)
+			{
+				nn.stop_ongoing_training();
+				error = 0;
 			}
 			++batch;
 		};

@@ -28,6 +28,7 @@ int main(int argc, char** argv)
 {
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
+	int sequence_length = -1;
 
 	bool header = false;
 	int start_col = 0;
@@ -54,6 +55,9 @@ int main(int argc, char** argv)
 		}
 		if (argname == "--y_var") {
 			y_var.push_back(argv[count + 1]);
+		}
+		if (argname == "--seq_len") {
+			sequence_length = atoi(argv[count + 1]);
 		}
 	}
 
@@ -262,6 +266,8 @@ int main(int argc, char** argv)
 	{
 		y = y.appendCol(z.Col(y_var_idx[i]));
 	}
+
+	printf("sequence_length:%d\n", sequence_length);
 	printf("x_dim:%d y_dim:%d\n", x_dim, y_dim);
 	x.print();
 	y.print();
@@ -275,7 +281,6 @@ int main(int argc, char** argv)
 
 	timeSeries.tolerance = 0.009;
 	timeSeries.learning_rate = 0.01;
-	timeSeries.data_set(0.4);
 	timeSeries.visualize_loss(10);
 	timeSeries.plot = 10;
 
@@ -283,8 +288,8 @@ int main(int argc, char** argv)
 	int n_layers = -1;
 	int n_rnn_layers = -1;
 	int input_unit = -1;
-	int sequence_length = -1;
 	bool capture = false;
+	float test = 0.4;
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -325,7 +330,7 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--test") {
-			timeSeries.data_set(atof(argv[count + 1]));
+			test = atof(argv[count + 1]);
 			continue;
 		}
 		else if (argname == "--epochs") {
@@ -367,6 +372,9 @@ int main(int argc, char** argv)
 		}
 
 	}
+
+	timeSeries.data_set(sequence_length, test);
+
 	std::cout << "Running with the following parameters:" << std::endl
 		<< "Learning rate   :    " << timeSeries.learning_rate << std::endl
 		<< "Minibatch size  :   " << timeSeries.n_minibatch << std::endl

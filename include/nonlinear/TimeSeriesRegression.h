@@ -8,6 +8,7 @@
 
 class TimeSeriesRegression
 {
+	bool convergence = false;
 	int error = 0;
 	FILE* fp_error_loss = NULL;
 	bool visualize_state_flag = true;
@@ -143,6 +144,10 @@ class TimeSeriesRegression
 			nn_test.save("fit_bast.model");
 			cost_min = cost;
 		}
+		if (cost_min / nY.size() < tolerance)
+		{
+			convergence = true;
+		}
 		if (fp_error_loss)
 		{
 			fprintf(fp_error_loss, "%.10f\n", cost / nY.size());
@@ -233,18 +238,31 @@ public:
 		}
 	}
 
-	int data_set(float test = 0.3f)
+	int data_set(int sequence_length_, float test = 0.3f)
 	{
 		train_images.clear();
 		train_labels.clear();
 		test_images.clear();
 		test_images.clear();
 
+		if (sequence_length_ > n_minibatch)
+		{
+			sequence_length = n_minibatch*int((float)sequence_length / (float)n_minibatch);
+		}
+		else if (n_minibatch > sequence_length_)
+		{
+			printf("%d %d %f\n", n_minibatch, sequence_length_, (float)n_minibatch / (float)sequence_length_);
+			n_minibatch = sequence_length_*int((float)n_minibatch / (float)sequence_length_);
+			sequence_length = sequence_length_;
+		}
+		printf("n_minibatch:%d sequence_length:%d\n", n_minibatch, sequence_length);
+
 		size_t dataAll = iY.size();
 		printf("dataset All:%d->", dataAll);
 		size_t test_Num = dataAll*test;
 		int datasetNum = dataAll - test_Num;
 
+		datasetNum = datasetNum - datasetNum % n_minibatch;
 		if (datasetNum == 0)
 		{
 			printf("Too many min_batch or Sequence length\n");
@@ -407,10 +425,15 @@ public:
 			{
 				gen_visualize_fit_state();
 			}
+			if (convergence)
+			{
+				nn.stop_ongoing_training();
+				error = 0;
+			}
 
 			if (progress) disp.restart(nn.get_input_size());
 			t.restart();
-			//rnn_state_reset(nn);
+			rnn_state_reset(nn);
 			++epoch;
 		};
 		auto on_enumerate_minibatch = [&]() {
@@ -419,6 +442,11 @@ public:
 			if (plot && batch % plot == 0)
 			{
 				gen_visualize_fit_state();
+			}
+			if (convergence)
+			{
+				nn.stop_ongoing_training();
+				error = 0;
 			}
 			++batch;
 		};
