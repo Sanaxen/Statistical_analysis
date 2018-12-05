@@ -271,7 +271,6 @@ int main(int argc, char** argv)
 
 	regression.tolerance = 1.0e-3;
 	regression.learning_rate = 1;
-	regression.data_set(0.0);
 	regression.visualize_loss(10);
 	regression.plot = 10;
 

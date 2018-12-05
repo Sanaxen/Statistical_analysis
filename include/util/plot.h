@@ -702,7 +702,7 @@ public:
 	}
 
 
-	void plot_histogram(Matrix<dnn_double>&X, char* label_text =NULL)
+	void plot_histogram(Matrix<dnn_double>&X, char* label_text =NULL, int shapiro_wilk_test=0)
 	{
 		script_reopen();
 		if (script == NULL) return;
@@ -728,9 +728,17 @@ public:
 			}
 		}
 		const char* plot = (plot_count) ? "replot" : "plot";
-		fprintf(script, "%s '%s' using 1:2 %s with boxes lc rgb \"chartreuse\" linewidth %.1f %s\n",
-			plot, data_name.c_str(), label.c_str(), linewidth, linecolor.c_str());
 
+		if (shapiro_wilk_test != 1)
+		{
+			fprintf(script, "%s '%s' using 1:2 %s with boxes lc rgb \"chartreuse\" linewidth %.1f %s\n",
+				plot, data_name.c_str(), label.c_str(), linewidth, linecolor.c_str());
+		}
+		else
+		{
+			fprintf(script, "%s '%s' using 1:2 %s with boxes lc rgb \"light-red\" linewidth %.1f %s\n",
+				plot, data_name.c_str(), label.c_str(), linewidth, linecolor.c_str());
+		}
 		linecolor = "";
 		plot_count++;
 	}
@@ -826,7 +834,7 @@ public:
 					}
 					else
 					{
-					fprintf(script, "plot '%s' using 1:2 %s with boxes lc rgb \"chartreuse\" linewidth %.1f %s\n",
+						fprintf(script, "plot '%s' using 1:2 %s with boxes lc rgb \"chartreuse\" linewidth %.1f %s\n",
 							histogram_name, (std::string("t ") + y).c_str(), 1/*linewidth*/, linecolor.c_str());
 					}
 					continue;

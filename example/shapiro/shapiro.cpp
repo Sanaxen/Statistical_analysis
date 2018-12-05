@@ -42,7 +42,8 @@ int main()
 	plot1.draw();
 
 	gnuPlot plot2(std::string(GNUPLOT_PATH), 4, false);
-	plot2.plot_histogram(Histogram(xx, 40));
+	shapiro.test(xx);
+	plot2.plot_histogram(Histogram(xx, 40), "", (shapiro.p_value() > 0.05) ? 1 : 0);
 	plot2.draw();
 
 #endif
@@ -57,6 +58,12 @@ int main()
 	Chi_distribution chi_distribution(600);
 	double chi_pdf = chi_distribution.p_value(0.05);
 	printf("p value          :%f\n", chi_pdf);
+
+#ifdef USE_GNUPLOT
+	gnuPlot plot3(std::string(GNUPLOT_PATH), 5, false);
+	plot3.plot_histogram(Histogram(xx, 40), "", (shapiro.p_value() > 0.05) ? 1 : 0);
+
+#endif
 
 	return 0;
 }

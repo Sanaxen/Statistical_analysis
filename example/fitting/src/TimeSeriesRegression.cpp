@@ -284,7 +284,7 @@ int main(int argc, char** argv)
 	timeSeries.visualize_loss(10);
 	timeSeries.plot = 10;
 
-	bool ref_prev = false;
+	int ref_prev = -1;
 	int n_layers = -1;
 	int n_rnn_layers = -1;
 	int input_unit = -1;
@@ -362,7 +362,7 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--ref_prev") {
-			timeSeries.ref_prev = (0 < atoi(argv[count + 1])) ? true : false;
+			timeSeries.ref_prev = atoi(argv[count + 1]);
 			continue;
 		}
 		else {

@@ -66,7 +66,7 @@ class NonLinearRegression
 		float cost = 0.0;
 		if (fp_test)
 		{
-			for (int i = 0; i < train_images.size(); i++)
+			for (int i = 0; i < nX.size(); i++)
 			{
 				tiny_dnn::vec_t x = nX[i];
 				tiny_dnn::vec_t& y_predict = nn_test.predict(x);
@@ -86,7 +86,13 @@ class NonLinearRegression
 
 		sprintf(plotName, "predict.dat", plot_count);
 		fp_test = fopen(plotName, "w");
-
+		/**/
+		if (fp_test)
+		{
+			fclose(fp_test);
+			fp_test = NULL;
+		}
+		/**/
 		if (fp_test)
 		{
 			for (int i = train_images.size(); i < nY.size(); i++)
@@ -240,21 +246,59 @@ public:
 
 		std::random_device rnd;     // 非決定的な乱数生成器を生成
 		std::mt19937 mt(rnd());     //  メルセンヌ・ツイスタ
-		std::uniform_int_distribution<> rand1(0, train_num_max - 1);
+		std::uniform_int_distribution<> rand1(0, dataAll - 1);
 
-		for (int i = 0; i < train_num_max; i++)
+		std::vector<int> use_index(dataAll, -1);
+
+		if (test_Num > 0)
+		{
+			do
+			{
+				int ii = rand1(mt);
+				if (use_index[ii] != -1)
+				{
+					continue;
+				}
+				test_images.push_back(nX[ii]);
+				test_labels.push_back(nY[ii]);
+				use_index[ii] = ii;
+
+				if (test_images.size() == test_Num) break;
+				for (int i = 1; i < test_Num*0.05; i++)
+				{
+					test_images.push_back(nX[ii + i]);
+					test_labels.push_back(nY[ii + i]);
+					use_index[ii + i] = ii + i;
+					if (test_images.size() == test_Num) break;
+				}
+			} while (test_images.size() != test_Num);
+		}
+		std::vector<int> test_index = use_index;
+
+		do
 		{
 			int ii = rand1(mt);
+			if (use_index[ii] != -1) continue;
 			train_images.push_back(nX[ii]);
 			train_labels.push_back(nY[ii]);
-		}
-		std::uniform_int_distribution<> rand2(train_num_max, dataAll - 1);
-		for (int i = train_num_max - 1; i < dataAll - 1; i++)
+		} while (train_images.size() != datasetNum);
+
+		FILE* fp = fopen("test_point.dat", "w");
+
+		for (int ii = 0; ii < iY.size(); ii++)
 		{
-			int ii = rand2(mt);
-			test_images.push_back(nX[ii]);
-			test_labels.push_back(nY[ii]);
+			int i = test_index[ii];
+			if (i == -1) continue;
+
+			fprintf(fp, "%d ", i);
+			for (int k = 0; k < iY[0].size()-1; k++)
+			{
+				fprintf(fp, "%f ", iY[i][k]);
 		}
+			fprintf(fp, "%f\n", iY[i][iY[0].size() - 1]);
+		}
+		fclose(fp);
+		printf("train:%d test:%d\n", train_images.size(), test_images.size());
 	}
 
 	void construct_net(int n_layers = 5)

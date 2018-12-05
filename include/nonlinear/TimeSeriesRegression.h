@@ -107,17 +107,20 @@ class TimeSeriesRegression
 
 		if (fp_test)
 		{
+			int ref_prev_count = 0;
 			y_pre = nY[train_images.size()];
 			for (int i = train_images.size(); i < iY.size() - 1; i++)
 			{
 				tiny_dnn::vec_t y_predict;
-				if (ref_prev)
+				if (ref_prev <= 0 || ref_prev > 0 && ref_prev == ref_prev_count)
 				{
 					y_predict = nn_test.predict(nY[i]);
+					ref_prev_count = 0;
 				}
 				else
 				{
-					y_predict = nn_test.predict((i < train_images.size()) ? nY[i] : y_pre);
+					y_predict = nn_test.predict(y_pre);
+					ref_prev_count++;
 				}
 
 				y_pre = y_predict;
@@ -201,7 +204,7 @@ public:
 	std::vector<tiny_dnn::vec_t> train_labels, test_labels;
 	std::vector<tiny_dnn::vec_t> train_images, test_images;
 
-	bool ref_prev = false;
+	int ref_prev = -1;
 	size_t input_size = 32;
 	size_t sequence_length = 100;
 	size_t n_minibatch = 30;
