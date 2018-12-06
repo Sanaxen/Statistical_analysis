@@ -69,21 +69,25 @@ class TimeSeriesRegression
 		float cost = 0.0;
 		if (fp_test)
 		{
-			for (int i = 0; i < train_images.size(); i++)
+			std::vector<tiny_dnn::vec_t> YY = nY;
+			for (int i = 0; i < iY.size()- future; i++)
 			{
-				tiny_dnn::vec_t y_predict;
-				if (ref_prev)
+				if (i == train_images.size())
 				{
-					y_predict = nn_test.predict(nY[i]);
-				}
-				else
-				{
-					y_predict = nn_test.predict((i < train_images.size()) ? nY[i] : y_pre);
+					fclose(fp_test);
+					sprintf(plotName, "predict.dat", plot_count);
+					fp_test = fopen(plotName, "w");
+
 				}
 
+				tiny_dnn::vec_t y_predict;
+				//y_predict = nn_test.predict((i < train_images.size()) ? nY[i] : y_pre);
+				y_predict = nn_test.predict( YY[i]);
+
+				YY[i + future] = y_predict;
 				y_pre = y_predict;
 
-				tiny_dnn::vec_t y = nY[i + 1];
+				tiny_dnn::vec_t y = nY[i + future];
 				for (int k = 0; k < y_predict.size(); k++)
 				{
 					y_predict[k] = y_predict[k] * Sigma[k] + Mean[k];
@@ -92,7 +96,7 @@ class TimeSeriesRegression
 					cost += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
 				}
 
-				fprintf(fp_test, "%f ", iX[i + 1][0]);
+				fprintf(fp_test, "%f ", iX[i + future][0]);
 				for (int k = 0; k < y_predict.size() - 1; k++)
 				{
 					fprintf(fp_test, "%f %f ", y_predict[k], y[k]);
@@ -102,58 +106,18 @@ class TimeSeriesRegression
 			fclose(fp_test);
 		}
 
-		sprintf(plotName, "predict.dat", plot_count);
-		fp_test = fopen(plotName, "w");
-
-		if (fp_test)
-		{
-			int ref_prev_count = 0;
-			y_pre = nY[train_images.size()];
-			for (int i = train_images.size(); i < iY.size() - 1; i++)
-			{
-				tiny_dnn::vec_t y_predict;
-				if (ref_prev <= 0 || ref_prev > 0 && ref_prev == ref_prev_count)
-				{
-					y_predict = nn_test.predict(nY[i]);
-					ref_prev_count = 0;
-				}
-				else
-				{
-					y_predict = nn_test.predict(y_pre);
-					ref_prev_count++;
-				}
-
-				y_pre = y_predict;
-
-				tiny_dnn::vec_t y = nY[i + 1];
-				for (int k = 0; k < y_predict.size(); k++)
-				{
-					y_predict[k] = y_predict[k] * Sigma[k] + Mean[k];
-					y[k] = y[k] * Sigma[k] + Mean[k];
-					cost += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
-				}
-
-				fprintf(fp_test, "%f ", iX[i + 1][0]);
-				for (int k = 0; k < y_predict.size() - 1; k++)
-				{
-					fprintf(fp_test, "%f %f ", y_predict[k], y[k]);
-				}
-				fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1], y[y_predict.size() - 1]);
-			}
-			fclose(fp_test);
-		}
 		if (cost < cost_min)
 		{
 			nn_test.save("fit_bast.model");
 			cost_min = cost;
 		}
-		if (cost_min / nY.size() < tolerance)
+		if (cost_min / (iY.size() - future) < tolerance)
 		{
 			convergence = true;
 		}
 		if (fp_error_loss)
 		{
-			fprintf(fp_error_loss, "%.10f\n", cost / nY.size());
+			fprintf(fp_error_loss, "%.10f\n", cost / (iY.size() - future));
 			fflush(fp_error_loss);
 		}
 	}
@@ -204,7 +168,7 @@ public:
 	std::vector<tiny_dnn::vec_t> train_labels, test_labels;
 	std::vector<tiny_dnn::vec_t> train_images, test_images;
 
-	int ref_prev = -1;
+	int future = 1;
 	size_t input_size = 32;
 	size_t sequence_length = 100;
 	size_t n_minibatch = 30;
@@ -260,7 +224,7 @@ public:
 		}
 		printf("n_minibatch:%d sequence_length:%d\n", n_minibatch, sequence_length);
 
-		size_t dataAll = iY.size();
+		size_t dataAll = iY.size() - future;
 		printf("dataset All:%d->", dataAll);
 		size_t test_Num = dataAll*test;
 		int datasetNum = dataAll - test_Num;
@@ -279,13 +243,13 @@ public:
 		{
 			//if (train_images.size() == nY.size()) break;
 			train_images.push_back(nY[i]);
-			train_labels.push_back(nY[i + 1]);
+			train_labels.push_back(nY[i + future]);
 		}
-		for (int i = train_num_max; i < dataAll - 1; i++)
+		for (int i = train_num_max; i < dataAll; i++)
 		{
 			//if (test_images.size() == nY.size()) break;
 			test_images.push_back(nY[i]);
-			test_labels.push_back(nY[i + 1]);
+			test_labels.push_back(nY[i + future]);
 		}
 	}
 
