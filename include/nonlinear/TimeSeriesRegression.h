@@ -2,9 +2,9 @@
 #define _TimeSeriesRegression_H
 
 #include "../../include/util/mathutil.h"
+#include <signal.h>
 
 #define OUT_SEQ_LEN	1
-#define VARFIDATION_COEF	0.8
 
 class TimeSeriesRegression
 {
@@ -18,6 +18,7 @@ class TimeSeriesRegression
 		mean = std::vector<float_t>(X[0].size(), 0.0);
 		sigma = std::vector<float_t>(X[0].size(), 0.0);
 
+#if 0
 		for (int i = 0; i < X.size(); i++)
 		{
 			for (int k = 0; k < X[0].size(); k++)
@@ -47,9 +48,53 @@ class TimeSeriesRegression
 				X[i][k] = (X[i][k] - mean[k]) / (sigma[k] + 1.0e-10);
 			}
 		}
+#else
+		//float max_value = -9999999999999.;
+		//float min_value = 9999999999999.;
+		//for (int i = 0; i < X.size(); i++)
+		//{
+		//	for (int k = 0; k < X[0].size(); k++)
+		//	{
+		//		if (max_value < X[i][k]) max_value = X[i][k];
+		//		if (min_value > X[i][k]) min_value = X[i][k];
+		//	}
+		//}
+		//for (int i = 0; i < X.size(); i++)
+		//{
+		//	for (int k = 0; k < X[0].size(); k++)
+		//	{
+		//		X[i][k] = (X[i][k] - min_value) / (max_value - min_value);
+		//	}
+		//}
+		//for (int k = 0; k < X[0].size(); k++)
+		//{
+		//	mean[k] = min_value;
+		//	sigma[k] = (max_value - min_value);
+		//}
+
+		for (int k = 0; k < X[0].size(); k++)
+		{
+			float max_value = -9999999999999.;
+			float min_value = 9999999999999.;
+			for (int i = 0; i < X.size(); i++)
+			{
+				if (max_value < X[i][k]) max_value = X[i][k];
+				if (min_value > X[i][k]) min_value = X[i][k];
+			}
+			mean[k] = min_value;
+			sigma[k] = (max_value - min_value);
+		}
+		for (int i = 0; i < X.size(); i++)
+		{
+			for (int k = 0; k < X[0].size(); k++)
+			{
+				X[i][k] = (X[i][k] - mean[k]) / (sigma[k] - mean[k]);
+			}
+		}
+#endif
 	}
 
-	float cost_min = 9999999.0;
+	float cost_min = std::numeric_limits<float>::max();
 	void net_test()
 	{
 		tiny_dnn::network2<tiny_dnn::sequential> nn_test;
@@ -70,33 +115,38 @@ class TimeSeriesRegression
 		if (fp_test)
 		{
 			std::vector<tiny_dnn::vec_t> YY = nY;
-			for (int i = 0; i < iY.size()- future; i++)
+			std::vector<tiny_dnn::vec_t> ZZ = nY;
+			for (int i = 0; i < iY.size()- sequence_length; i++)
 			{
-				if (i == train_images.size())
+				if (i + sequence_length == train_images.size())
 				{
 					fclose(fp_test);
 					sprintf(plotName, "predict.dat", plot_count);
 					fp_test = fopen(plotName, "w");
-
 				}
 
 				tiny_dnn::vec_t y_predict;
 				//y_predict = nn_test.predict((i < train_images.size()) ? nY[i] : y_pre);
-				y_predict = nn_test.predict( YY[i]);
+				//y_predict = nn_test.predict((i < train_images.size()) ? train_images[i] : seq_vec(YY, i));
+				y_predict = nn_test.predict( seq_vec(YY, i));
 
-				YY[i + future] = y_predict;
+				if (i + sequence_length >= train_images.size())
+				{
+					YY[i + sequence_length] = y_predict;
+				}
 				y_pre = y_predict;
 
-				tiny_dnn::vec_t y = nY[i + future];
+				tiny_dnn::vec_t y = nY[i + sequence_length];
 				for (int k = 0; k < y_predict.size(); k++)
 				{
 					y_predict[k] = y_predict[k] * Sigma[k] + Mean[k];
 					y[k] = y[k] * Sigma[k] + Mean[k];
 
 					cost += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
+
 				}
 
-				fprintf(fp_test, "%f ", iX[i + future][0]);
+				fprintf(fp_test, "%f ", iX[i + sequence_length][0]);
 				for (int k = 0; k < y_predict.size() - 1; k++)
 				{
 					fprintf(fp_test, "%f %f ", y_predict[k], y[k]);
@@ -106,18 +156,21 @@ class TimeSeriesRegression
 			fclose(fp_test);
 		}
 
+		cost /= (iY.size() - sequence_length);
+		printf("%f %f\n", cost_min, cost);
 		if (cost < cost_min)
 		{
 			nn_test.save("fit_bast.model");
+			printf("!!=========== bast model save ============!!\n");
 			cost_min = cost;
 		}
-		if (cost_min / (iY.size() - future) < tolerance)
+		if (cost_min < tolerance)
 		{
 			convergence = true;
 		}
 		if (fp_error_loss)
 		{
-			fprintf(fp_error_loss, "%.10f\n", cost / (iY.size() - future));
+			fprintf(fp_error_loss, "%.10f %.10f %.4f\n", cost, cost_min, tolerance);
 			fflush(fp_error_loss);
 		}
 	}
@@ -154,6 +207,7 @@ class TimeSeriesRegression
 	int batch = 0;
 
 public:
+	bool test_mode = false;
 	bool capture = false;
 	bool progress = true;
 	float tolerance = 1.0e-6;
@@ -168,7 +222,7 @@ public:
 	std::vector<tiny_dnn::vec_t> train_labels, test_labels;
 	std::vector<tiny_dnn::vec_t> train_images, test_images;
 
-	int future = 1;
+	std::string rnn_type = "gru";
 	size_t input_size = 32;
 	size_t sequence_length = 100;
 	size_t n_minibatch = 30;
@@ -205,6 +259,24 @@ public:
 		}
 	}
 
+	void add_seq(tiny_dnn::vec_t& y, tiny_dnn::vec_t& Y)
+	{
+		for (int i = 0; i < y.size(); i++)
+		{
+			Y.push_back(y[i]);
+		}
+	}
+	tiny_dnn::vec_t seq_vec(tiny_dnn::tensor_t& ny, int start)
+	{
+
+		tiny_dnn::vec_t seq;
+		for (int k = 0; k < sequence_length; k++)
+		{
+			add_seq(ny[start + k], seq);
+		}
+		return seq;
+	}
+
 	int data_set(int sequence_length_, float test = 0.3f)
 	{
 		train_images.clear();
@@ -212,19 +284,10 @@ public:
 		test_images.clear();
 		test_images.clear();
 
-		if (sequence_length_ > n_minibatch)
-		{
-			sequence_length = n_minibatch*int((float)sequence_length / (float)n_minibatch);
-		}
-		else if (n_minibatch > sequence_length_)
-		{
-			printf("%d %d %f\n", n_minibatch, sequence_length_, (float)n_minibatch / (float)sequence_length_);
-			n_minibatch = sequence_length_*int((float)n_minibatch / (float)sequence_length_);
-			sequence_length = sequence_length_;
-		}
+		sequence_length = sequence_length_;
 		printf("n_minibatch:%d sequence_length:%d\n", n_minibatch, sequence_length);
 
-		size_t dataAll = iY.size() - future;
+		size_t dataAll = iY.size() - sequence_length;
 		printf("dataset All:%d->", dataAll);
 		size_t test_Num = dataAll*test;
 		int datasetNum = dataAll - test_Num;
@@ -241,25 +304,25 @@ public:
 
 		for (int i = 0; i < train_num_max; i++)
 		{
-			//if (train_images.size() == nY.size()) break;
-			train_images.push_back(nY[i]);
-			train_labels.push_back(nY[i + future]);
+			train_images.push_back(seq_vec(nY, i));
+			train_labels.push_back(nY[i + sequence_length]);
 		}
 		for (int i = train_num_max; i < dataAll; i++)
 		{
-			//if (test_images.size() == nY.size()) break;
-			test_images.push_back(nY[i]);
-			test_labels.push_back(nY[i + future]);
+			test_images.push_back(seq_vec(nY, i));
+			test_labels.push_back(nY[i + sequence_length]);
 		}
 	}
 
-	void construct_net(int n_rnn_layers = 2, int n_layers = 2)
+	void construct_net(int n_rnn_layers = 2, int n_layers = 2, int n_hidden_size = -1)
 	{
 		using tanh = tiny_dnn::activation::tanh;
 		using recurrent = tiny_dnn::recurrent_layer;
 
-		int hidden_size = train_images[0].size() * 50;
-		if (input_size < hidden_size) input_size = hidden_size;
+		int hidden_size = n_hidden_size;
+		if (hidden_size <= 0) hidden_size = 64;
+
+		input_size = train_images[0].size()*3;
 
 		// clip gradients
 		tiny_dnn::recurrent_layer_parameters params;
@@ -272,11 +335,11 @@ public:
 
 		LayerInfo layers(in_w, in_h, in_map);
 		nn << layers.add_fc(input_size);
-		nn << layers.tanh();
+		//nn << layers.tanh();
 		for (int i = 0; i < n_rnn_layers; i++) {
-			nn << layers.add_rnn(std::string("gru"), hidden_size, sequence_length, params);
+			nn << layers.add_rnn(rnn_type, hidden_size, sequence_length, params);
 			input_size = hidden_size;
-			nn << layers.tanh();
+			//nn << layers.tanh();
 		}
 		for (int i = 0; i < n_layers; i++) {
 			nn << layers.add_fc(hidden_size);
@@ -302,14 +365,12 @@ public:
 	}
 
 
-	void fit(int seq_length = 30, int rnn_layers = 2, int n_layers = 2, int input_unit = 32)
+	void fit(int seq_length = 30, int rnn_layers = 2, int n_layers = 2, int n_hidden_size = -1)
 	{
 		if (seq_length < 0) seq_length = 30;
 		if (rnn_layers < 0) rnn_layers = 2;
 		if (n_layers < 0) n_layers = 2;
-		if (input_unit < 0) input_unit = 32;
 
-		input_size = input_unit;
 		sequence_length = seq_length;
 		nn.set_input_size(train_images.size());
 		using train_loss = tiny_dnn::mse;
@@ -321,9 +382,10 @@ public:
 		optimizer.alpha *=
 			std::min(tiny_dnn::float_t(4),
 				static_cast<tiny_dnn::float_t>(sqrt(n_minibatch) * learning_rate));
+		//optimizer.alpha *= learning_rate;
 		std::cout << "optimizer.alpha:" << optimizer.alpha << std::endl;
 
-		construct_net(rnn_layers, n_layers);
+		construct_net(rnn_layers, n_layers, n_hidden_size);
 		optimizer.reset();
 		tiny_dnn::timer t;
 
@@ -332,61 +394,13 @@ public:
 
 		auto on_enumerate_epoch = [&]() {
 
-			if (epoch % 10 == 0) {
-				optimizer.alpha *= 0.97;
-			}
+			//if (epoch % 10 == 0) {
+			//	optimizer.alpha *= 0.97;
+			//}
 			if (epoch % 1 == 0)
 			{
 				std::cout << "\nEpoch " << epoch << "/" << n_train_epochs << " finished. "
 					<< t.elapsed() << "s elapsed." << std::endl;
-
-//				if (fp_error_loss)
-//				{
-//					set_test(nn, OUT_SEQ_LEN);
-//					float_t loss;
-//#if 0
-//					float_t loss = nn.get_loss<train_loss>(train_images, train_labels) / train_images.size();
-//#else
-//					loss = 0;
-//					for (int i = 0; i < train_images.size(); i++)
-//					{
-//						tiny_dnn::vec_t& y = nn.predict(train_images[i]);
-//						for (int k = 0; k < y.size(); k++)
-//						{
-//							float_t d = (y[k] - train_labels[i][k])* Sigma[k];
-//							loss += d*d;
-//						}
-//					}
-//					for (int i = 0; i < test_images.size()*VARFIDATION_COEF; i++)
-//					{
-//						tiny_dnn::vec_t& y = nn.predict(test_images[i]);
-//						for (int k = 0; k < y.size(); k++)
-//						{
-//							float_t d = (y[k] - test_labels[i][k])* Sigma[k];
-//							loss += d*d;
-//						}
-//					}
-//
-//					loss /= (train_images.size() + test_images.size()*VARFIDATION_COEF);
-//#endif
-//					if (loss < loss_min)
-//					{
-//						nn.save(model_file);
-//						loss_min = loss;
-//						printf("=====>(model save!!) loss_min:%f\n", loss);
-//					}
-//					set_train(nn, seq_length);
-//
-//					fprintf(fp_error_loss, "%d %.10f\n", epoch, loss);
-//					fflush(fp_error_loss);
-//
-//					error = 1;
-//					if (loss < tolerance)
-//					{
-//						nn.stop_ongoing_training();
-//						error = 0;
-//					}
-//				}
 			}
 			if (plot && epoch % plot == 0)
 			{
@@ -418,51 +432,63 @@ public:
 			++batch;
 		};
 
+		if (!test_mode)
+		{
+			try
+			{
+				// training
+				nn.fit<tiny_dnn::mse>(optimizer, train_images, train_labels,
+					n_minibatch,
+					n_train_epochs,
+					on_enumerate_minibatch,
+					on_enumerate_epoch
+					);
+			}
+			catch (tiny_dnn::nn_error &err) {
+				std::cerr << "Exception: " << err.what() << std::endl;
+				error = -1;
+				return;
+			}
+
+			set_test(nn, OUT_SEQ_LEN);
+			//float_t loss = nn.get_loss<train_loss>(train_images, train_labels) / train_images.size();
+
+			float_t loss = 0.0;
+			for (int i = 0; i < train_images.size(); i++)
+			{
+				tiny_dnn::vec_t& y = nn.predict(train_images[i]);
+				for (int k = 0; k < y.size(); k++)
+				{
+					float_t d = (y[k] - train_labels[i][k])* Sigma[k];
+					loss += d*d;
+				}
+			}
+			for (int i = 0; i < test_images.size(); i++)
+			{
+				tiny_dnn::vec_t& y = nn.predict(test_images[i]);
+				for (int k = 0; k < y.size(); k++)
+				{
+					float_t d = (y[k] - test_labels[i][k])* Sigma[k];
+					loss += d*d;
+				}
+			}
+			loss /= (train_images.size() + test_images.size());
+			printf("loss:%.3f\n", loss);
+
+			set_train(nn, seq_length);
+
+		}
+
 		try
 		{
-			// training
-			nn.fit<tiny_dnn::mse>(optimizer, train_images, train_labels,
-				n_minibatch,
-				n_train_epochs,
-				on_enumerate_minibatch,
-				on_enumerate_epoch
-				);
+			nn.load("fit_bast.model");
+			gen_visualize_fit_state();
 		}
-		catch (tiny_dnn::nn_error &err) {
-			std::cerr << "Exception: " << err.what() << std::endl;
-			error = -1;
-			return;
-		}
-
-		set_test(nn, OUT_SEQ_LEN);
-		//float_t loss = nn.get_loss<train_loss>(train_images, train_labels) / train_images.size();
-
-		float_t loss = 0.0;
-		for (int i = 0; i < train_images.size(); i++)
+		catch (tiny_dnn::nn_error& msg)
 		{
-			tiny_dnn::vec_t& y = nn.predict(train_images[i]);
-			for (int k = 0; k < y.size(); k++)
-			{
-				float_t d = (y[k] - train_labels[i][k])* Sigma[k];
-				loss += d*d;
-			}
+			printf("%s\n", msg.what());
+			printf("fit_bast.model open error.\n");
 		}
-		for (int i = 0; i < test_images.size()*VARFIDATION_COEF; i++)
-		{
-			tiny_dnn::vec_t& y = nn.predict(test_images[i]);
-			for (int k = 0; k < y.size(); k++)
-			{
-				float_t d = (y[k] - test_labels[i][k])* Sigma[k];
-				loss += d*d;
-			}
-		}
-		loss /= (train_images.size()+ test_images.size()*VARFIDATION_COEF);
-		printf("loss:%.3f\n", loss);
-
-		set_train(nn, seq_length);
-
-		nn.load("fit_bast.model");
-		gen_visualize_fit_state();
 		std::cout << "end training." << std::endl;
 
 		if (fp_error_loss)fclose(fp_error_loss);

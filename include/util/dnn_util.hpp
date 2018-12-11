@@ -318,9 +318,12 @@ public:
 		size_t in_map = out_map;
 		out_map = out_channels;
 
-		tiny_dnn::convolutional_layer layer = tiny_dnn::convolutional_layer(in_w, in_h, window_width, window_height, in_map, out_map, pad_type, has_bias, w_stride, h_stride, backend_type);
-		out_w = conv_out_length(in_w, window_width, w_stride, pad_type);
-		out_h = conv_out_length(in_h, window_height, h_stride, pad_type);
+		size_t w_dilation = 1;
+		size_t h_dilation = 1;
+
+		tiny_dnn::convolutional_layer layer = tiny_dnn::convolutional_layer(in_w, in_h, window_width, window_height, in_map, out_map, pad_type, has_bias, w_stride, h_stride, w_dilation, h_dilation, backend_type);
+		out_w = conv_out_length(in_w, window_width, w_stride, w_dilation, pad_type);
+		out_h = conv_out_length(in_h, window_height, h_stride, h_dilation, pad_type);
 
 		printf("convolutional_layer %zdx%zd filter(%zd,%zd) stride(%zd,%zd) fmap:%zd->", in_w, in_h, window_width, window_height, w_stride, h_stride, in_map);
 		printf(" %zdx%zd fmap:%zd\n", out_w, out_h, out_map);
@@ -354,11 +357,13 @@ public:
 		size_t in_w = out_w;
 		size_t in_h = out_h;
 		size_t in_map = out_map;
+		bool ceil_mode = false;
+		size_t dilation = 1;
 
-		tiny_dnn::max_pooling_layer layer = tiny_dnn::max_pooling_layer(in_w, in_h, in_map, pooling_size_x, pooling_size_y, stride_x, stride_y, pad_type, backend_type);
+		tiny_dnn::max_pooling_layer layer = tiny_dnn::max_pooling_layer(in_w, in_h, in_map, pooling_size_x, pooling_size_y, stride_x, stride_y, ceil_mode, pad_type, backend_type);
 
-		out_w = conv_out_length(in_w, pooling_size_x, stride_x, pad_type);
-		out_h = conv_out_length(in_h, pooling_size_y, stride_y, pad_type);
+		out_w = conv_out_length(in_w, pooling_size_x, stride_x, dilation, pad_type);
+		out_h = conv_out_length(in_h, pooling_size_y, stride_y, dilation, pad_type);
 
 		printf("max_pooling_layer %zdx%zd filter(%zd,%zd) stride(%zd,%zd) fmap:%zd->", in_w, in_h, pooling_size_x, pooling_size_y, stride_x, stride_y, in_map);
 		printf(" %zdx%zd fmap:%zd\n", out_w, out_h, out_map);
@@ -391,10 +396,12 @@ public:
 		size_t in_w = out_w;
 		size_t in_h = out_h;
 		size_t in_map = out_map;
+		size_t dilation = 1;
+		bool ceil_mode = false;
 
-		tiny_dnn::average_pooling_layer layer = tiny_dnn::average_pooling_layer(in_w, in_h, in_map, pooling_size_x, pooling_size_y, stride_x, stride_y, pad_type);
-		out_w = conv_out_length(in_w, pooling_size_x, stride_x, pad_type);
-		out_h = conv_out_length(in_h, pooling_size_y, stride_y, pad_type);
+		tiny_dnn::average_pooling_layer layer = tiny_dnn::average_pooling_layer(in_w, in_h, in_map, pooling_size_x, pooling_size_y, stride_x, stride_y, ceil_mode, pad_type);
+		out_w = conv_out_length(in_w, pooling_size_x, stride_x, dilation, pad_type);
+		out_h = conv_out_length(in_h, pooling_size_y, stride_y, dilation, pad_type);
 
 		printf("average_pooling_layer %zdx%zd filter(%zd,%zd) stride(%zd,%zd) fmap:%zd->", in_w, in_h, pooling_size_x, pooling_size_y, stride_x, stride_y, in_map);
 		printf(" %zdx%zd fmap:%zd\n", out_w, out_h, out_map);

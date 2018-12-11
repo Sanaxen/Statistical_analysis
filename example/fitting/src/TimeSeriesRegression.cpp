@@ -22,8 +22,6 @@
 
 #define IN_SEQ_LEN	15
 
-
-
 int main(int argc, char** argv)
 {
 	std::vector<std::string> x_var;
@@ -284,10 +282,10 @@ int main(int argc, char** argv)
 	timeSeries.visualize_loss(10);
 	timeSeries.plot = 10;
 
-	int	future = 1;
+	bool test_mode = false;
 	int n_layers = -1;
 	int n_rnn_layers = -1;
-	int input_unit = -1;
+	int hidden_size = -1;
 	bool capture = false;
 	float test = 0.4;
 
@@ -329,6 +327,10 @@ int main(int argc, char** argv)
 			timeSeries.learning_rate = atof(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--test_mode") {
+			timeSeries.test_mode = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
 		else if (argname == "--test") {
 			test = atof(argv[count + 1]);
 			continue;
@@ -345,6 +347,10 @@ int main(int argc, char** argv)
 			timeSeries.plot = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--rnn_type") {
+			timeSeries.rnn_type = argv[count + 1];
+			continue;
+		}
 		else if (argname == "--seq_len") {
 			sequence_length = atoi(argv[count + 1]);
 			continue;
@@ -357,12 +363,8 @@ int main(int argc, char** argv)
 			n_rnn_layers = atoi(argv[count + 1]);
 			continue;
 		}
-		else if (argname == "--input_unit") {
-			input_unit = atoi(argv[count + 1]);
-			continue;
-		}
-		else if (argname == "--future") {
-			timeSeries.future = atoi(argv[count + 1]);
+		else if (argname == "--hidden_size") {
+			hidden_size = atoi(argv[count + 1]);
 			continue;
 		}
 		else {
@@ -381,12 +383,12 @@ int main(int argc, char** argv)
 		<< "Number of epochs: " << timeSeries.n_train_epochs << std::endl
 		<< "plotting cycle  :  " << timeSeries.plot << std::endl
 		<< "tolerance       :       " << timeSeries.tolerance << std::endl
-		<< "input_unit      :       " << input_unit << std::endl
+		<< "hidden_size      :       " << hidden_size << std::endl
 		<< "sequence_length :       " << sequence_length << std::endl
 		
 		<< std::endl;
 
-	timeSeries.fit(sequence_length, n_rnn_layers, n_layers, input_unit);
+	timeSeries.fit(sequence_length, n_rnn_layers, n_layers, hidden_size);
 	timeSeries.report(0.05, report_file);
 
 	return 0;

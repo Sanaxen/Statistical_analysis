@@ -47,7 +47,7 @@ class NonLinearRegression
 		}
 	}
 
-	float cost_min = 9999999.0;
+	float cost_min = std::numeric_limits<float>::max();
 	void net_test()
 	{
 		tiny_dnn::network2<tiny_dnn::sequential> nn_test;
@@ -112,18 +112,20 @@ class NonLinearRegression
 			}
 			fclose(fp_test);
 		}
+		cost /= iY.size();
+		//printf("%f %f\n", cost_min, cost);
 		if (cost < cost_min)
 		{
 			nn_test.save("fit_bast.model");
 			cost_min = cost;
 		}
-		if (cost_min / nY.size() < tolerance)
+		if (cost_min < tolerance)
 		{
 			convergence = true;
 		}
 		if (fp_error_loss)
 		{
-			fprintf(fp_error_loss, "%.10f\n", cost / nY.size());
+			fprintf(fp_error_loss, "%.10f %.10f %.4f\n", cost, cost_min, tolerance);
 			fflush(fp_error_loss);
 		}
 	}
@@ -161,6 +163,7 @@ class NonLinearRegression
 	int plot_count = 0;
 	int batch = 0;
 public:
+	bool test_mode = false;
 	bool capture = false;
 	bool progress = true;
 	float tolerance = 1.0e-6;
@@ -372,47 +375,6 @@ public:
 			{
 				std::cout << "\nEpoch " << epoch << "/" << n_train_epochs << " finished. "
 					<< t.elapsed() << "s elapsed." << std::endl;
-
-//				if (fp_error_loss)
-//				{
-//					set_test(nn, 1);
-//					float_t loss;
-//#if 0
-//					float_t loss = nn.get_loss<train_loss>(train_images, train_labels) / train_images.size();
-//#else
-//					loss = 0;
-//					for (int i = 0; i < train_images.size(); i++)
-//					{
-//						tiny_dnn::vec_t& y = nn.predict(train_images[i]);
-//						for (int k = 0; k < y.size(); k++)
-//						{
-//							float_t d;
-//							if (NormalizeData)
-//							{
-//								d = (y[k] - train_labels[i][k])* Sigma_y[k];
-//							}
-//							else
-//							{
-//								d = (y[k] - train_labels[i][k]);
-//							}
-//
-//							loss += d*d;
-//						}
-//					}
-//					loss /= train_images.size();
-//#endif
-//					set_train(nn, 1);
-//
-//					fprintf(fp_error_loss, "%d %.3f\n", epoch, loss);
-//					fflush(fp_error_loss);
-//
-//					error = 1;
-//					if (loss < tolerance)
-//					{
-//						nn.stop_ongoing_training();
-//						error = 0;
-//					}
-//				}
 			}
 			if (epoch >= 3 && plot && epoch % plot == 0)
 			{
@@ -444,48 +406,60 @@ public:
 			++batch;
 		};
 
+		if (!test_mode)
+		{
+			try
+			{
+				// training
+				nn.fit<tiny_dnn::mse>(optimizer, train_images, train_labels,
+					n_minibatch,
+					n_train_epochs,
+					on_enumerate_minibatch,
+					on_enumerate_epoch
+					);
+			}
+			catch (tiny_dnn::nn_error &err) {
+				std::cerr << "Exception: " << err.what() << std::endl;
+				error = -1;
+				return;
+			}
+			set_test(nn, 1);
+			//float_t loss = nn.get_loss<train_loss>(train_images, train_labels) / train_images.size();
+			float_t loss = 0.0;
+			for (int i = 0; i < train_images.size(); i++)
+			{
+				tiny_dnn::vec_t& y = nn.predict(train_images[i]);
+				for (int k = 0; k < y.size(); k++)
+				{
+					float_t d;
+					if (NormalizeData)
+					{
+						d = (y[k] - train_labels[i][k])* Sigma_y[k];
+					}
+					else
+					{
+						d = (y[k] - train_labels[i][k]);
+					}
+					loss += d*d;
+				}
+			}
+			loss /= train_images.size();
+
+			printf("loss:%.3f\n", loss);
+			set_train(nn, 1);
+		}
+
 		try
 		{
-			// training
-			nn.fit<tiny_dnn::mse>(optimizer, train_images, train_labels,
-				n_minibatch,
-				n_train_epochs,
-				on_enumerate_minibatch,
-				on_enumerate_epoch
-				);
+			nn.load("fit_bast.model");
+			gen_visualize_fit_state();
 		}
-		catch (tiny_dnn::nn_error &err) {
-			std::cerr << "Exception: " << err.what() << std::endl;
-			error = -1;
-			return;
-		}
-		set_test(nn, 1);
-		//float_t loss = nn.get_loss<train_loss>(train_images, train_labels) / train_images.size();
-		float_t loss = 0.0;
-		for (int i = 0; i < train_images.size(); i++)
+		catch (tiny_dnn::nn_error& msg)
 		{
-			tiny_dnn::vec_t& y = nn.predict(train_images[i]);
-			for (int k = 0; k < y.size(); k++)
-			{
-				float_t d;
-				if (NormalizeData)
-				{
-					d = (y[k] - train_labels[i][k])* Sigma_y[k];
-				}
-				else
-				{
-					d = (y[k] - train_labels[i][k]);
-				}
-				loss += d*d;
-			}
+			printf("%s\n", msg.what());
+			printf("fit_bast.model open error.\n");
 		}
-		loss /= train_images.size();
 
-		printf("loss:%.3f\n", loss);
-		set_train(nn, 1);
-
-		nn.load("fit_bast.model");
-		gen_visualize_fit_state();
 		std::cout << "end training." << std::endl;
 
 		if (fp_error_loss)fclose(fp_error_loss);

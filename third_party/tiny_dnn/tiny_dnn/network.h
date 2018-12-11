@@ -35,7 +35,7 @@ enum class content_type {
   weights_and_model  ///< save/load both the weights and the architecture
 };
 
-enum class file_format { binary, json };
+enum class file_format { binary, portable_binary, json };
 
 struct result {
   result() : num_success(0), num_total(0) {}
@@ -685,6 +685,10 @@ class network {
         cereal::BinaryInputArchive bi(ifs);
         from_archive(bi, what);
       } break;
+      case file_format::portable_binary: {
+        cereal::PortableBinaryInputArchive bi(ifs);
+        from_archive(bi, what);
+      } break;
       case file_format::json: {
         cereal::JSONInputArchive ji(ifs);
         from_archive(ji, what);
@@ -706,6 +710,10 @@ class network {
     switch (format) {
       case file_format::binary: {
         cereal::BinaryOutputArchive bo(ofs);
+        to_archive(bo, what);
+      } break;
+      case file_format::portable_binary: {
+        cereal::PortableBinaryOutputArchive bo(ofs);
         to_archive(bo, what);
       } break;
       case file_format::json: {
@@ -812,7 +820,7 @@ class network {
     return label_t(max_index(fprop(in)));
   }
 
- //private:
+ private:
   template <typename Layer>
   friend network<sequential> &operator<<(network<sequential> &n, Layer &&l);
 

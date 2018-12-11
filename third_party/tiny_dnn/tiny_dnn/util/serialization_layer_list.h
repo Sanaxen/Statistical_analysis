@@ -36,10 +36,11 @@ void register_layers(T* h) {
     "q_fully_connected");
   h->template register_layer<recurrent_layer>("recurrent_layer");
   h->template register_layer<gru_cell>("gru_cell");
+  h->template register_layer<l2_normalization_layer>("l2norm");
   h->template register_layer<lstm_cell>("lstm_cell");
   h->template register_layer<rnn_cell>("rnn_cell");
-
   h->template register_layer<slice_layer>("slice");
+  h->template register_layer<zero_pad_layer>("zero_pad");
 
   h->template register_layer<sigmoid_layer>("sigmoid");
   h->template register_layer<asinh_layer>("asinh");

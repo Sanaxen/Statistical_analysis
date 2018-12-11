@@ -20,7 +20,6 @@ Duplicate definition prevention
 * #define _cublas_Init_def extern
 
 # matrix_config.h  
-
 |options|description|default|additional requirements to use|
 |-----|-----|----|----|
 |USE_LAPACK|Use [CLAPACK](http://www.netlib.org/clapack/) |ON|[CLAPACK, version 3.2.1 CMAKE package](http://www.netlib.org/clapack/clapack-3.2.1-CMAKE.tgz)|
@@ -32,3 +31,7 @@ Duplicate definition prevention
 |USE_GNUPLOT|Use [ portable command-line driven graphing utility](http://www.gnuplot.info/) |ON|http://www.gnuplot.info/|
 |USE_GRAPHVIZ_DOT|Use [ graph visualization software.](https://www.graphviz.org/) |ON|https://www.graphviz.org/|
 
+# third_party\tiny_dnn\tiny_dnn\config.h  
+|options|description|default|additional requirements to use|
+|-----|-----|----|----|
+|CNN_USE_TBB|use  [intel TBB library](https://github.com/01org/tbb/) |ON|[Official Intel(R) Threading Building Blocks (Intel TBB)   Apache License 2.0](https://github.com/01org/tbb/releases)|

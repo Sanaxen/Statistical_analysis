@@ -316,6 +316,10 @@ int main(int argc, char** argv)
 			regression.learning_rate = atof(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--test_mode") {
+			regression.test_mode = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
 		else if (argname == "--test") {
 			regression.data_set(atof(argv[count + 1]));
 			continue;

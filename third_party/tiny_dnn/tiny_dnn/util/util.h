@@ -29,6 +29,7 @@
 #ifndef CNN_NO_SERIALIZATION
 #include <cereal/archives/binary.hpp>
 #include <cereal/archives/json.hpp>
+#include <cereal/archives/portable_binary.hpp>
 #include <cereal/cereal.hpp>
 #include <cereal/types/deque.hpp>
 #include <cereal/types/polymorphic.hpp>
@@ -328,6 +329,24 @@ inline void fill_tensor(tensor_t &tensor, float_t value, size_t size) {
 inline size_t conv_out_length(size_t in_length,
                               size_t window_size,
                               size_t stride,
+                              size_t dilation,
+                              padding pad_type) {
+  size_t output_length;
+
+  if (pad_type == padding::same) {
+    output_length = in_length;
+  } else if (pad_type == padding::valid) {
+    output_length = in_length - dilation * window_size + dilation;
+  } else {
+    throw nn_error("Not recognized pad_type.");
+  }
+  return (output_length + stride - 1) / stride;
+}
+
+inline size_t pool_out_length(size_t in_length,
+                              size_t window_size,
+                              size_t stride,
+                              bool ceil_mode,
                               padding pad_type) {
   size_t output_length;
 
@@ -338,7 +357,9 @@ inline size_t conv_out_length(size_t in_length,
   } else {
     throw nn_error("Not recognized pad_type.");
   }
-  return (output_length + stride - 1) / stride;
+
+  float tmp = static_cast<float>((output_length + stride - 1)) / stride;
+  return static_cast<int>(ceil_mode ? ceil(tmp) : floor(tmp));
 }
 
 // get all platforms (drivers), e.g. NVIDIA
