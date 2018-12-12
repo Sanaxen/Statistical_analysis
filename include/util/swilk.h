@@ -18,8 +18,14 @@
 #define logical int
 #define doublereal double
 #define TRUE_ 1
+
+#ifndef min
 #define min(a,b) ((a) <= (b) ? (a) : (b))
+#endif
+
+#ifndef max
 #define max(a,b) ((a) >= (b) ? (a) : (b))
+#endif
 
 #include <random>
 /* Table of constant values */
