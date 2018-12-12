@@ -10,7 +10,7 @@
 #ifdef USE_GNUPLOT
 #include "../../../include/util/plot.h"
 
-#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
+//#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
 #endif
 
 static Matrix<dnn_double> mat_read(FILE *fp, int *rows, int *cols)

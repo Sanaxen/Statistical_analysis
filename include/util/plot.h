@@ -9,6 +9,8 @@
 //#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
 #define GNUPLOT_PATH "start wgnuplot.exe"
 
+#pragma warning( disable : 4244 ) 
+
 class ScatterWrk
 {
 public:
