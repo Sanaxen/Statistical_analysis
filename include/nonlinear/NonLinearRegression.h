@@ -3,6 +3,7 @@
 #define _NonLinearRegression_H
 
 #include "../../include/util/mathutil.h"
+#pragma warning( disable : 4305 ) 
 
 class NonLinearRegression
 {
@@ -136,7 +137,7 @@ class NonLinearRegression
 		nn.save("tmp.model");
 
 		net_test();
-		set_train(nn, 1);
+		set_train(nn, 1, default_backend_type);
 
 
 #ifdef USE_GNUPLOT
@@ -167,7 +168,9 @@ public:
 	bool capture = false;
 	bool progress = true;
 	float tolerance = 1.0e-6;
-	tiny_dnn::core::backend_t backend_type = tiny_dnn::core::backend_t::internal;
+	
+	tiny_dnn::core::backend_t default_backend_type = tiny_dnn::core::backend_t::internal;
+
 	tiny_dnn::tensor_t iX;
 	tiny_dnn::tensor_t iY;
 	tiny_dnn::tensor_t nX;
@@ -446,7 +449,7 @@ public:
 			loss /= train_images.size();
 
 			printf("loss:%.3f\n", loss);
-			set_train(nn, 1);
+			set_train(nn, 1, default_backend_type);
 		}
 
 		try

@@ -5,6 +5,7 @@
 #include <signal.h>
 
 #define OUT_SEQ_LEN	1
+#pragma warning( disable : 4305 ) 
 
 class TimeSeriesRegression
 {
@@ -181,7 +182,7 @@ class TimeSeriesRegression
 		nn.save("tmp.model");
 
 		net_test();
-		set_train(nn, sequence_length);
+		set_train(nn, sequence_length, default_backend_type);
 
 #ifdef USE_GNUPLOT
 		if (capture)
@@ -211,7 +212,9 @@ public:
 	bool capture = false;
 	bool progress = true;
 	float tolerance = 1.0e-6;
-	tiny_dnn::core::backend_t backend_type = tiny_dnn::core::backend_t::internal;
+
+	tiny_dnn::core::backend_t default_backend_type = tiny_dnn::core::backend_t::internal;
+
 	tiny_dnn::tensor_t iX;
 	tiny_dnn::tensor_t iY;
 	//tiny_dnn::tensor_t nX;
@@ -475,7 +478,7 @@ public:
 			loss /= (train_images.size() + test_images.size());
 			printf("loss:%.3f\n", loss);
 
-			set_train(nn, seq_length);
+			set_train(nn, seq_length, default_backend_type);
 
 		}
 
