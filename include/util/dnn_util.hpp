@@ -44,7 +44,7 @@ using softmax = tiny_dnn::softmax_layer;
 using tiny_dnn::core::connection_table;
 
 template <typename N>
-inline void set_train(N &nn, const int seq_len=0) {
+inline void set_train(N &nn, const int seq_len=0, tiny_dnn::core::backend_t& defaule_backend = tiny_dnn::core::backend_t::internal) {
 	nn.set_netphase(tiny_dnn::net_phase::train);
 	for (unsigned int i = 0; i < nn.layer_size(); i++) {
 		try {
@@ -61,6 +61,16 @@ inline void set_train(N &nn, const int seq_len=0) {
 		catch (tiny_dnn::nn_error &err) {
 		}
 	}
+
+#ifdef CNN_USE_INTEL_MKL
+	for (auto n : nn)
+	{
+		if (n->layer_type() == "fully-connected")
+		{
+			n->set_backend_type(defaule_backend);
+		}
+	}
+#endif
 }
 
 template <typename N>
@@ -81,6 +91,15 @@ inline void set_test(N &nn, const int seq_len=0) {
 		catch (tiny_dnn::nn_error &err) {
 		}
 	}
+#ifdef CNN_USE_INTEL_MKL
+	for (auto n : nn)
+	{
+		if (n->layer_type() == "fully-connected")
+		{
+			n->set_backend_type(tiny_dnn::core::backend_t::intel_mkl);
+		}
+	}
+#endif
 }
 
 template <typename N>
