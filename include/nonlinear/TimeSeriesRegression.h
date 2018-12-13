@@ -382,10 +382,10 @@ public:
 		tiny_dnn::adam optimizer;
 		std::cout << "optimizer:" << "adam" << std::endl;
 
-		optimizer.alpha *=
-			std::min(tiny_dnn::float_t(4),
-				static_cast<tiny_dnn::float_t>(sqrt(n_minibatch) * learning_rate));
-		//optimizer.alpha *= learning_rate;
+		//optimizer.alpha *=
+		//	std::min(tiny_dnn::float_t(4),
+		//		static_cast<tiny_dnn::float_t>(sqrt(n_minibatch) * learning_rate));
+		optimizer.alpha *= learning_rate;
 		std::cout << "optimizer.alpha:" << optimizer.alpha << std::endl;
 
 		construct_net(rnn_layers, n_layers, n_hidden_size);
@@ -397,8 +397,9 @@ public:
 
 		auto on_enumerate_epoch = [&]() {
 
-			//if (epoch % 10 == 0) {
-			//	optimizer.alpha *= 0.97;
+			//if (epoch % 10 == 0 && optimizer.alpha > 1.0e-8) {
+			//	optimizer.alpha *= 0.5;
+			//	printf("optimizer.alpha=%.10f\n", optimizer.alpha);
 			//}
 			if (epoch % 1 == 0)
 			{
