@@ -10,6 +10,9 @@
 
 #include <iostream>
 #include <string.h>
+#ifdef USE_MKL
+#define CNN_USE_INTEL_MKL
+#endif
 #include "../../../include/util/dnn_util.hpp"
 #include "../../../include/nonlinear/TimeSeriesRegression.h"
 #include "../../../include/nonlinear/MatrixToTensor.h"
