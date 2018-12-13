@@ -272,6 +272,7 @@ public:
 				if (test_images.size() == test_Num) break;
 				for (int i = 1; i < test_Num*0.05; i++)
 				{
+					if (ii + i >= dataAll) break;
 					test_images.push_back(nX[ii + i]);
 					test_labels.push_back(nY[ii + i]);
 					use_index[ii + i] = ii + i;
