@@ -365,12 +365,15 @@ int main(int argc, char** argv)
 
 	}
 	std::cout << "Running with the following parameters:" << std::endl
-		<< "Learning rate:    " << regression.learning_rate << std::endl
-		<< "Minibatch size:   " << regression.n_minibatch << std::endl
+		<< "Learning rate   : " << regression.learning_rate << std::endl
+		<< "Minibatch size  : " << regression.n_minibatch << std::endl
 		<< "Number of epochs: " << regression.n_train_epochs << std::endl
-		<< "plotting cycle :  " << regression.plot << std::endl
-		<< "tolerance :       " << regression.tolerance << std::endl
-		<< "optimizer :       " << regression.opt_type << std::endl
+		<< "plotting cycle  : " << regression.plot << std::endl
+		<< "tolerance       : " << regression.tolerance << std::endl
+		<< "optimizer       : " << regression.opt_type << std::endl
+		<< "input_unit      : " << input_unit << std::endl
+		<< "n_layers        : " << n_layers << std::endl
+		<< "test_mode       : " << regression.test_mode << std::endl
 		<< std::endl;
 
 	regression.fit(n_layers, input_unit);

@@ -349,6 +349,10 @@ int main(int argc, char** argv)
 			timeSeries.n_train_epochs = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--support_epochs") {
+			timeSeries.support_epochs = atoi(argv[count + 1]);
+			continue;
+		}
 		else if (argname == "--minibatch_size") {
 			timeSeries.n_minibatch = atoi(argv[count + 1]);
 			continue;
@@ -392,14 +396,18 @@ int main(int argc, char** argv)
 	timeSeries.data_set(sequence_length, test);
 
 	std::cout << "Running with the following parameters:" << std::endl
-		<< "Learning rate   :    " << timeSeries.learning_rate << std::endl
+		<< "Learning rate   :   " << timeSeries.learning_rate << std::endl
 		<< "Minibatch size  :   " << timeSeries.n_minibatch << std::endl
-		<< "Number of epochs: " << timeSeries.n_train_epochs << std::endl
-		<< "plotting cycle  :  " << timeSeries.plot << std::endl
-		<< "tolerance       :       " << timeSeries.tolerance << std::endl
-		<< "hidden_size      :       " << hidden_size << std::endl
-		<< "sequence_length :       " << sequence_length << std::endl
-		<< "optimizer :       " << timeSeries.opt_type << std::endl
+		<< "Number of epochs:	" << timeSeries.n_train_epochs << std::endl
+		<< "plotting cycle  :	" << timeSeries.plot << std::endl
+		<< "tolerance       :	" << timeSeries.tolerance << std::endl
+		<< "hidden_size     :   " << hidden_size << std::endl
+		<< "sequence_length :   " << sequence_length << std::endl
+		<< "optimizer       :   " << timeSeries.opt_type << std::endl
+		<< "support_epochs  :   " << timeSeries.support_epochs << std::endl
+		<< "n_rnn_layers    :   " << n_rnn_layers << std::endl
+		<< "n_layers        :   " << n_layers << std::endl
+		<< "test_mode       :   " << timeSeries.test_mode << std::endl
 
 		<< std::endl;
 

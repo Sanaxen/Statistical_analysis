@@ -207,7 +207,7 @@ class TimeSeriesRegression
 #endif
 	}
 
-	//int load_count = 1;
+	float_t support_length = 1.0;
 	int epoch = 1;
 	int plot_count = 0;
 	int batch = 0;
@@ -230,6 +230,7 @@ public:
 	std::vector<tiny_dnn::vec_t> train_labels, test_labels;
 	std::vector<tiny_dnn::vec_t> train_images, test_images;
 
+	size_t support_epochs = 0;
 	std::string opt_type = "adam";
 	std::string rnn_type = "gru";
 	size_t input_size = 32;
@@ -331,7 +332,7 @@ public:
 		int hidden_size = n_hidden_size;
 		if (hidden_size <= 0) hidden_size = 64;
 
-		input_size = train_images[0].size()*3;
+		input_size = train_images[0].size();
 
 		// clip gradients
 		tiny_dnn::recurrent_layer_parameters params;
@@ -344,11 +345,9 @@ public:
 
 		LayerInfo layers(in_w, in_h, in_map);
 		nn << layers.add_fc(input_size);
-		//nn << layers.tanh();
 		for (int i = 0; i < n_rnn_layers; i++) {
 			nn << layers.add_rnn(rnn_type, hidden_size, sequence_length, params);
 			input_size = hidden_size;
-			//nn << layers.tanh();
 		}
 		for (int i = 0; i < n_layers; i++) {
 			nn << layers.add_fc(hidden_size);
@@ -432,17 +431,27 @@ public:
 		optimizer_->reset();
 		tiny_dnn::timer t;
 
-		float_t loss_min = 9999999999.0;
+		float_t loss_min = std::numeric_limits<float>::max();
 		tiny_dnn::progress_display disp(nn.get_input_size());
-
+		
+		size_t train_data_size = 0;
+		if (support_epochs)
+		{
+			train_data_size = train_images.size();
+			for (int i = 0; i < test_images.size(); i++)
+			{
+				train_images.push_back(test_images[i]);
+				train_labels.push_back(test_labels[i]);
+			}
+		}
 		auto on_enumerate_epoch = [&]() {
 
-			//if (epoch % 10 == 0) {
-			//	if (opt_type == "adam" && optimizer_adam.alpha > 1.0e-12)		optimizer_adam.alpha *= 0.97;
-			//	if (opt_type == "sgd" && optimizer_sgd.alpha > 1.0e-12)			optimizer_sgd.alpha *= 0.97;
-			//	if (opt_type == "rmsprop" && optimizer_rmsprop.alpha > 1.0e-12)	optimizer_rmsprop.alpha *= 0.97;
-			//	if (opt_type == "adagrad" && optimizer_adagrad.alpha > 1.0e-12)	optimizer_adagrad.alpha *= 0.97;
-			//}
+			if (epoch % 10 == 0) {
+				if (opt_type == "adam" && optimizer_adam.alpha > 1.0e-12)		optimizer_adam.alpha *= 0.97;
+				if (opt_type == "sgd" && optimizer_sgd.alpha > 1.0e-12)			optimizer_sgd.alpha *= 0.97;
+				if (opt_type == "rmsprop" && optimizer_rmsprop.alpha > 1.0e-12)	optimizer_rmsprop.alpha *= 0.97;
+				if (opt_type == "adagrad" && optimizer_adagrad.alpha > 1.0e-12)	optimizer_adagrad.alpha *= 0.97;
+			}
 			if (epoch % 1 == 0)
 			{
 				std::cout << "\nEpoch " << epoch << "/" << n_train_epochs << " finished. "
@@ -456,6 +465,28 @@ public:
 			{
 				nn.stop_ongoing_training();
 				error = 0;
+			}
+
+			if (support_epochs)
+			{
+				float_t a = std::min(float_t(1.0), float_t((float_t)epoch / (float_t)support_epochs));
+				support_length = support_length*(float_t(1.0) - a*a);
+				size_t sz = train_data_size + size_t(support_length*test_images.size());
+
+				if (sz != train_images.size())
+				{
+					if (sz == train_data_size)
+					{
+						train_images.resize(train_data_size);
+						train_labels.resize(train_data_size);
+					}
+					else if (sz < train_images.size())
+					{
+						printf("%d -> support_length:%d\n", train_images.size(), sz);
+						train_images.resize(sz);
+						train_labels.resize(sz);
+					}
+				}
 			}
 
 			if (progress) disp.restart(nn.get_input_size());
