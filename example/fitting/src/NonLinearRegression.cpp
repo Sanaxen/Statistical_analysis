@@ -25,6 +25,7 @@ int main(int argc, char** argv)
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
 
+	int read_max = -1;
 	bool header = false;
 	int start_col = 0;
 	int x_dim = 0, y_dim = 0;
@@ -33,10 +34,12 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--read_max") {
+			read_max = atoi(argv[count + 1]);
+		}else
 		if (argname == "--x") {
 			x_dim = atoi(argv[count + 1]);
-		}
-		else if (argname == "--y") {
+		}else if (argname == "--y") {
 			y_dim = atoi(argv[count + 1]);
 		}
 		else if (argname == "--csv") {
@@ -267,8 +270,8 @@ int main(int argc, char** argv)
 	y.print();
 
 	tiny_dnn::tensor_t X, Y;
-	MatrixToTensor(x, X);
-	MatrixToTensor(y, Y);
+	MatrixToTensor(x, X, read_max);
+	MatrixToTensor(y, Y, read_max);
 
 	NonLinearRegression regression(X, Y);
 
@@ -281,7 +284,10 @@ int main(int argc, char** argv)
 	int input_unit = -1;
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
-		if (argname == "--x") {
+		if (argname == "--read_max") {
+			continue;
+		}
+		else if (argname == "--x") {
 			continue;
 		}
 		else if (argname == "--y") {
@@ -347,6 +353,10 @@ int main(int argc, char** argv)
 			input_unit = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--opt_type") {
+			regression.opt_type = argv[count + 1];
+			continue;
+		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
@@ -360,6 +370,7 @@ int main(int argc, char** argv)
 		<< "Number of epochs: " << regression.n_train_epochs << std::endl
 		<< "plotting cycle :  " << regression.plot << std::endl
 		<< "tolerance :       " << regression.tolerance << std::endl
+		<< "optimizer :       " << regression.opt_type << std::endl
 		<< std::endl;
 
 	regression.fit(n_layers, input_unit);

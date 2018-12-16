@@ -182,6 +182,7 @@ public:
 	std::vector<tiny_dnn::vec_t> train_labels, test_labels;
 	std::vector<tiny_dnn::vec_t> train_images, test_images;
 
+	std::string opt_type = "adam";
 	size_t input_size = 32;
 	size_t n_minibatch = 10;
 	size_t n_train_epochs = 2000;
@@ -357,15 +358,52 @@ public:
 		nn.set_input_size(train_images.size());
 		using train_loss = tiny_dnn::mse;
 
+		tiny_dnn::optimizer* optimizer_ = NULL;
 
-		tiny_dnn::adam optimizer;
-		std::cout << "optimizer:" << "adam" << std::endl;
+		tiny_dnn::adam				optimizer_adam;
+		tiny_dnn::gradient_descent	optimizer_sgd;
+		tiny_dnn::RMSprop			optimizer_rmsprop;
+		tiny_dnn::adagrad			optimizer_adagrad;
 
-		optimizer.alpha *= learning_rate;
-		std::cout << "optimizer.alpha:" << optimizer.alpha << std::endl;
+		if (opt_type == "SGD")
+		{
+			std::cout << "optimizer:" << "SGD" << std::endl;
+			optimizer_sgd.alpha *= learning_rate;
+			std::cout << "optimizer.alpha:" << optimizer_sgd.alpha << std::endl;
+
+			optimizer_ = &optimizer_sgd;
+		}else
+		if (opt_type == "rmsprop")
+		{
+			std::cout << "optimizer:" << "RMSprop" << std::endl;
+			optimizer_rmsprop.alpha *= learning_rate;
+			std::cout << "optimizer.alpha:" << optimizer_rmsprop.alpha << std::endl;
+
+			optimizer_ = &optimizer_rmsprop;
+		}else
+		if (opt_type == "adagrad")
+		{
+			std::cout << "optimizer:" << "adagrad" << std::endl;
+			optimizer_adagrad.alpha *= learning_rate;
+			std::cout << "optimizer.alpha:" << optimizer_adagrad.alpha << std::endl;
+
+			optimizer_ = &optimizer_adagrad;
+		}else
+		if (opt_type == "adam" || optimizer_ == NULL)
+		{
+			std::cout << "optimizer:" << "adam" << std::endl;
+
+			//optimizer.alpha *=
+			//	std::min(tiny_dnn::float_t(4),
+			//		static_cast<tiny_dnn::float_t>(sqrt(n_minibatch) * learning_rate));
+			optimizer_adam.alpha *= learning_rate;
+			std::cout << "optimizer.alpha:" << optimizer_adam.alpha << std::endl;
+
+			optimizer_ = &optimizer_adam;
+		}
 
 		construct_net(n_layers);
-		optimizer.reset();
+		optimizer_->reset();
 		tiny_dnn::timer t;
 
 		tiny_dnn::progress_display disp(nn.get_input_size());
@@ -373,7 +411,10 @@ public:
 		auto on_enumerate_epoch = [&]() {
 
 			if (epoch % 10 == 0) {
-				optimizer.alpha *= 0.97;
+				if (opt_type == "adam" && optimizer_adam.alpha > 1.0e-12)		optimizer_adam.alpha *= 0.97;
+				if (opt_type == "sgd" && optimizer_sgd.alpha > 1.0e-12)			optimizer_sgd.alpha *= 0.97;
+				if (opt_type == "rmsprop" && optimizer_rmsprop.alpha > 1.0e-12)	optimizer_rmsprop.alpha *= 0.97;
+				if (opt_type == "adagrad" && optimizer_adagrad.alpha > 1.0e-12)	optimizer_adagrad.alpha *= 0.97;
 			}
 			if (epoch % 1 == 0)
 			{
@@ -415,7 +456,7 @@ public:
 			try
 			{
 				// training
-				nn.fit<tiny_dnn::mse>(optimizer, train_images, train_labels,
+				nn.fit<tiny_dnn::mse>(*optimizer_, train_images, train_labels,
 					n_minibatch,
 					n_train_epochs,
 					on_enumerate_minibatch,

@@ -12,7 +12,7 @@ del /Q images\*.png
 :%LDM%\NonLinearRegression.exe  --header 1 --x 2 --y 3 --x_var "x1" --x_var "x2" --csv sample3.csv --test 0 --progress %progress%  --plot 5
 :%LDM%\NonLinearRegression.exe  --header 1 --x 2 --y 3  --y_var "y1" --y_var "y2" --y_var "y3" --csv sample3.csv --test 0 --progress %progress%  --plot 5
 
-%LDM%\NonLinearRegression.exe  --x 2 --y 3 --csv sample.csv --test 0.5 --tol 0.01 --progress %progress%  --plot 5 --epochs 6000  --minibatch_size 64
+%LDM%\NonLinearRegression.exe  --x 2 --y 3 --csv sample.csv --test 0.5 --tol 0.005 --progress %progress%  --plot 5 --epochs 6000  --minibatch_size 64
 goto end
 
 %LDM%\NonLinearRegression.exe  --x 2 --y 3 --csv sample.csv --test 0.0 --tol 0.05 --progress %progress%  --plot 5 --epochs 6000

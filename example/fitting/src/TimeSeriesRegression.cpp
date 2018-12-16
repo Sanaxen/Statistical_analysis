@@ -31,6 +31,7 @@ int main(int argc, char** argv)
 	std::vector<std::string> y_var;
 	int sequence_length = -1;
 
+	int read_max = -1;
 	bool header = false;
 	int start_col = 0;
 	int x_dim = 0, y_dim = 0;
@@ -41,6 +42,9 @@ int main(int argc, char** argv)
 		std::string argname(argv[count]);
 		if (argname == "--x") {
 			x_dim = atoi(argv[count + 1]);
+		}else
+		if (argname == "--read_max") {
+			read_max = atoi(argv[count + 1]);
 		}
 		else if (argname == "--y") {
 			y_dim = atoi(argv[count + 1]);
@@ -274,8 +278,8 @@ int main(int argc, char** argv)
 	y.print();
 
 	tiny_dnn::tensor_t X, Y;
-	MatrixToTensor(x, X);
-	MatrixToTensor(y, Y);
+	MatrixToTensor(x, X, read_max);
+	MatrixToTensor(y, Y, read_max);
 
 
 	TimeSeriesRegression timeSeries(X, Y);
@@ -294,6 +298,9 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--read_max") {
+			continue;
+		}else
 		if (argname == "--x") {
 			continue;
 		}
@@ -354,6 +361,10 @@ int main(int argc, char** argv)
 			timeSeries.rnn_type = argv[count + 1];
 			continue;
 		}
+		else if (argname == "--opt_type") {
+			timeSeries.opt_type = argv[count + 1];
+			continue;
+		}
 		else if (argname == "--seq_len") {
 			sequence_length = atoi(argv[count + 1]);
 			continue;
@@ -388,7 +399,8 @@ int main(int argc, char** argv)
 		<< "tolerance       :       " << timeSeries.tolerance << std::endl
 		<< "hidden_size      :       " << hidden_size << std::endl
 		<< "sequence_length :       " << sequence_length << std::endl
-		
+		<< "optimizer :       " << timeSeries.opt_type << std::endl
+
 		<< std::endl;
 
 	timeSeries.fit(sequence_length, n_rnn_layers, n_layers, hidden_size);

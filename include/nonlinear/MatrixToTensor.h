@@ -2,9 +2,10 @@
 
 #define _MatrixToTensor_H
 
-inline void MatrixToTensor(Matrix<dnn_double>& X, tiny_dnn::tensor_t& T)
+inline void MatrixToTensor(Matrix<dnn_double>& X, tiny_dnn::tensor_t& T, int read_max = -1)
 {
-	for (int i = 0; i < std::min(2000,X.m); i++)
+	size_t rd_max = read_max < 0 ? X.m : std::min(read_max, X.m);
+	for (int i = 0; i < rd_max; i++)
 	{
 		tiny_dnn::vec_t x;
 		for (int j = 0; j < X.n; j++)
