@@ -357,6 +357,10 @@ int main(int argc, char** argv)
 			regression.opt_type = argv[count + 1];
 			continue;
 		}
+		else if (argname == "--early_stopping") {
+			regression.early_stopping = atoi(argv[count + 1]);
+			continue;
+		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;

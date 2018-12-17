@@ -5,6 +5,8 @@
 #include "../../include/util/mathutil.h"
 #pragma warning( disable : 4305 ) 
 
+#define EARLY_STOPPING_	30
+
 class NonLinearRegression
 {
 	bool convergence = false;
@@ -49,6 +51,8 @@ class NonLinearRegression
 	}
 
 	float cost_min = std::numeric_limits<float>::max();
+	float cost_pre = 0;
+	size_t net_test_no_Improvement_count = 0;
 	void net_test()
 	{
 		tiny_dnn::network2<tiny_dnn::sequential> nn_test;
@@ -129,6 +133,19 @@ class NonLinearRegression
 			fprintf(fp_error_loss, "%.10f %.10f %.4f\n", cost, cost_min, tolerance);
 			fflush(fp_error_loss);
 		}
+		if (cost_pre <= cost || fabs(cost_pre - cost) < 1.0e-3)
+		{
+			net_test_no_Improvement_count++;
+		}
+		else
+		{
+			net_test_no_Improvement_count = 0;
+		}
+		if (early_stopping && net_test_no_Improvement_count == EARLY_STOPPING_)
+		{
+			early_stopp = true;
+		}
+		cost_pre = cost;
 	}
 
 	void gen_visualize_fit_state()
@@ -163,7 +180,9 @@ class NonLinearRegression
 	int epoch = 1;
 	int plot_count = 0;
 	int batch = 0;
+	bool early_stopp = false;
 public:
+	bool early_stopping = true;
 	bool test_mode = false;
 	bool capture = false;
 	bool progress = true;
@@ -430,6 +449,12 @@ public:
 				nn.stop_ongoing_training();
 				error = 0;
 			}
+			if (early_stopp)
+			{
+				nn.stop_ongoing_training();
+				error = 1;
+				printf("early_stopp!!\n");
+			}
 
 			if (progress) disp.restart(nn.get_input_size());
 			t.restart();
@@ -447,6 +472,12 @@ public:
 			{
 				nn.stop_ongoing_training();
 				error = 0;
+			}
+			if (early_stopp)
+			{
+				nn.stop_ongoing_training();
+				error = 1;
+				printf("early_stopp!!\n");
 			}
 			++batch;
 		};

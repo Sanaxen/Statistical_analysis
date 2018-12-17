@@ -385,6 +385,10 @@ int main(int argc, char** argv)
 			hidden_size = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--early_stopping") {
+			timeSeries.early_stopping = atoi(argv[count + 1]);
+			continue;
+		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
