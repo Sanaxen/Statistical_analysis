@@ -7,7 +7,7 @@
 #define OUT_SEQ_LEN	1
 #pragma warning( disable : 4305 ) 
 
-#define EARLY_STOPPING_	30
+#define EARLY_STOPPING_	60
 
 class TimeSeriesRegression
 {
@@ -52,33 +52,34 @@ class TimeSeriesRegression
 			}
 		}
 #else
-		//float max_value = -9999999999999.;
-		//float min_value = 9999999999999.;
-		//for (int i = 0; i < X.size(); i++)
-		//{
-		//	for (int k = 0; k < X[0].size(); k++)
-		//	{
-		//		if (max_value < X[i][k]) max_value = X[i][k];
-		//		if (min_value > X[i][k]) min_value = X[i][k];
-		//	}
-		//}
-		//for (int i = 0; i < X.size(); i++)
-		//{
-		//	for (int k = 0; k < X[0].size(); k++)
-		//	{
-		//		X[i][k] = (X[i][k] - min_value) / (max_value - min_value);
-		//	}
-		//}
-		//for (int k = 0; k < X[0].size(); k++)
-		//{
-		//	mean[k] = min_value;
-		//	sigma[k] = (max_value - min_value);
-		//}
-
+#if 0
+		float max_value = -std::numeric_limits<float>::max();
+		float min_value = std::numeric_limits<float>::max();
+		for (int i = 0; i < X.size(); i++)
+		{
+			for (int k = 0; k < X[0].size(); k++)
+			{
+				if (max_value < X[i][k]) max_value = X[i][k];
+				if (min_value > X[i][k]) min_value = X[i][k];
+			}
+		}
+		for (int i = 0; i < X.size(); i++)
+		{
+			for (int k = 0; k < X[0].size(); k++)
+			{
+				X[i][k] = (X[i][k] - min_value) / (max_value - min_value);
+			}
+		}
 		for (int k = 0; k < X[0].size(); k++)
 		{
-			float max_value = -9999999999999.;
-			float min_value = 9999999999999.;
+			mean[k] = min_value;
+			sigma[k] = (max_value - min_value);
+		}
+#else
+		for (int k = 0; k < X[0].size(); k++)
+		{
+			float max_value = -std::numeric_limits<float>::max();
+			float min_value = std::numeric_limits<float>::max();
 			for (int i = 0; i < X.size(); i++)
 			{
 				if (max_value < X[i][k]) max_value = X[i][k];
@@ -94,6 +95,7 @@ class TimeSeriesRegression
 				X[i][k] = (X[i][k] - mean[k]) / (sigma[k] - mean[k]);
 			}
 		}
+#endif
 #endif
 	}
 
@@ -367,14 +369,26 @@ public:
 		for (int i = 0; i < n_rnn_layers; i++) {
 			nn << layers.add_rnn(rnn_type, hidden_size, sequence_length, params);
 			input_size = hidden_size;
+			nn << layers.relu();
 		}
-		for (int i = 0; i < n_layers; i++) {
-			nn << layers.add_fc(hidden_size);
-			nn << layers.tanh();
+
+		size_t sz = hidden_size;
+		if (sz > train_labels[0].size() * 10)
+		{
+			sz = train_labels[0].size() * 10;
 		}
-		nn << layers.add_fc(train_labels[0].size() * 10);
-		nn << layers.tanh();
-		nn << layers.add_fc(train_labels[0].size() * 5);
+		for (int i = 0; i < n_layers; i++) 
+		{
+			nn << layers.add_fc(sz);
+			nn << layers.relu();
+		}
+		sz =  10;
+		for (; sz > 2; sz /= 2)
+		{
+			nn << layers.add_fc(train_labels[0].size()*sz);
+		nn << layers.relu();
+		}
+		nn << layers.add_fc(train_labels[0].size() * 2);
 		nn << layers.tanh();
 		nn << layers.add_fc(train_labels[0].size());
 

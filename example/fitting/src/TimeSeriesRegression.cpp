@@ -399,6 +399,10 @@ int main(int argc, char** argv)
 
 	timeSeries.data_set(sequence_length, test);
 
+	if (sequence_length > timeSeries.n_minibatch)
+	{
+		printf("!!Warning!! sequence_length:%d > Minibatch:%d\n", sequence_length, timeSeries.n_minibatch);
+	}
 	std::cout << "Running with the following parameters:" << std::endl
 		<< "Learning rate   :   " << timeSeries.learning_rate << std::endl
 		<< "Minibatch size  :   " << timeSeries.n_minibatch << std::endl

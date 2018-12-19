@@ -5,7 +5,7 @@
 #include "../../include/util/mathutil.h"
 #pragma warning( disable : 4305 ) 
 
-#define EARLY_STOPPING_	30
+#define EARLY_STOPPING_	60
 
 class NonLinearRegression
 {
