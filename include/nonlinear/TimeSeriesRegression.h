@@ -16,12 +16,11 @@ class TimeSeriesRegression
 	FILE* fp_error_loss = NULL;
 	bool visualize_state_flag = true;
 
-	void normalize(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
+	void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
 	{
 		mean = std::vector<float_t>(X[0].size(), 0.0);
-		sigma = std::vector<float_t>(X[0].size(), 0.0);
+		sigma = std::vector<float_t>(X[0].size(), 1.0);
 
-#if 0
 		for (int i = 0; i < X.size(); i++)
 		{
 			for (int k = 0; k < X[0].size(); k++)
@@ -51,7 +50,13 @@ class TimeSeriesRegression
 				X[i][k] = (X[i][k] - mean[k]) / (sigma[k] + 1.0e-10);
 			}
 		}
-#else
+	}
+
+	void normalizeMinMax(tiny_dnn::tensor_t& X, std::vector<float_t>& min_, std::vector<float_t>& maxmin_)
+	{
+		min_ = std::vector<float_t>(X[0].size(), 0.0);
+		maxmin_ = std::vector<float_t>(X[0].size(), 1.0);
+
 #if 0
 		float max_value = -std::numeric_limits<float>::max();
 		float min_value = std::numeric_limits<float>::max();
@@ -63,17 +68,24 @@ class TimeSeriesRegression
 				if (min_value > X[i][k]) min_value = X[i][k];
 			}
 		}
+		for (int k = 0; k < X[0].size(); k++)
+		{
+			min_[k] = min_value;
+			maxmin_[k] = (max_value - min_value);
+
+			if (fabs(maxmin_[k]) < 1.0e-14)
+			{
+				min_[k] = 0.0;
+				maxmin_[k] = max_value;
+			}
+		}
+
 		for (int i = 0; i < X.size(); i++)
 		{
 			for (int k = 0; k < X[0].size(); k++)
 			{
-				X[i][k] = (X[i][k] - min_value) / (max_value - min_value);
+				X[i][k] = (X[i][k] - min_[k]) / maxmin_[k];
 			}
-		}
-		for (int k = 0; k < X[0].size(); k++)
-		{
-			mean[k] = min_value;
-			sigma[k] = (max_value - min_value);
 		}
 #else
 		for (int k = 0; k < X[0].size(); k++)
@@ -85,17 +97,21 @@ class TimeSeriesRegression
 				if (max_value < X[i][k]) max_value = X[i][k];
 				if (min_value > X[i][k]) min_value = X[i][k];
 			}
-			mean[k] = min_value;
-			sigma[k] = (max_value - min_value);
+			min_[k] = min_value;
+			maxmin_[k] = (max_value - min_value);
+			if (fabs(maxmin_[k]) < 1.0e-14)
+			{
+				min_[k] = 0.0;
+				maxmin_[k] = max_value;
+			}
 		}
 		for (int i = 0; i < X.size(); i++)
 		{
 			for (int k = 0; k < X[0].size(); k++)
 			{
-				X[i][k] = (X[i][k] - mean[k]) / (sigma[k] - mean[k]);
+				X[i][k] = (X[i][k] - min_[k]) / maxmin_[k];
 			}
 		}
-#endif
 #endif
 	}
 
@@ -123,6 +139,29 @@ class TimeSeriesRegression
 		{
 			std::vector<tiny_dnn::vec_t> YY = nY;
 			std::vector<tiny_dnn::vec_t> ZZ = nY;
+
+			for (int i = 0; i < sequence_length; i++)
+			{
+				tiny_dnn::vec_t y = nY[i];
+				for (int k = 0; k < y.size(); k++)
+				{
+					if (zscore_normalization)
+					{
+						y[k] = y[k] * Sigma[k] + Mean[k];
+					}
+					if (minmax_normalization)
+					{
+						y[k] = y[k] * MaxMin[k] + Min[k];
+					}
+				}
+				fprintf(fp_test, "%f ", iX[i][0]);
+				for (int k = 0; k < y.size() - 1; k++)
+				{
+					fprintf(fp_test, "%f %f ", y[k], y[k]);
+				}
+				fprintf(fp_test, "%f %f\n", y[y.size() - 1], y[y.size() - 1]);
+			}
+
 			for (int i = 0; i < iY.size()- sequence_length; i++)
 			{
 				if (i + sequence_length == train_images.size())
@@ -130,6 +169,30 @@ class TimeSeriesRegression
 					fclose(fp_test);
 					sprintf(plotName, "predict.dat", plot_count);
 					fp_test = fopen(plotName, "w");
+
+					tiny_dnn::vec_t y = nY[i + sequence_length-1];
+
+					for (int k = 0; k < y_pre.size(); k++)
+					{
+						if (zscore_normalization)
+						{
+							y_pre[k] = y_pre[k] * Sigma[k] + Mean[k];
+							y[k] = y[k] * Sigma[k] + Mean[k];
+						}
+						if (minmax_normalization)
+						{
+							y_pre[k] = y_pre[k] * MaxMin[k] + Min[k];
+							y[k] = y[k] * MaxMin[k] + Min[k];
+						}
+					}
+
+					fprintf(fp_test, "%f ", iX[i + sequence_length-1][0]);
+					for (int k = 0; k < y_pre.size() - 1; k++)
+					{
+						fprintf(fp_test, "%f %f ", y_pre[k], y[k]);
+					}
+					fprintf(fp_test, "%f %f\n", y_pre[y_pre.size() - 1], y[y_pre.size() - 1]);
+
 				}
 
 				tiny_dnn::vec_t y_predict;
@@ -151,9 +214,16 @@ class TimeSeriesRegression
 				tiny_dnn::vec_t y = nY[i + sequence_length];
 				for (int k = 0; k < y_predict.size(); k++)
 				{
-					y_predict[k] = y_predict[k] * Sigma[k] + Mean[k];
-					y[k] = y[k] * Sigma[k] + Mean[k];
-
+					if (zscore_normalization)
+					{
+						y_predict[k] = y_predict[k] * Sigma[k] + Mean[k];
+						y[k] = y[k] * Sigma[k] + Mean[k];
+					}
+					if (minmax_normalization)
+					{
+						y_predict[k] = y_predict[k] * MaxMin[k] + Min[k];
+						y[k] = y[k] * MaxMin[k] + Min[k];
+					}
 					cost += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
 
 				}
@@ -206,7 +276,7 @@ class TimeSeriesRegression
 		nn.save("tmp.model");
 
 		net_test();
-		set_train(nn, sequence_length, default_backend_type);
+		set_train(nn, sequence_length, n_bptt_max, default_backend_type);
 
 #ifdef USE_GNUPLOT
 		if (capture)
@@ -233,6 +303,9 @@ class TimeSeriesRegression
 	bool early_stopp = false;
 
 public:
+	size_t freedom = 0;
+	bool minmax_normalization = false;
+	bool zscore_normalization = false;
 	bool early_stopping = true;
 	bool test_mode = false;
 	bool capture = false;
@@ -247,18 +320,21 @@ public:
 	tiny_dnn::tensor_t nY;
 	std::vector<float_t> Mean;
 	std::vector<float_t> Sigma;
+	std::vector<float_t> Min;
+	std::vector<float_t> MaxMin;
 	tiny_dnn::network2<tiny_dnn::sequential> nn;
 	std::vector<tiny_dnn::vec_t> train_labels, test_labels;
 	std::vector<tiny_dnn::vec_t> train_images, test_images;
 
 	size_t support_epochs = 0;
 	std::string opt_type = "adam";
-	std::string rnn_type = "gru";
+	std::string rnn_type = "lstm";
 	size_t input_size = 32;
 	size_t sequence_length = 100;
 	size_t n_minibatch = 30;
 	size_t n_train_epochs = 3000;
 	float_t learning_rate = 0.01;
+	size_t n_bptt_max = 0;
 	int plot = 100;
 	std::string model_file = "fit.model";
 
@@ -266,12 +342,28 @@ public:
 	{
 		return error;
 	}
-	TimeSeriesRegression(tiny_dnn::tensor_t& X, tiny_dnn::tensor_t& Y)
+	TimeSeriesRegression(tiny_dnn::tensor_t& X, tiny_dnn::tensor_t& Y, std::string normalize_type="")
 	{
 		iX = X;
 		iY = Y;
 		nY = Y;
-		normalize(nY, Mean, Sigma);
+		if (normalize_type == "zscore") zscore_normalization = true;
+		if (normalize_type == "minmax") minmax_normalization = true;
+
+		if (zscore_normalization)
+		{
+			normalizeZ(nY, Mean, Sigma);
+			printf("zscore_normalization\n");
+		}
+		if (minmax_normalization)
+		{
+			normalizeMinMax(nY, Min, MaxMin);
+			printf("minmax_normalization\n");
+
+			//get Mean, Sigma
+			auto dmy = iY;
+			normalizeZ(dmy, Mean, Sigma);
+		}
 	}
 	void visualize_loss(int n)
 	{
@@ -358,43 +450,44 @@ public:
 		// clip gradients
 		tiny_dnn::recurrent_layer_parameters params;
 		params.clip = 0;	// 1Å`5
-		params.bptt_max = 1e9;
+
+		if (n_bptt_max == 0) n_bptt_max = sequence_length;
+		params.bptt_max = n_bptt_max;
+		printf("bptt_max:%d\n", n_bptt_max);
 
 		size_t in_w = train_images[0].size();
 		size_t in_h = 1;
 		size_t in_map = 1;
 
 		LayerInfo layers(in_w, in_h, in_map);
-		nn << layers.add_fc(input_size);
+		nn << layers.add_fc(input_size, false);
 		for (int i = 0; i < n_rnn_layers; i++) {
 			nn << layers.add_rnn(rnn_type, hidden_size, sequence_length, params);
 			input_size = hidden_size;
-			nn << layers.relu();
+			//Scaled Exponential Linear Unit. (Klambauer et al., 2017)
+			//nn << layers.selu_layer();
+			nn << layers.tanh();
 		}
+		//nn << layers.add_dropout(0.1);
+		//nn << layers.add_batnorm();
+		//nn << layers.add_cnv(1, hidden_size, 1, tiny_dnn::padding::same);
+		//nn << layers.add_maxpool(2, 1, tiny_dnn::padding::same);
 
 		size_t sz = hidden_size;
 		if (sz > train_labels[0].size() * 10)
 		{
 			sz = train_labels[0].size() * 10;
 		}
-		for (int i = 0; i < n_layers; i++) 
-		{
-			nn << layers.add_fc(sz);
-			nn << layers.relu();
-		}
-		sz =  10;
-		for (; sz > 2; sz /= 2)
-		{
-			nn << layers.add_fc(train_labels[0].size()*sz);
-		nn << layers.relu();
-		}
-		nn << layers.add_fc(train_labels[0].size() * 2);
+		nn << layers.add_fc(sz);
+		//nn << layers.relu();
 		nn << layers.tanh();
 		nn << layers.add_fc(train_labels[0].size());
 
 		nn.weight_init(tiny_dnn::weight_init::xavier());
 		for (auto n : nn) n->set_parallelize(true);
 		printf("layers:%zd\n", nn.depth());
+		freedom = layers.get_parameter_num();
+		printf("freedom:%zd\n", freedom);
 
 #ifdef USE_GRAPHVIZ_DOT
 		// generate graph model in dot language
@@ -416,8 +509,7 @@ public:
 		nn.set_input_size(train_images.size());
 		using train_loss = tiny_dnn::mse;
 
-		tiny_dnn::optimizer* optimizer_ = NULL;
-		
+	
 		tiny_dnn::adam optimizer_adam;
 		tiny_dnn::gradient_descent optimizer_sgd;
 		tiny_dnn::RMSprop optimizer_rmsprop;
@@ -429,7 +521,6 @@ public:
 			optimizer_sgd.alpha *= learning_rate;
 			std::cout << "optimizer.alpha:" << optimizer_sgd.alpha << std::endl;
 
-			optimizer_ = &optimizer_sgd;
 		}else
 		if (opt_type == "rmsprop")
 		{
@@ -437,7 +528,6 @@ public:
 			optimizer_rmsprop.alpha *= learning_rate;
 			std::cout << "optimizer.alpha:" << optimizer_rmsprop.alpha << std::endl;
 			
-			optimizer_ = &optimizer_rmsprop;
 		}else
 		if (opt_type == "adagrad")
 		{
@@ -445,9 +535,8 @@ public:
 			optimizer_adagrad.alpha *= learning_rate;
 			std::cout << "optimizer.alpha:" << optimizer_adagrad.alpha << std::endl;
 
-			optimizer_ = &optimizer_adagrad;
 		}else
-		if (opt_type == "adam" || optimizer_ == NULL)
+		if (opt_type == "adam" )
 		{
 			std::cout << "optimizer:" << "adam" << std::endl;
 
@@ -457,11 +546,15 @@ public:
 			optimizer_adam.alpha *= learning_rate;
 			std::cout << "optimizer.alpha:" << optimizer_adam.alpha << std::endl;
 
-			optimizer_ = &optimizer_adam;
 		}
 
 		construct_net(rnn_layers, n_layers, n_hidden_size);
-		optimizer_->reset();
+		
+		if (opt_type == "adam") optimizer_adam.reset();
+		if (opt_type == "sgd" )	optimizer_sgd.reset();
+		if (opt_type == "rmsprop" )	optimizer_rmsprop.reset();
+		if (opt_type == "adagrad")optimizer_adagrad.reset();
+
 		tiny_dnn::timer t;
 
 		float_t loss_min = std::numeric_limits<float>::max();
@@ -558,13 +651,46 @@ public:
 		{
 			try
 			{
-				// training
-				nn.fit<tiny_dnn::mse>(*optimizer_, train_images, train_labels,
-					n_minibatch,
-					n_train_epochs,
-					on_enumerate_minibatch,
-					on_enumerate_epoch
-					);
+				if (opt_type == "adam")
+				{
+					// training
+					nn.fit<tiny_dnn::mse>(optimizer_adam, train_images, train_labels,
+						n_minibatch,
+						n_train_epochs,
+						on_enumerate_minibatch,
+						on_enumerate_epoch
+						);
+				}
+				if (opt_type == "sgd")
+				{
+					// training
+					nn.fit<tiny_dnn::mse>(optimizer_sgd, train_images, train_labels,
+						n_minibatch,
+						n_train_epochs,
+						on_enumerate_minibatch,
+						on_enumerate_epoch
+						);
+				}
+				if (opt_type == "rmsprop")
+				{
+					// training
+					nn.fit<tiny_dnn::mse>(optimizer_rmsprop, train_images, train_labels,
+						n_minibatch,
+						n_train_epochs,
+						on_enumerate_minibatch,
+						on_enumerate_epoch
+						);
+				}
+				if (opt_type == "adagrad")
+				{
+					// training
+					nn.fit<tiny_dnn::mse>(optimizer_adagrad, train_images, train_labels,
+						n_minibatch,
+						n_train_epochs,
+						on_enumerate_minibatch,
+						on_enumerate_epoch
+						);
+				}
 			}
 			catch (tiny_dnn::nn_error &err) {
 				std::cerr << "Exception: " << err.what() << std::endl;
@@ -572,32 +698,32 @@ public:
 				return;
 			}
 
-			set_test(nn, OUT_SEQ_LEN);
-			//float_t loss = nn.get_loss<train_loss>(train_images, train_labels) / train_images.size();
+			//set_test(nn, OUT_SEQ_LEN);
+			////float_t loss = nn.get_loss<train_loss>(train_images, train_labels) / train_images.size();
 
-			float_t loss = 0.0;
-			for (int i = 0; i < train_images.size(); i++)
-			{
-				tiny_dnn::vec_t& y = nn.predict(train_images[i]);
-				for (int k = 0; k < y.size(); k++)
-				{
-					float_t d = (y[k] - train_labels[i][k])* Sigma[k];
-					loss += d*d;
-				}
-			}
-			for (int i = 0; i < test_images.size(); i++)
-			{
-				tiny_dnn::vec_t& y = nn.predict(test_images[i]);
-				for (int k = 0; k < y.size(); k++)
-				{
-					float_t d = (y[k] - test_labels[i][k])* Sigma[k];
-					loss += d*d;
-				}
-			}
-			loss /= (train_images.size() + test_images.size());
-			printf("loss:%.3f\n", loss);
+			//float_t loss = 0.0;
+			//for (int i = 0; i < train_images.size(); i++)
+			//{
+			//	tiny_dnn::vec_t& y = nn.predict(train_images[i]);
+			//	for (int k = 0; k < y.size(); k++)
+			//	{
+			//		float_t d = (y[k] - train_labels[i][k])* Sigma[k];
+			//		loss += d*d;
+			//	}
+			//}
+			//for (int i = 0; i < test_images.size(); i++)
+			//{
+			//	tiny_dnn::vec_t& y = nn.predict(test_images[i]);
+			//	for (int k = 0; k < y.size(); k++)
+			//	{
+			//		float_t d = (y[k] - test_labels[i][k])* Sigma[k];
+			//		loss += d*d;
+			//	}
+			//}
+			//loss /= (train_images.size() + test_images.size());
+			//printf("loss:%.3f\n", loss);
 
-			set_train(nn, seq_length, default_backend_type);
+			//set_train(nn, seq_length, n_bptt_max, default_backend_type);
 
 		}
 
@@ -625,7 +751,14 @@ public:
 		tiny_dnn::vec_t& y_predict = nn.predict(pre);
 		for (int k = 0; k < y_predict.size(); k++)
 		{
-			y_predict[k] = y_predict[k] * Sigma[k] + Mean[k];
+			if (zscore_normalization)
+			{
+				y_predict[k] = y_predict[k] * Sigma[k] + Mean[k];
+			}
+			if (minmax_normalization)
+			{
+				y_predict[k] = y_predict[k] * MaxMin[k] + Min[k];
+			}
 		}
 		return y_predict;
 	}
@@ -642,11 +775,24 @@ public:
 		double rmse = 0.0;
 		for (int i = 1; i < train_images.size(); i++)
 		{
-			tiny_dnn::vec_t& y = nn.predict(train_images[i-1]);
+			tiny_dnn::vec_t y = nn.predict(train_images[i-1]);
 			for (int k = 0; k < y.size(); k++)
 			{
 				float_t d;
-				d = (y[k] - train_labels[i][k])* Sigma[k];
+				auto yy = train_labels[i][k];
+
+				if (zscore_normalization)
+				{
+					y[k] = y[k] * Sigma[k] + Mean[k];
+					yy = yy * Sigma[k] + Mean[k];
+				}
+				if (minmax_normalization)
+				{
+					y[k] = y[k] * MaxMin[k] + Min[k];
+					yy = yy * MaxMin[k] + Min[k];
+				}
+
+				d = (y[k] - yy);
 				rmse += d*d;
 			}
 		}
@@ -657,24 +803,37 @@ public:
 		double chi_square = 0.0;
 		for (int i = 1; i < train_images.size(); i++)
 		{
-			tiny_dnn::vec_t& y = nn.predict(train_images[i-1]);
+			tiny_dnn::vec_t y = nn.predict(train_images[i-1]);
 			for (int k = 0; k < y.size(); k++)
 			{
 				float_t d;
-				d = (y[k] - train_labels[i][k])* Sigma[k];
+				auto yy = train_labels[i][k];
+
+				if (zscore_normalization)
+				{
+					y[k] = y[k] * Sigma[k] + Mean[k];
+					yy = yy * Sigma[k] + Mean[k];
+				}
+				if (minmax_normalization)
+				{
+					y[k] = y[k] * MaxMin[k] + Min[k];
+					yy = yy * MaxMin[k] + Min[k];
+				}
+
+				d = (y[k] - yy);
 
 				chi_square += d*d / (Sigma[k] * Sigma[k]);
 			}
 		}
 
-		Chi_distribution chi_distribution(train_images.size()*train_labels[0].size());
+		Chi_distribution chi_distribution(freedom);
 		double chi_pdf = chi_distribution.p_value(Éø);
 
 		fprintf(fp, "Status:%d\n", getStatus());
 		fprintf(fp, "--------------------------------------------------------------------\n");
 		fprintf(fp, "RMSE             :%f\n", rmse);
 		fprintf(fp, "chi square       :%f\n", chi_square);
-		fprintf(fp, "freedom          :%d\n", train_images.size()*train_labels[0].size());
+		fprintf(fp, "freedom          :%d\n", freedom);
 		fprintf(fp, "p value          :%f\n", chi_pdf);
 		fprintf(fp, "--------------------------------------------------------------------\n");
 		if (chi_distribution.status != 0)

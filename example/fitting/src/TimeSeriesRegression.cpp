@@ -30,6 +30,7 @@ int main(int argc, char** argv)
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
 	int sequence_length = -1;
+	std::string normalization_type = "";
 
 	int read_max = -1;
 	bool header = false;
@@ -63,6 +64,11 @@ int main(int argc, char** argv)
 		}
 		if (argname == "--seq_len") {
 			sequence_length = atoi(argv[count + 1]);
+		}
+		if (argname == "--normal")
+		{
+			normalization_type = argv[count + 1];
+			printf("--normal %s\n", argv[count + 1]);
 		}
 	}
 
@@ -282,7 +288,7 @@ int main(int argc, char** argv)
 	MatrixToTensor(y, Y, read_max);
 
 
-	TimeSeriesRegression timeSeries(X, Y);
+	TimeSeriesRegression timeSeries(X, Y, normalization_type);
 
 	timeSeries.tolerance = 0.009;
 	timeSeries.learning_rate = 0.01;
@@ -320,6 +326,13 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--y_var") {
+			continue;
+		}
+		else if (argname == "--normal") {
+			continue;
+		}
+		else if (argname == "--bptt_max") {
+			timeSeries.n_bptt_max = atoi(argv[count + 1]);
 			continue;
 		}
 		else if (argname == "--capture") {
@@ -416,6 +429,7 @@ int main(int argc, char** argv)
 		<< "n_rnn_layers    :   " << n_rnn_layers << std::endl
 		<< "n_layers        :   " << n_layers << std::endl
 		<< "test_mode       :   " << timeSeries.test_mode << std::endl
+		<< "n_bptt_max       :  " << timeSeries.n_bptt_max << std::endl
 
 		<< std::endl;
 

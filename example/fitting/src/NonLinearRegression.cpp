@@ -24,6 +24,7 @@ int main(int argc, char** argv)
 {
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
+	std::string normalization_type = "zscore";
 
 	int read_max = -1;
 	bool header = false;
@@ -56,6 +57,11 @@ int main(int argc, char** argv)
 		}
 		if (argname == "--y_var") {
 			y_var.push_back(argv[count + 1]);
+		}
+		if (argname == "--normal")
+		{
+			normalization_type = argv[count + 1];
+			printf("--normal %s\n", argv[count + 1]);
 		}
 	}
 
@@ -273,7 +279,7 @@ int main(int argc, char** argv)
 	MatrixToTensor(x, X, read_max);
 	MatrixToTensor(y, Y, read_max);
 
-	NonLinearRegression regression(X, Y);
+	NonLinearRegression regression(X, Y, normalization_type);
 
 	regression.tolerance = 1.0e-3;
 	regression.learning_rate = 1;
@@ -307,6 +313,9 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--y_var") {
+			continue;
+		}
+		else if (argname == "--normal") {
 			continue;
 		}
 		else if (argname == "--capture") {

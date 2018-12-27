@@ -44,7 +44,7 @@ using softmax = tiny_dnn::softmax_layer;
 using tiny_dnn::core::connection_table;
 
 template <typename N>
-inline void set_train(N &nn, const int seq_len=0, tiny_dnn::core::backend_t& defaule_backend = tiny_dnn::core::backend_t::internal) {
+inline void set_train(N &nn, const int seq_len=0, const int bptt_max = 0, tiny_dnn::core::backend_t& defaule_backend = tiny_dnn::core::backend_t::internal) {
 	nn.set_netphase(tiny_dnn::net_phase::train);
 	for (unsigned int i = 0; i < nn.layer_size(); i++) {
 		try {
@@ -55,7 +55,7 @@ inline void set_train(N &nn, const int seq_len=0, tiny_dnn::core::backend_t& def
 		}
 		try {
 			nn.template at<tiny_dnn::recurrent_layer>(i).seq_len(seq_len);
-			nn.template at<tiny_dnn::recurrent_layer>(i).bptt_max(1e9);
+			nn.template at<tiny_dnn::recurrent_layer>(i).bptt_max(bptt_max);
 			nn.template at<tiny_dnn::recurrent_layer>(i).clear_state();
 		}
 		catch (tiny_dnn::nn_error &err) {
@@ -255,7 +255,23 @@ class LayerInfo
 	size_t out_h;
 	size_t out_map;
 	tiny_dnn::core::backend_t      backend_type;
+	size_t parame_num = 0;
 public:
+	inline size_t get_parameter_num() const
+	{
+		return parame_num;
+	}
+#define PARAMETER_NUM(l) do{\
+		size_t param_ = 0;\
+		std::vector<tiny_dnn::vec_t *> weights = l.weights(); \
+		for (int i = 0; i < weights.size(); i++)\
+		{\
+			tiny_dnn::vec_t &w = *weights[i]; \
+			parame_num += w.size(); \
+			param_ += w.size(); \
+		}\
+		printf("param_:%d\n", param_);\
+	}while(0)
 
 	inline void _editInfo(size_t out_w_, size_t out_h_, size_t out_map_)
 	{
@@ -279,6 +295,7 @@ public:
 
 #define ACTIVATIN_SYMBL(name) \
 	{\
+		if (name == "selu_layer")	return selu_layer();\
 		if (name == "relu")			return rele();\
 		if (name == "leaky_relu")	return leaky_relu();\
 		if (name == "elu")			return elu();\
@@ -299,8 +316,19 @@ public:
 		return  tiny_dnn::class_name();\
 	}
 
+#define ACTIVATIN_FUNC2(class_name, param) \
+	{\
+		size_t in_w = out_w;\
+		size_t in_h = out_h;\
+		size_t in_map = out_map;\
+		printf("%s %zdx%zd fmap:%zd->", #class_name, in_w, in_h, in_map);\
+		printf(" %zdx%zd fmap:%zd\n", out_w, out_h, out_map);\
+		return  tiny_dnn::class_name(param);\
+	}
+	
+	inline  tiny_dnn::selu_layer selu_layer() { ACTIVATIN_FUNC(selu_layer) }
 	inline  tiny_dnn::relu_layer relu() { ACTIVATIN_FUNC(relu_layer) }
-	inline  tiny_dnn::leaky_relu_layer leaky_relu() { ACTIVATIN_FUNC(leaky_relu_layer) }
+	inline  tiny_dnn::leaky_relu_layer leaky_relu() { ACTIVATIN_FUNC2(leaky_relu_layer, float_t(0.0001)) }
 	inline  tiny_dnn::elu_layer elu() { ACTIVATIN_FUNC(elu_layer) }
 	inline  tiny_dnn::tanh_layer tanh() { ACTIVATIN_FUNC(tanh_layer) }
 	inline  tiny_dnn::sigmoid_layer sigmoid() { ACTIVATIN_FUNC(sigmoid_layer) }
@@ -346,6 +374,8 @@ public:
 
 		printf("convolutional_layer %zdx%zd filter(%zd,%zd) stride(%zd,%zd) fmap:%zd->", in_w, in_h, window_width, window_height, w_stride, h_stride, in_map);
 		printf(" %zdx%zd fmap:%zd\n", out_w, out_h, out_map);
+		PARAMETER_NUM(layer);
+
 		return layer;
 	}
 
@@ -442,6 +472,7 @@ public:
 
 		printf("batch_normalization_layer %zdx%zd  fmap:%zd->", in_w, in_h, in_map);
 		printf(" %zdx%zd fmap:%zd\n", out_w, out_h, out_map);
+		PARAMETER_NUM(layer);
 		return layer;
 
 	}
@@ -459,6 +490,7 @@ public:
 
 		printf("batch_normalization_layer %zdx%zd  fmap:%zd->", in_w, in_h, in_map);
 		printf(" %zdx%zd fmap:%zd\n", out_w, out_h, out_map);
+		PARAMETER_NUM(layer);
 		return layer;
 
 	}
@@ -500,6 +532,7 @@ public:
 
 		printf("fully_connected_layer %zdx%zd fmap:%zd->", in_w, in_h, in_map);
 		printf(" %zdx%d fmap:%d\n", out_dim, 1, 1);
+		PARAMETER_NUM(layer);
 		return layer;
 	}
 	inline tiny_dnn::recurrent_layer add_rnn(
@@ -522,17 +555,25 @@ public:
 		printf(" %zdx%d fmap:%d\n", hidden_size, 1, 1);
 
 		if (rnn_type == "rnn") {
-			return recurrent(tiny_dnn::rnn(input_size, hidden_size), seq_len, prmam);
+			tiny_dnn::recurrent_layer layer = recurrent(tiny_dnn::rnn(input_size, hidden_size), seq_len, prmam);
+			PARAMETER_NUM(layer);
+			return layer;
 		}
 		else if (rnn_type == "gru") {
-			return recurrent(tiny_dnn::gru(input_size, hidden_size), seq_len, prmam);
+			tiny_dnn::recurrent_layer layer = recurrent(tiny_dnn::gru(input_size, hidden_size), seq_len, prmam);
+			PARAMETER_NUM(layer);
+			return layer;
 		}
 		else if (rnn_type == "lstm") {
-			return recurrent(tiny_dnn::lstm(input_size, hidden_size), seq_len, prmam);
+			tiny_dnn::recurrent_layer layer = recurrent(tiny_dnn::lstm(input_size, hidden_size), seq_len, prmam);
+			PARAMETER_NUM(layer);
+			return layer;
 		}
 		else
 		{
-			return recurrent(tiny_dnn::rnn(input_size, hidden_size), seq_len, prmam);
+			tiny_dnn::recurrent_layer layer = recurrent(tiny_dnn::rnn(input_size, hidden_size), seq_len, prmam);
+			PARAMETER_NUM(layer);
+			return layer;
 		}
 	}
 };
