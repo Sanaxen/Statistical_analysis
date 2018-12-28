@@ -334,7 +334,7 @@ public:
 	size_t n_minibatch = 30;
 	size_t n_train_epochs = 3000;
 	float_t learning_rate = 0.01;
-	size_t n_bptt_max = 0;
+	size_t n_bptt_max = 1e9;
 	int plot = 100;
 	std::string model_file = "fit.model";
 
@@ -822,7 +822,7 @@ public:
 
 				d = (y[k] - yy);
 
-				chi_square += d*d / (Sigma[k] * Sigma[k]);
+				chi_square += d*d / (y[k] + 1.e-10);
 			}
 		}
 

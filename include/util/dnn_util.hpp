@@ -71,6 +71,20 @@ inline void set_train(N &nn, const int seq_len=0, const int bptt_max = 0, tiny_d
 		}
 	}
 #endif
+#ifdef CNN_USE_AVX
+	for (auto n : nn)
+	{
+		if (n->layer_type() == "recurrent-layer")
+		{
+			n->set_backend_type(defaule_backend);
+		}
+		if (n->layer_type() == "lstm-cell")
+		{
+			n->set_backend_type(defaule_backend);
+		}
+	}
+#endif
+
 }
 
 template <typename N>
@@ -97,6 +111,24 @@ inline void set_test(N &nn, const int seq_len=0) {
 		if (n->layer_type() == "fully-connected")
 		{
 			n->set_backend_type(tiny_dnn::core::backend_t::intel_mkl);
+		}
+		if (n->layer_type() == "recurrent-layer")
+		{
+			n->set_backend_type(tiny_dnn::core::backend_t::avx);
+		}
+		if (n->layer_type() == "lstm-cell")
+		{
+			n->set_backend_type(tiny_dnn::core::backend_t::avx);
+		}
+	}
+#endif
+
+#ifdef CNN_USE_AVX
+	for (auto n : nn)
+	{
+		if (n->layer_type() == "recurrent-layer")
+		{
+			n->set_backend_type(tiny_dnn::core::backend_t::avx);
 		}
 	}
 #endif
@@ -296,7 +328,7 @@ public:
 #define ACTIVATIN_SYMBL(name) \
 	{\
 		if (name == "selu_layer")	return selu_layer();\
-		if (name == "relu")			return rele();\
+		if (name == "relu")			return relu();\
 		if (name == "leaky_relu")	return leaky_relu();\
 		if (name == "elu")			return elu();\
 		if (name == "tanh")			return tanh();\

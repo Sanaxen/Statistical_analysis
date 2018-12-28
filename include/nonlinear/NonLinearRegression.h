@@ -754,7 +754,7 @@ public:
 				{
 					d = (y[k] - train_labels[i][k]);
 				}
-				chi_square += d*d/(Sigma_y[k]* Sigma_y[k]);
+				chi_square += d*d/(y[k] + 1.e-10);
 			}
 		}
 
