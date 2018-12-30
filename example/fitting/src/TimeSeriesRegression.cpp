@@ -29,6 +29,7 @@ int main(int argc, char** argv)
 {
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
+	std::vector<std::string> yx_var;
 	int sequence_length = -1;
 	std::string normalization_type = "";
 
@@ -61,6 +62,9 @@ int main(int argc, char** argv)
 		}
 		if (argname == "--y_var") {
 			y_var.push_back(argv[count + 1]);
+		}
+		if (argname == "--yx_var") {
+			yx_var.push_back(argv[count + 1]);
 		}
 		if (argname == "--seq_len") {
 			sequence_length = atoi(argv[count + 1]);
@@ -113,6 +117,7 @@ int main(int argc, char** argv)
 
 	std::vector<int> x_var_idx;
 	std::vector<int> y_var_idx;
+	std::vector<int> yx_var_idx;
 
 	if (x_var.size())
 	{
@@ -201,6 +206,50 @@ int main(int argc, char** argv)
 		}
 	}
 
+	if (yx_var.size())
+	{
+		for (int i = 0; i < yx_var.size(); i++)
+		{
+			for (int j = 0; j < header_names.size(); j++)
+			{
+				if (yx_var[i] == header_names[j])
+				{
+					yx_var_idx.push_back(j);
+				}
+				else if ("\"" + yx_var[i] + "\"" == header_names[j])
+				{
+					yx_var_idx.push_back(j);
+				}
+				else
+				{
+					char buf[32];
+					sprintf(buf, "%d", j);
+					if (yx_var[i] == std::string(buf))
+					{
+						yx_var_idx.push_back(j);
+					}
+					sprintf(buf, "\"%d\"", j);
+					if (yx_var[i] == std::string(buf))
+					{
+						yx_var_idx.push_back(j);
+					}
+				}
+			}
+		}
+		if (yx_var_idx.size() == 0)
+		{
+			for (int i = 0; i < yx_var.size(); i++)
+			{
+				yx_var_idx.push_back(atoi(yx_var[i].c_str()));
+			}
+		}
+		if (yx_var_idx.size() != yx_var.size())
+		{
+			printf("--yx_var ERROR\n");
+			return -1;
+		}
+	}
+
 	if (x_var.size() == 0 && x_dim > 0)
 	{
 		for (int i = 0; i < x_dim; i++)
@@ -213,7 +262,7 @@ int main(int argc, char** argv)
 	}
 	if (x_var.size() > 0 && x_dim > 0)
 	{
-		if (x_var.size() != x_dim)
+		if (x_var.size()+yx_var.size() != x_dim)
 		{
 			printf("arguments number error:--x_var != --x");
 			return -1;
@@ -252,7 +301,7 @@ int main(int argc, char** argv)
 	}
 	if (x_var.size() > 0 && x_dim == 0)
 	{
-		x_dim = x_var.size();
+		x_dim = x_var.size()+yx_var.size();
 	}
 	if (y_var.size() > 0 && y_dim == 0)
 	{
@@ -267,6 +316,11 @@ int main(int argc, char** argv)
 	{
 		printf("y_var:%s %d\n", y_var[i].c_str(), y_var_idx[i]);
 	}
+	for (int i = 0; i < yx_var.size(); i++)
+	{
+		printf("yx_var:%s %d\n", yx_var[i].c_str(), yx_var_idx[i]);
+	}
+
 	Matrix<dnn_double> x = z.Col(x_var_idx[0]);
 	for (int i = 1; i < x_dim; i++)
 	{
@@ -276,6 +330,15 @@ int main(int argc, char** argv)
 	for (int i = 1; i < y_dim; i++)
 	{
 		y = y.appendCol(z.Col(y_var_idx[i]));
+	}
+
+	if (yx_var.size())
+	{
+		Matrix<dnn_double> yx = z.Col(yx_var_idx[0]);
+		for (int i = 1; i < yx_var.size(); i++)
+		{
+			y = y.appendCol(yx.Col(yx_var_idx[i]));
+		}
 	}
 
 	printf("sequence_length:%d\n", sequence_length);
@@ -290,6 +353,8 @@ int main(int argc, char** argv)
 
 	TimeSeriesRegression timeSeries(X, Y, normalization_type);
 
+	timeSeries.x_dim = x_dim;
+	timeSeries.y_dim = y_dim;
 	timeSeries.tolerance = 0.009;
 	timeSeries.learning_rate = 0.01;
 	timeSeries.visualize_loss(10);
@@ -326,6 +391,9 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--y_var") {
+			continue;
+		}
+		else if (argname == "--yx_var") {
 			continue;
 		}
 		else if (argname == "--normal") {

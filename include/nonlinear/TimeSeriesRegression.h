@@ -138,12 +138,11 @@ class TimeSeriesRegression
 		if (fp_test)
 		{
 			std::vector<tiny_dnn::vec_t> YY = nY;
-			std::vector<tiny_dnn::vec_t> ZZ = nY;
 
 			for (int i = 0; i < sequence_length; i++)
 			{
 				tiny_dnn::vec_t y = nY[i];
-				for (int k = 0; k < y.size(); k++)
+				for (int k = 0; k < y_dim; k++)
 				{
 					if (zscore_normalization)
 					{
@@ -155,11 +154,11 @@ class TimeSeriesRegression
 					}
 				}
 				fprintf(fp_test, "%f ", iX[i][0]);
-				for (int k = 0; k < y.size() - 1; k++)
+				for (int k = 0; k < y_dim - 1; k++)
 				{
 					fprintf(fp_test, "%f %f ", y[k], y[k]);
 				}
-				fprintf(fp_test, "%f %f\n", y[y.size() - 1], y[y.size() - 1]);
+				fprintf(fp_test, "%f %f\n", y[y_dim - 1], y[y_dim - 1]);
 			}
 
 			for (int i = 0; i < iY.size()- sequence_length; i++)
@@ -172,7 +171,7 @@ class TimeSeriesRegression
 
 					tiny_dnn::vec_t y = nY[i + sequence_length-1];
 
-					for (int k = 0; k < y_pre.size(); k++)
+					for (int k = 0; k < y_dim; k++)
 					{
 						if (zscore_normalization)
 						{
@@ -187,32 +186,32 @@ class TimeSeriesRegression
 					}
 
 					fprintf(fp_test, "%f ", iX[i + sequence_length-1][0]);
-					for (int k = 0; k < y_pre.size() - 1; k++)
+					for (int k = 0; k < y_dim - 1; k++)
 					{
 						fprintf(fp_test, "%f %f ", y_pre[k], y[k]);
 					}
-					fprintf(fp_test, "%f %f\n", y_pre[y_pre.size() - 1], y[y_pre.size() - 1]);
+					fprintf(fp_test, "%f %f\n", y_pre[y_dim - 1], y[y_dim - 1]);
 
 				}
 
 				tiny_dnn::vec_t y_predict;
-				//y_predict = nn_test.predict((i < train_images.size()) ? nY[i] : y_pre);
-				//y_predict = nn_test.predict((i < train_images.size()) ? train_images[i] : seq_vec(YY, i));
-				y_predict = nn_test.predict( seq_vec(YY, i));
+				
+				y_predict = nn_test.predict(seq_vec(YY, i));
 
-				//if (YY[i + sequence_length][1] != 0)
-				//{
-				//	y_predict[1] = YY[i + sequence_length][1];
-				//	y_predict[0] = YY[i + sequence_length][0];
-				//}
+				//Change to the predicted value
 				if (i + sequence_length >= train_images.size())
 				{
 					YY[i + sequence_length] = y_predict;
+					//Add an explanatory variable
+					for (int k = y_dim; k < YY[0].size(); k++)
+					{
+						YY[i + sequence_length].push_back(nY[i + sequence_length][k]);
+					}
 				}
 				y_pre = y_predict;
 
 				tiny_dnn::vec_t y = nY[i + sequence_length];
-				for (int k = 0; k < y_predict.size(); k++)
+				for (int k = 0; k < y_dim; k++)
 				{
 					if (zscore_normalization)
 					{
@@ -229,11 +228,11 @@ class TimeSeriesRegression
 				}
 
 				fprintf(fp_test, "%f ", iX[i + sequence_length][0]);
-				for (int k = 0; k < y_predict.size() - 1; k++)
+				for (int k = 0; k < y_dim - 1; k++)
 				{
 					fprintf(fp_test, "%f %f ", y_predict[k], y[k]);
 				}
-				fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1], y[y_predict.size() - 1]);
+				fprintf(fp_test, "%f %f\n", y_predict[y_dim - 1], y[y_dim - 1]);
 			}
 			fclose(fp_test);
 		}
@@ -303,6 +302,8 @@ class TimeSeriesRegression
 	bool early_stopp = false;
 
 public:
+	size_t x_dim;
+	size_t y_dim;
 	size_t freedom = 0;
 	bool minmax_normalization = false;
 	bool zscore_normalization = false;
@@ -350,11 +351,6 @@ public:
 		if (normalize_type == "zscore") zscore_normalization = true;
 		if (normalize_type == "minmax") minmax_normalization = true;
 
-		if (zscore_normalization)
-		{
-			normalizeZ(nY, Mean, Sigma);
-			printf("zscore_normalization\n");
-		}
 		if (minmax_normalization)
 		{
 			normalizeMinMax(nY, Min, MaxMin);
@@ -363,6 +359,11 @@ public:
 			//get Mean, Sigma
 			auto dmy = iY;
 			normalizeZ(dmy, Mean, Sigma);
+		}
+		if (zscore_normalization)
+		{
+			normalizeZ(nY, Mean, Sigma);
+			printf("zscore_normalization\n");
 		}
 	}
 	void visualize_loss(int n)
@@ -428,12 +429,26 @@ public:
 		for (int i = 0; i < train_num_max; i++)
 		{
 			train_images.push_back(seq_vec(nY, i));
-			train_labels.push_back(nY[i + sequence_length]);
+
+			auto ny = nY[i + sequence_length];
+			tiny_dnn::vec_t y;
+			for (int k = 0; k < y_dim; k++)
+			{
+				y.push_back(ny[k]);
+			}
+			train_labels.push_back(y);
 		}
 		for (int i = train_num_max; i < dataAll; i++)
 		{
 			test_images.push_back(seq_vec(nY, i));
-			test_labels.push_back(nY[i + sequence_length]);
+
+			auto ny = nY[i + sequence_length];
+			tiny_dnn::vec_t y;
+			for (int k = 0; k < y_dim; k++)
+			{
+				y.push_back(ny[k]);
+			}
+			test_labels.push_back(y);
 		}
 	}
 
@@ -477,6 +492,10 @@ public:
 		if (sz > train_labels[0].size() * 10)
 		{
 			sz = train_labels[0].size() * 10;
+		}
+		for (int i = 0; i < n_layers; i++) {
+			nn << layers.add_fc(sz);
+			nn << layers.tanh();
 		}
 		nn << layers.add_fc(sz);
 		//nn << layers.relu();
@@ -697,34 +716,6 @@ public:
 				error = -1;
 				return;
 			}
-
-			//set_test(nn, OUT_SEQ_LEN);
-			////float_t loss = nn.get_loss<train_loss>(train_images, train_labels) / train_images.size();
-
-			//float_t loss = 0.0;
-			//for (int i = 0; i < train_images.size(); i++)
-			//{
-			//	tiny_dnn::vec_t& y = nn.predict(train_images[i]);
-			//	for (int k = 0; k < y.size(); k++)
-			//	{
-			//		float_t d = (y[k] - train_labels[i][k])* Sigma[k];
-			//		loss += d*d;
-			//	}
-			//}
-			//for (int i = 0; i < test_images.size(); i++)
-			//{
-			//	tiny_dnn::vec_t& y = nn.predict(test_images[i]);
-			//	for (int k = 0; k < y.size(); k++)
-			//	{
-			//		float_t d = (y[k] - test_labels[i][k])* Sigma[k];
-			//		loss += d*d;
-			//	}
-			//}
-			//loss /= (train_images.size() + test_images.size());
-			//printf("loss:%.3f\n", loss);
-
-			//set_train(nn, seq_length, n_bptt_max, default_backend_type);
-
 		}
 
 		try

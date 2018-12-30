@@ -55,7 +55,7 @@ class NonLinearRegression
 		min_ = std::vector<float_t>(X[0].size(), 0.0);
 		maxmin_ = std::vector<float_t>(X[0].size(), 1.0);
 
-#if 10
+#if 0
 		float max_value = -std::numeric_limits<float>::max();
 		float min_value = std::numeric_limits<float>::max();
 		for (int i = 0; i < X.size(); i++)
@@ -289,25 +289,23 @@ public:
 		if (normalize_type == "zscore") zscore_normalization = true;
 		if (normalize_type == "minmax") minmax_normalization = true;
 
-		if (zscore_normalization)
-		{
-			normalizeZ(nX, Mean_x, Sigma_x);
-			normalizeZ(nY, Mean_y, Sigma_y);
-			printf("zscore_normalization\n");
-		}
-		else
 		if (minmax_normalization)
 		{
 			normalizeMinMax(nX, Min_x, MaxMin_x);
 			normalizeMinMax(nY, Min_y, MaxMin_y);
 			printf("minmax_normalization\n");
-		}
-		else
-		{
+
 			tiny_dnn::tensor_t dmyX = nX;
 			tiny_dnn::tensor_t dmyY = nY;
 			normalizeZ(dmyX, Mean_x, Sigma_x);
 			normalizeZ(dmyY, Mean_y, Sigma_y);
+
+		}
+		if (zscore_normalization)
+		{
+			normalizeZ(nX, Mean_x, Sigma_x);
+			normalizeZ(nY, Mean_y, Sigma_y);
+			printf("zscore_normalization\n");
 		}
 	}
 	void visualize_loss(int n)
