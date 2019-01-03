@@ -12,6 +12,7 @@ class NonLinearRegression
 	bool convergence = false;
 	int error = 0;
 	FILE* fp_error_loss = NULL;
+	FILE* fp_error_vari_loss = NULL;
 	bool visualize_state_flag = true;
 
 	void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
@@ -132,6 +133,8 @@ class NonLinearRegression
 		FILE* fp_test = fopen(plotName, "w");
 
 		float cost = 0.0;
+		float vari_cost = 0.0;
+		float cost_tot = 0.0;
 		if (fp_test)
 		{
 			for (int i = 0; i < nX.size(); i++)
@@ -143,11 +146,49 @@ class NonLinearRegression
 				fprintf(fp_test, "%d ", i);
 				for (int k = 0; k < y_predict.size()-1; k++)
 				{
-					fprintf(fp_test, "%f %f ", y_predict[k]*Sigma_y[k] + Mean_y[k], y[k]);
-					cost += (y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k])*(y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k]);
+					float_t yy;
+					if (zscore_normalization)
+					{
+						yy = y_predict[k] * Sigma_y[k] + Mean_y[k];
+					}
+					if (minmax_normalization)
+					{
+						y_predict[k] * MaxMin_y[k] + Min_y[k];
+					}
+					fprintf(fp_test, "%f %f ", yy, y[k]);
+
+					if (test_data_index[i] >= 0)
+					{
+						vari_cost += (yy- y[k])*(yy - y[k]);
+
+					}
+					else
+					{
+						cost += (yy - y[k])*(yy - y[k]);
+					}
+					cost_tot += (yy - y[k])*(yy - y[k]);
 				}
-				fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1], y[y_predict.size() - 1]);
-				cost += (y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
+
+				float_t yy;
+				if (zscore_normalization)
+				{
+					yy = y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1];
+				}
+				if (minmax_normalization)
+				{
+					yy = y_predict[y_predict.size() - 1] * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1];
+				}
+
+				fprintf(fp_test, "%f %f\n", yy, y[y_predict.size() - 1]);
+				if (test_data_index[i] >= 0)
+				{
+					vari_cost += (yy - y[y_predict.size() - 1])*(yy - y[y_predict.size() - 1]);
+				}
+				else
+				{
+					cost += (yy - y[y_predict.size() - 1])*(yy- y[y_predict.size() - 1]);
+				}
+				cost_tot += (yy - y[y_predict.size() - 1])*(yy - y[y_predict.size() - 1]);
 			}
 			fclose(fp_test);
 		}
@@ -173,19 +214,23 @@ class NonLinearRegression
 				for (int k = 0; k < y_predict.size() - 1; k++)
 				{
 					fprintf(fp_test, "%f %f ", y_predict[k] * Sigma_y[k] + Mean_y[k], y[k]);
-					cost += (y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k])*(y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k]);
+					vari_cost += (y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k])*(y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k]);
+					cost_tot += (y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k])*(y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k]);
 				}
 				fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1], y[y_predict.size() - 1]);
-				cost += (y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
+				vari_cost += (y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
+				cost_tot += (y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
 			}
 			fclose(fp_test);
 		}
-		cost /= iY.size();
+		cost /= train_images.size();
+		vari_cost /= test_images.size();
+		cost_tot /= iY.size();
 		//printf("%f %f\n", cost_min, cost);
-		if (cost < cost_min)
+		if (cost_tot < cost_min)
 		{
 			nn_test.save("fit_bast.model");
-			cost_min = cost;
+			cost_min = cost_tot;
 		}
 		if (cost_min < tolerance)
 		{
@@ -196,7 +241,12 @@ class NonLinearRegression
 			fprintf(fp_error_loss, "%.10f %.10f %.4f\n", cost, cost_min, tolerance);
 			fflush(fp_error_loss);
 		}
-		if (cost_pre <= cost || fabs(cost_pre - cost) < 1.0e-3)
+		if (fp_error_vari_loss)
+		{
+			fprintf(fp_error_vari_loss, "%.10f\n", vari_cost);
+			fflush(fp_error_vari_loss);
+		}
+		if (cost_pre <= cost_tot || fabs(cost_pre - cost_tot) < 1.0e-3)
 		{
 			net_test_no_Improvement_count++;
 		}
@@ -208,7 +258,7 @@ class NonLinearRegression
 		{
 			early_stopp = true;
 		}
-		cost_pre = cost;
+		cost_pre = cost_tot;
 	}
 
 	void gen_visualize_fit_state()
@@ -237,6 +287,7 @@ class NonLinearRegression
 		plot_count++;
 #endif
 	}
+	std::vector<int> test_data_index;
 
 	//int load_count = 1;
 	int epoch = 1;
@@ -314,6 +365,7 @@ public:
 		if (n > 0)
 		{
 			fp_error_loss = fopen("error_loss.dat", "w");
+			fp_error_vari_loss = fopen("error_var_loss.dat", "w");
 		}
 		else
 		{
@@ -321,6 +373,11 @@ public:
 			{
 				fclose(fp_error_loss);
 				fp_error_loss = NULL;
+			}
+			if (fp_error_vari_loss)
+			{
+				fclose(fp_error_vari_loss);
+				fp_error_vari_loss = NULL;
 			}
 		}
 	}
@@ -376,7 +433,7 @@ public:
 				}
 			} while (test_images.size() != test_Num);
 		}
-		std::vector<int> test_index = use_index;
+		test_data_index = use_index;
 
 		do
 		{
@@ -390,7 +447,7 @@ public:
 
 		for (int ii = 0; ii < iY.size(); ii++)
 		{
-			int i = test_index[ii];
+			int i = test_data_index[ii];
 			if (i == -1) continue;
 
 			fprintf(fp, "%d ", i);
@@ -617,34 +674,6 @@ public:
 				error = -1;
 				return;
 			}
-			//set_test(nn, 1);
-			////float_t loss = nn.get_loss<train_loss>(train_images, train_labels) / train_images.size();
-			//float_t loss = 0.0;
-			//for (int i = 0; i < train_images.size(); i++)
-			//{
-			//	tiny_dnn::vec_t& y = nn.predict(train_images[i]);
-			//	for (int k = 0; k < y.size(); k++)
-			//	{
-			//		float_t d;
-			//		if (zscore_normalization)
-			//		{
-			//			d = (y[k] - train_labels[i][k])* Sigma_y[k];
-			//		}else
-			//		if (minmax_normalization)
-			//		{
-			//			d = (y[k] - train_labels[i][k])* MaxMin_y[k];
-			//		}
-			//		else
-			//		{
-			//			d = (y[k] - train_labels[i][k]);
-			//		}
-			//		loss += d*d;
-			//	}
-			//}
-			//loss /= train_images.size();
-
-			//printf("loss:%.3f\n", loss);
-			//set_train(nn, 1, 0, default_backend_type);
 		}
 
 		try
@@ -661,6 +690,7 @@ public:
 		std::cout << "end training." << std::endl;
 
 		if (fp_error_loss)fclose(fp_error_loss);
+		if (fp_error_vari_loss)fclose(fp_error_vari_loss);
 
 		// save network model & trained weights
 		nn.save(model_file);

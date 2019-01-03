@@ -14,6 +14,7 @@ class TimeSeriesRegression
 	bool convergence = false;
 	int error = 0;
 	FILE* fp_error_loss = NULL;
+	FILE* fp_error_vari_loss = NULL;
 	bool visualize_state_flag = true;
 
 	void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
@@ -134,11 +135,14 @@ class TimeSeriesRegression
 		tiny_dnn::vec_t y_pre = nY[0];
 		FILE* fp_test = fopen(plotName, "w");
 
+		float vari_cost = 0.0;
 		float cost = 0.0;
+		float cost_tot = 0.0;
 		if (fp_test)
 		{
 			std::vector<tiny_dnn::vec_t> YY = nY;
 
+			//The first sequence is only referenced
 			for (int i = 0; i < sequence_length; i++)
 			{
 				tiny_dnn::vec_t y = nY[i];
@@ -161,16 +165,50 @@ class TimeSeriesRegression
 				fprintf(fp_test, "%f %f\n", y[y_dim - 1], y[y_dim - 1]);
 			}
 
+			// {y(0) y(1) ... y(sequence_length-1)} -> y(sequence_length)
 			for (int i = 0; i < iY.size()- sequence_length; i++)
 			{
+				if (i + sequence_length == train_images.size()+ sequence_length)
+				{
+					fclose(fp_test);
+					sprintf(plotName, "predict_all.dat", plot_count);
+					fp_test = fopen(plotName, "w");
+
+					tiny_dnn::vec_t y = nY[i + sequence_length - 1];
+
+					//Plot Output of only data concatenation
+					for (int k = 0; k < y_dim; k++)
+					{
+						if (zscore_normalization)
+						{
+							y_pre[k] = y_pre[k] * Sigma[k] + Mean[k];
+							y[k] = y[k] * Sigma[k] + Mean[k];
+						}
+						if (minmax_normalization)
+						{
+							y_pre[k] = y_pre[k] * MaxMin[k] + Min[k];
+							y[k] = y[k] * MaxMin[k] + Min[k];
+						}
+					}
+
+					fprintf(fp_test, "%f ", iX[i + sequence_length - 1][0]);
+					for (int k = 0; k < y_dim - 1; k++)
+					{
+						fprintf(fp_test, "%f %f ", y_pre[k], y[k]);
+					}
+					fprintf(fp_test, "%f %f\n", y_pre[y_dim - 1], y[y_dim - 1]);
+				}
+				//After the index reaches train, test data not used for training after that
 				if (i + sequence_length == train_images.size())
 				{
+					//From this point on, test data not used for training
 					fclose(fp_test);
 					sprintf(plotName, "predict.dat", plot_count);
 					fp_test = fopen(plotName, "w");
 
 					tiny_dnn::vec_t y = nY[i + sequence_length-1];
 
+					//Plot Output of only data concatenation
 					for (int k = 0; k < y_dim; k++)
 					{
 						if (zscore_normalization)
@@ -195,8 +233,29 @@ class TimeSeriesRegression
 				}
 
 				tiny_dnn::vec_t y_predict;
-				
-				y_predict = nn_test.predict(seq_vec(YY, i));
+
+				// {y(0) y(1) ... y(sequence_length-1)} -> y(sequence_length)
+				if (support == 0)
+				{
+					y_predict = nn_test.predict(seq_vec(YY, i));
+				}else
+				{
+					if (support > sequence_length) support = sequence_length;
+
+					tiny_dnn::vec_t& obs = seq_vec(nY, i);
+					tiny_dnn::vec_t x = seq_vec(YY, i);
+					if (support)
+					{
+						for (int j = 0; j < support; j++)
+						{
+							for (int k = 0; k < y_dim; k++)
+							{
+								x[y_dim*j + k] = obs[y_dim*j + k];
+							}
+						}
+					}
+					y_predict = nn_test.predict(x);
+				}
 
 				//Change to the predicted value
 				if (i + sequence_length >= train_images.size())
@@ -223,8 +282,15 @@ class TimeSeriesRegression
 						y_predict[k] = y_predict[k] * MaxMin[k] + Min[k];
 						y[k] = y[k] * MaxMin[k] + Min[k];
 					}
-					cost += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
-
+					if (i < train_images.size()+ sequence_length)
+					{
+						cost += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
+					}
+					else
+					{
+						vari_cost += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
+					}
+					cost_tot += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
 				}
 
 				fprintf(fp_test, "%f ", iX[i + sequence_length][0]);
@@ -237,13 +303,15 @@ class TimeSeriesRegression
 			fclose(fp_test);
 		}
 
-		cost /= (iY.size() - sequence_length);
-		printf("%f %f\n", cost_min, cost);
-		if (cost < cost_min)
+		cost /= (train_images.size() + sequence_length);
+		vari_cost /= (iY.size() - train_images.size() - sequence_length);
+		cost_tot /= (iY.size() -  sequence_length);
+		printf("%f %f\n", cost_min, cost_tot);
+		if (cost_tot < cost_min)
 		{
 			nn_test.save("fit_bast.model");
 			printf("!!=========== bast model save ============!!\n");
-			cost_min = cost;
+			cost_min = cost_tot;
 		}
 		if (cost_min < tolerance)
 		{
@@ -254,7 +322,12 @@ class TimeSeriesRegression
 			fprintf(fp_error_loss, "%.10f %.10f %.4f\n", cost, cost_min, tolerance);
 			fflush(fp_error_loss);
 		}
-		if (cost_pre <= cost || fabs(cost_pre - cost) < 1.0e-3)
+		if (fp_error_vari_loss)
+		{
+			fprintf(fp_error_vari_loss, "%.10f\n", vari_cost);
+			fflush(fp_error_vari_loss);
+		}
+		if (cost_pre <= cost_tot || fabs(cost_pre - cost_tot) < 1.0e-3)
 		{
 			net_test_no_Improvement_count++;
 		}
@@ -266,7 +339,7 @@ class TimeSeriesRegression
 		{
 			early_stopp = true;
 		}
-		cost_pre = cost;
+		cost_pre = cost_tot;
 	}
 
 	void gen_visualize_fit_state()
@@ -327,7 +400,7 @@ public:
 	std::vector<tiny_dnn::vec_t> train_labels, test_labels;
 	std::vector<tiny_dnn::vec_t> train_images, test_images;
 
-	size_t support_epochs = 0;
+	size_t support = 0;
 	std::string opt_type = "adam";
 	std::string rnn_type = "lstm";
 	size_t input_size = 32;
@@ -372,6 +445,7 @@ public:
 		if (n > 0)
 		{
 			fp_error_loss = fopen("error_loss.dat", "w");
+			fp_error_vari_loss = fopen("error_var_loss.dat", "w");
 		}
 		else
 		{
@@ -379,6 +453,11 @@ public:
 			{
 				fclose(fp_error_loss);
 				fp_error_loss = NULL;
+			}
+			if (fp_error_vari_loss)
+			{
+				fclose(fp_error_vari_loss);
+				fp_error_vari_loss = NULL;
 			}
 		}
 	}
@@ -438,6 +517,7 @@ public:
 			}
 			train_labels.push_back(y);
 		}
+
 		for (int i = train_num_max; i < dataAll; i++)
 		{
 			test_images.push_back(seq_vec(nY, i));
@@ -489,6 +569,7 @@ public:
 		//nn << layers.add_maxpool(2, 1, tiny_dnn::padding::same);
 
 		size_t sz = hidden_size;
+
 		if (sz > train_labels[0].size() * 10)
 		{
 			sz = train_labels[0].size() * 10;
@@ -497,6 +578,7 @@ public:
 			nn << layers.add_fc(sz);
 			nn << layers.tanh();
 		}
+		//nn << layers.add_dropout(0.1);
 		nn << layers.add_fc(sz);
 		//nn << layers.relu();
 		nn << layers.tanh();
@@ -579,16 +661,7 @@ public:
 		float_t loss_min = std::numeric_limits<float>::max();
 		tiny_dnn::progress_display disp(nn.get_input_size());
 		
-		size_t train_data_size = 0;
-		if (support_epochs)
-		{
-			train_data_size = train_images.size();
-			for (int i = 0; i < test_images.size(); i++)
-			{
-				train_images.push_back(test_images[i]);
-				train_labels.push_back(test_labels[i]);
-			}
-		}
+
 		auto on_enumerate_epoch = [&]() {
 
 			if (epoch % 10 == 0) {
@@ -616,28 +689,6 @@ public:
 				nn.stop_ongoing_training();
 				error = 1;
 				printf("early_stopp!!\n");
-			}
-
-			if (support_epochs)
-			{
-				float_t a = std::min(float_t(1.0), float_t((float_t)epoch / (float_t)support_epochs));
-				support_length = support_length*(float_t(1.0) - a*a);
-				size_t sz = train_data_size + size_t(support_length*test_images.size());
-
-				if (sz != train_images.size())
-				{
-					if (sz == train_data_size)
-					{
-						train_images.resize(train_data_size);
-						train_labels.resize(train_data_size);
-					}
-					else if (sz < train_images.size())
-					{
-						printf("%d -> support_length:%d\n", train_images.size(), sz);
-						train_images.resize(sz);
-						train_labels.resize(sz);
-					}
-				}
 			}
 
 			if (progress) disp.restart(nn.get_input_size());
@@ -731,6 +782,7 @@ public:
 		std::cout << "end training." << std::endl;
 
 		if (fp_error_loss)fclose(fp_error_loss);
+		if (fp_error_vari_loss)fclose(fp_error_vari_loss);
 
 		// save network model & trained weights
 		nn.save(model_file);

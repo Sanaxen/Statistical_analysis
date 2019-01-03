@@ -9,5 +9,7 @@ replot 'error_loss.dat' using 1  smooth bezier t "loss"  with lines linewidth 2 
 replot 'error_loss.dat' using 2  smooth bezier t "best"  with lines linewidth 1 linecolor rgbcolor "blue"
 replot 'error_loss.dat' using 3  smooth bezier t "goal"  with lines linewidth 1 linecolor rgbcolor "green"
 
+replot 'error_var_loss.dat' using 1  smooth bezier t "vari"  with lines linewidth 2 linecolor rgbcolor "magenta" dt 13
+
 pause 5
 reread

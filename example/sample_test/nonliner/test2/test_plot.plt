@@ -9,14 +9,29 @@ unset key
 
 file = "test.dat"
 
-plot file using 1:2   t "predict"  with lines linewidth 2 lc "orange-red","predict.dat" using 1:2   t "predict"  with lines linewidth 2 lc "medium-blue"
-replot file using 1:3   t "Observation"  with lines linewidth 2 lc "web-blue","predict.dat" using 1:3   t "predict"  with lines linewidth 2 lc "web-blue" dt 3
+plot file using 1:2   t "predict"  with lines linewidth 2 lc "orange-red",\
+"predict.dat" using 1:2   t "predict"  with lines linewidth 2 lc "orangered4",\
+"predict_all.dat" using 1:2   t "predict_all"  with lines linewidth 2 lc "magenta"
 
-replot file using 1:4   t "predict"  with lines linewidth 2 lc "orange-red","predict.dat" using 1:4   t "predict"  with lines linewidth 2  lc "medium-blue"
-replot file using 1:5   t "Observation"  with lines linewidth 2 lc "web-blue","predict.dat" using 1:5   t "Observation"  with lines linewidth 2 lc "web-blue" dt 3
+replot file using 1:3   t "Observation"  with lines linewidth 2 lc "web-blue",\
+"predict.dat" using 1:3   t "predict"  with lines linewidth 2 lc "web-blue" dt 3,\
+"predict_all.dat" using 1:3   t "predict_all"  with lines linewidth 2 lc "web-blue" dt 3
 
-replot file using 1:6   t "predict"  with lines linewidth 2 lc "orange-red","predict.dat" using 1:6   t "predict"  with lines linewidth 2  lc "medium-blue"
-replot file using 1:7   t "Observation"  with lines linewidth 2 lc "web-blue","predict.dat" using 1:7   t "Observation"  with lines linewidth 2 lc "web-blue" dt 3
+replot file using 1:4   t "predict"  with lines linewidth 2 lc "orange-red",\
+"predict.dat" using 1:4   t "predict"  with lines linewidth 2  lc "orangered4",\
+"predict_all.dat" using 1:4   t "predict_all"  with lines linewidth 2 lc "magenta"
+
+replot file using 1:5   t "Observation"  with lines linewidth 2 lc "web-blue",\
+"predict.dat" using 1:5   t "Observation"  with lines linewidth 2 lc "web-blue" dt 3,\
+"predict_all.dat" using 1:5   t "Observation"  with lines linewidth 2 lc "web-blue" dt 3
+
+replot file using 1:6   t "predict"  with lines linewidth 2 lc "orange-red",\
+"predict.dat" using 1:6   t "predict"  with lines linewidth 2  lc "orangered4",\
+"predict_all.dat" using 1:6   t "predict_all"  with lines linewidth 2 lc "magenta"
+
+replot file using 1:7   t "Observation"  with lines linewidth 2 lc "web-blue",\
+"predict.dat" using 1:7   t "Observation"  with lines linewidth 2 lc "web-blue" dt 3,\
+"predict_all.dat" using 1:7   t "Observation"  with lines linewidth 2 lc "web-blue" dt 3
 
 
 #set terminal png

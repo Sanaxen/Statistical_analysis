@@ -322,25 +322,52 @@ int main(int argc, char** argv)
 	}
 
 	Matrix<dnn_double> x = z.Col(x_var_idx[0]);
-	for (int i = 1; i < x_dim; i++)
+	for (int i = 1; i < x_dim- yx_var.size(); i++)
 	{
 		x = x.appendCol(z.Col(x_var_idx[i]));
 	}
+
 	Matrix<dnn_double> y = z.Col(y_var_idx[0]);
 	for (int i = 1; i < y_dim; i++)
 	{
 		y = y.appendCol(z.Col(y_var_idx[i]));
 	}
+	y.print("y");
 
 	if (yx_var.size())
 	{
-		Matrix<dnn_double> yx = z.Col(yx_var_idx[0]);
-		for (int i = 1; i < yx_var.size(); i++)
+		for (int i = 0; i < yx_var.size(); i++)
 		{
-			y = y.appendCol(yx.Col(yx_var_idx[i]));
+			y = y.appendCol(z.Col(yx_var_idx[i]));
 		}
 	}
+	y.print("y+yx");
 
+	if(0)
+	{
+		std::random_device rnd;     // 非決定的な乱数生成器を生成
+		std::mt19937 mt(rnd());     //  メルセンヌ・ツイスタ
+		std::uniform_real_distribution<> rand(0.0, 1.0);
+		FILE* fp = fopen("sample.csv", "w");
+
+		float t = 0;
+		float dt = 1;
+		int k = 1;
+		for (int i = 0; i < 10000; i++)
+		{
+			float r = rand(mt);
+			if (r > 0.2)
+			{
+				fprintf(fp, "%f,%f,%f\n", t + dt*k, 0.0, 1.0);
+			}
+			else
+			{
+				fprintf(fp, "%f,%f,%f\n", t + dt*k, 1.0, 0.0);
+			}
+			k++;
+		}
+		fclose(fp);
+	}
 	printf("sequence_length:%d\n", sequence_length);
 	printf("x_dim:%d y_dim:%d\n", x_dim, y_dim);
 	x.print();
@@ -430,8 +457,8 @@ int main(int argc, char** argv)
 			timeSeries.n_train_epochs = atoi(argv[count + 1]);
 			continue;
 		}
-		else if (argname == "--support_epochs") {
-			timeSeries.support_epochs = atoi(argv[count + 1]);
+		else if (argname == "--support") {
+			timeSeries.support = atoi(argv[count + 1]);
 			continue;
 		}
 		else if (argname == "--minibatch_size") {
@@ -493,7 +520,7 @@ int main(int argc, char** argv)
 		<< "hidden_size     :   " << hidden_size << std::endl
 		<< "sequence_length :   " << sequence_length << std::endl
 		<< "optimizer       :   " << timeSeries.opt_type << std::endl
-		<< "support_epochs  :   " << timeSeries.support_epochs << std::endl
+		<< "support         :   " << timeSeries.support << std::endl
 		<< "n_rnn_layers    :   " << n_rnn_layers << std::endl
 		<< "n_layers        :   " << n_layers << std::endl
 		<< "test_mode       :   " << timeSeries.test_mode << std::endl
