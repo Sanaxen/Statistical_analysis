@@ -246,11 +246,12 @@ class TimeSeriesRegression
 					tiny_dnn::vec_t x = seq_vec(YY, i);
 					if (support)
 					{
+						size_t l = nY[0].size();
 						for (int j = 0; j < support; j++)
 						{
 							for (int k = 0; k < y_dim; k++)
 							{
-								x[y_dim*j + k] = obs[y_dim*j + k];
+								x[l*j + k] = obs[l*j + k];
 							}
 						}
 					}
