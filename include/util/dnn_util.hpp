@@ -546,6 +546,51 @@ public:
 		return layer;
 
 	}
+
+	inline tiny_dnn::linear_layer add_linear(
+		size_t out_dim,
+		float_t scale = float_t{ 1 },
+		float_t bias = float_t{ 0 }
+	)
+	{
+		size_t in_w = out_w;
+		size_t in_h = out_h;
+		size_t in_map = out_map;
+		size_t in_dim = in_w*in_h*in_map;
+
+		tiny_dnn::linear_layer layer = tiny_dnn::linear_layer(out_dim, scale, bias);
+
+		out_w = out_dim;
+		out_h = 1;
+		out_map = 1;
+
+		printf("linear_layer %zdx%zd fmap:%zd->", in_w, in_h, in_map);
+		printf(" %zdx%d fmap:%d\n", out_dim, 1, 1);
+		PARAMETER_NUM(layer);
+		return layer;
+	}
+
+	inline tiny_dnn::input_layer add_input(
+		size_t out_dim
+	)
+	{
+		size_t in_w = out_w;
+		size_t in_h = out_h;
+		size_t in_map = out_map;
+		size_t in_dim = in_w*in_h*in_map;
+
+		tiny_dnn::input_layer layer = tiny_dnn::input_layer(in_dim);
+
+		out_w = out_dim;
+		out_h = 1;
+		out_map = 1;
+
+		printf("input_layer %zdx%zd fmap:%zd->", in_w, in_h, in_map);
+		printf(" %zdx%d fmap:%d\n", out_dim, 1, 1);
+		PARAMETER_NUM(layer);
+		return layer;
+	}
+
 	inline tiny_dnn::fully_connected_layer add_fc(
 		size_t out_dim,
 		bool       has_bias = true
