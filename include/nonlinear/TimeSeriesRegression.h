@@ -283,7 +283,7 @@ class TimeSeriesRegression
 						y_predict[k] = y_predict[k] * MaxMin[k] + Min[k];
 						y[k] = y[k] * MaxMin[k] + Min[k];
 					}
-					if (i < train_images.size()+ sequence_length)
+					if (i < train_images.size())
 					{
 						cost += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
 					}
@@ -556,7 +556,11 @@ public:
 		size_t in_map = 1;
 
 		LayerInfo layers(in_w, in_h, in_map);
+		nn << layers.add_input(input_size);
 		nn << layers.add_fc(input_size, false);
+		//nn << layers.relu();
+		//nn << layers.add_fc(input_size);
+		//nn << layers.relu();
 		for (int i = 0; i < n_rnn_layers; i++) {
 			nn << layers.add_rnn(rnn_type, hidden_size, sequence_length, params);
 			input_size = hidden_size;
@@ -564,7 +568,6 @@ public:
 			//nn << layers.selu_layer();
 			nn << layers.tanh();
 		}
-		//nn << layers.add_dropout(0.1);
 		//nn << layers.add_batnorm();
 		//nn << layers.add_cnv(1, hidden_size, 1, tiny_dnn::padding::same);
 		//nn << layers.add_maxpool(2, 1, tiny_dnn::padding::same);
@@ -579,11 +582,11 @@ public:
 			nn << layers.add_fc(sz);
 			nn << layers.tanh();
 		}
-		//nn << layers.add_dropout(0.1);
 		nn << layers.add_fc(sz);
 		//nn << layers.relu();
 		nn << layers.tanh();
 		nn << layers.add_fc(train_labels[0].size());
+		nn << layers.add_linear(train_labels[0].size());
 
 		nn.weight_init(tiny_dnn::weight_init::xavier());
 		for (auto n : nn) n->set_parallelize(true);
