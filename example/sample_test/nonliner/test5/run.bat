@@ -12,7 +12,7 @@ del /Q images\*.png
 --learning_rate 1 --opt_type adam ^
 --test 0.11 --progress %progress% --plot 5 --tol 0.0001 --early_stopping 0 ^
 --epochs 26000 --n_layers 1  --n_rnn_layers 1 --rnn_type lstm ^
---seq_len 24 --minibatch_size 24 --hidden_size 30 --test_mode 0 --normal zscore --support 0
+--seq_len 24 --minibatch_size 24 --hidden_size 30 --test_mode 0 --normal zscore --support 0 --prophecy 60 --test_mode 0
 : > log1.txt
 
 goto end

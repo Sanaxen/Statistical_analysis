@@ -165,9 +165,40 @@ class TimeSeriesRegression
 				fprintf(fp_test, "%f %f\n", y[y_dim - 1], y[y_dim - 1]);
 			}
 
+			float_t x_value;
 			// {y(0) y(1) ... y(sequence_length-1)} -> y(sequence_length)
-			for (int i = 0; i < iY.size()- sequence_length; i++)
+			for (int i = 0; i < iY.size()- sequence_length + prophecy; i++)
 			{
+				//prophecy
+				if (i + sequence_length == iY.size())
+				{
+					fclose(fp_test);
+					sprintf(plotName, "prophecy.dat", plot_count);
+					fp_test = fopen(plotName, "w");
+
+					tiny_dnn::vec_t y = YY[i + sequence_length - 1];
+					//Plot Output of only data concatenation
+					for (int k = 0; k < y_dim; k++)
+					{
+						if (zscore_normalization)
+						{
+							y[k] = y[k] * Sigma[k] + Mean[k];
+						}
+						if (minmax_normalization)
+						{
+							y[k] = y[k] * MaxMin[k] + Min[k];
+						}
+					}
+					
+
+					fprintf(fp_test, "%f ", x_value);
+					for (int k = 0; k < y_dim - 1; k++)
+					{
+						fprintf(fp_test, "%f ", y[k]);
+					}
+					fprintf(fp_test, "%f\n", y[y_dim - 1]);
+				}
+
 				if (i + sequence_length == train_images.size()+ sequence_length)
 				{
 					fclose(fp_test);
@@ -258,6 +289,18 @@ class TimeSeriesRegression
 					y_predict = nn_test.predict(x);
 				}
 
+				//prophecy
+				if (i + sequence_length >= iY.size())
+				{
+					YY.push_back(y_predict);
+					//Add an explanatory variable
+					for (int k = y_dim; k < YY[0].size(); k++)
+					{
+						YY[i + sequence_length].push_back(0);
+					}
+				}
+				else
+				{
 				//Change to the predicted value
 				if (i + sequence_length >= train_images.size())
 				{
@@ -268,9 +311,13 @@ class TimeSeriesRegression
 						YY[i + sequence_length].push_back(nY[i + sequence_length][k]);
 					}
 				}
+				}
 				y_pre = y_predict;
 
-				tiny_dnn::vec_t y = nY[i + sequence_length];
+				tiny_dnn::vec_t y;
+				if (i + sequence_length < iY.size())
+				{
+					y = nY[i + sequence_length];
 				for (int k = 0; k < y_dim; k++)
 				{
 					if (zscore_normalization)
@@ -300,6 +347,29 @@ class TimeSeriesRegression
 					fprintf(fp_test, "%f %f ", y_predict[k], y[k]);
 				}
 				fprintf(fp_test, "%f %f\n", y_predict[y_dim - 1], y[y_dim - 1]);
+					x_value = iX[i + sequence_length][0];
+				}
+				else
+				{
+					for (int k = 0; k < y_dim; k++)
+					{
+						if (zscore_normalization)
+						{
+							y_predict[k] = y_predict[k] * Sigma[k] + Mean[k];
+						}
+						if (minmax_normalization)
+						{
+							y_predict[k] = y_predict[k] * MaxMin[k] + Min[k];
+						}
+					}
+					fprintf(fp_test, "%f ", x_value+(iX[iX.size() - 1][0]-iX[iX.size()-2][0]));
+					for (int k = 0; k < y_dim - 1; k++)
+					{
+						fprintf(fp_test, "%f ", y_predict[k]);
+					}
+					fprintf(fp_test, "%f\n", y_predict[y_dim - 1]);
+					x_value = x_value + (iX[iX.size() - 1][0] - iX[iX.size() - 2][0]);
+				}
 			}
 			fclose(fp_test);
 		}
@@ -378,6 +448,7 @@ class TimeSeriesRegression
 public:
 	size_t x_dim;
 	size_t y_dim;
+	size_t prophecy = 0;
 	size_t freedom = 0;
 	bool minmax_normalization = false;
 	bool zscore_normalization = false;
