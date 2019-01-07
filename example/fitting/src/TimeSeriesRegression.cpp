@@ -497,6 +497,10 @@ int main(int argc, char** argv)
 			timeSeries.early_stopping = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--prophecy") {
+			timeSeries.prophecy = atoi(argv[count + 1]);
+			continue;
+		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
