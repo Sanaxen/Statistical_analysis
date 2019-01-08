@@ -13,13 +13,17 @@ plot file using 1:3   t "Observation"  with lines linewidth 2 lc "web-blue","pre
 replot file using 1:5   t "Observation"  with lines linewidth 2 lc "web-blue","predict.dat" using 1:5   t "Observation"  with lines linewidth 2 lc "web-blue"
 replot file using 1:7   t "Observation"  with lines linewidth 2 lc "web-blue","predict.dat" using 1:7   t "Observation"  with lines linewidth 2 lc "web-blue"
 
-replot "test_point.dat" using 1:2   t "test"  with points ps 0.3 lc "grey80"
-replot "test_point.dat" using 1:3   t "test"  with points ps 0.3 lc "grey80"
-replot "test_point.dat" using 1:4   t "test"  with points ps 0.3 lc "grey80"
+#replot "test_point.dat" using 1:2   t "test"  with points ps 0.3 lc "grey80"
+#replot "test_point.dat" using 1:3   t "test"  with points ps 0.3 lc "grey80"
+#replot "test_point.dat" using 1:4   t "test"  with points ps 0.3 lc "grey80"
 
-replot file using 1:2   t "predict"  with lines linewidth 2 lc "orange-red","predict.dat" using 1:2   t "predict"  with lines linewidth 2 lc "orangered4"
-replot file using 1:4   t "predict"  with lines linewidth 2 lc "orange-red","predict.dat" using 1:4   t "predict"  with lines linewidth 2  lc "orangered4"
-replot file using 1:6   t "predict"  with lines linewidth 2 lc "orange-red","predict.dat" using 1:6   t "predict"  with lines linewidth 2  lc "orangered4"
+replot "test_point.dat" using 1:2   t "test"  with points ps 0.5 lc rgbcolor "#8000FF00"
+replot "test_point.dat" using 1:3   t "test"  with points ps 0.5 lc rgbcolor "#8000FF00"
+replot "test_point.dat" using 1:4   t "test"  with points ps 0.5 lc rgbcolor "#8000FF00"
+
+replot file using 1:2   t "predict"  with lines linewidth 2 lc "orange-red","predict.dat" using 1:2   t "predict"  with lines linewidth 3 lc "orangered4"
+replot file using 1:4   t "predict"  with lines linewidth 2 lc "orange-red","predict.dat" using 1:4   t "predict"  with lines linewidth 3  lc "orangered4"
+replot file using 1:6   t "predict"  with lines linewidth 2 lc "orange-red","predict.dat" using 1:6   t "predict"  with lines linewidth 3  lc "orangered4"
 
 #set terminal png
 #set out "image1.png"
