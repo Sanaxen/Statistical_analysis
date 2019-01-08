@@ -383,7 +383,7 @@ int main(int argc, char** argv)
 	timeSeries.x_dim = x_dim;
 	timeSeries.y_dim = y_dim;
 	timeSeries.tolerance = 0.009;
-	timeSeries.learning_rate = 0.01;
+	timeSeries.learning_rate = 1.0;
 	timeSeries.visualize_loss(10);
 	timeSeries.plot = 10;
 

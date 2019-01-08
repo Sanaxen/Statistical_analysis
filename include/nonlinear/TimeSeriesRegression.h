@@ -479,7 +479,7 @@ public:
 	size_t sequence_length = 100;
 	size_t n_minibatch = 30;
 	size_t n_train_epochs = 3000;
-	float_t learning_rate = 0.01;
+	float_t learning_rate = 1.0;
 	size_t n_bptt_max = 1e9;
 	int plot = 100;
 	std::string model_file = "fit.model";
@@ -890,6 +890,9 @@ public:
 		}
 
 		set_test(nn, OUT_SEQ_LEN);
+		std::vector<double> yy;
+		std::vector<double> ff;
+		double mse = 0.0;
 		double rmse = 0.0;
 		for (int i = 1; i < train_images.size(); i++)
 		{
@@ -897,77 +900,110 @@ public:
 			for (int k = 0; k < y.size(); k++)
 			{
 				float_t d;
-				auto yy = train_labels[i][k];
+				auto z = train_labels[i][k];
 
 				if (zscore_normalization)
 				{
 					y[k] = y[k] * Sigma[k] + Mean[k];
-					yy = yy * Sigma[k] + Mean[k];
+					z = z * Sigma[k] + Mean[k];
 				}
 				if (minmax_normalization)
 				{
 					y[k] = y[k] * MaxMin[k] + Min[k];
-					yy = yy * MaxMin[k] + Min[k];
+					z = z * MaxMin[k] + Min[k];
 				}
 
-				d = (y[k] - yy);
-				rmse += d*d;
+				d = (y[k] - z);
+				mse += d*d;
+				yy.push_back(y[k]);
+				ff.push_back(train_labels[i][k]);
 			}
 		}
-		rmse /= (train_images.size()*train_labels[0].size());
-		rmse = sqrt(rmse);
+		mse /= (train_images.size()*train_labels[0].size());
+		rmse = sqrt(mse);
 
-		set_test(nn, OUT_SEQ_LEN);
-		double chi_square = 0.0;
-		for (int i = 1; i < train_images.size(); i++)
+		double SE = sqrt(mse / std::max((size_t)1, train_images.size()*train_labels[0].size() - freedom));
+
+		double mean_ff = 0.0;
+		double mean_yy = 0.0;
+		for (int i = 0; i < yy.size(); i++)
 		{
-			tiny_dnn::vec_t y = nn.predict(train_images[i-1]);
-			for (int k = 0; k < y.size(); k++)
-			{
-				float_t d;
-				auto yy = train_labels[i][k];
-
-				if (zscore_normalization)
-				{
-					y[k] = y[k] * Sigma[k] + Mean[k];
-					yy = yy * Sigma[k] + Mean[k];
-				}
-				if (minmax_normalization)
-				{
-					y[k] = y[k] * MaxMin[k] + Min[k];
-					yy = yy * MaxMin[k] + Min[k];
-				}
-
-				d = (y[k] - yy);
-
-				chi_square += d*d / (y[k] + 1.e-10);
-			}
+			mean_yy += yy[i];
+			mean_ff += ff[i];
 		}
+		mean_ff /= yy.size();
+		mean_yy /= yy.size();
+
+		double syy = 0.0;
+		double sff = 0.0;
+		double y_yy_f_yy = 0.0;
+		for (int i = 0; i < yy.size(); i++)
+		{
+			double y_yy = (yy[i] - mean_yy);
+			double f_ff = (ff[i] - mean_ff);
+			y_yy_f_yy += y_yy*f_ff;
+			syy += y_yy*y_yy;
+			sff += f_ff*f_ff;
+		}
+
+		double r = y_yy_f_yy / sqrt(syy*sff);
+		double R2 = 1.0 - mse / syy;
+
+		//set_test(nn, OUT_SEQ_LEN);
+		//double chi_square = 0.0;
+		//for (int i = 1; i < train_images.size(); i++)
+		//{
+		//	tiny_dnn::vec_t y = nn.predict(train_images[i-1]);
+		//	for (int k = 0; k < y.size(); k++)
+		//	{
+		//		float_t d;
+		//		auto yy = train_labels[i][k];
+
+		//		if (zscore_normalization)
+		//		{
+		//			y[k] = y[k] * Sigma[k] + Mean[k];
+		//			yy = yy * Sigma[k] + Mean[k];
+		//		}
+		//		if (minmax_normalization)
+		//		{
+		//			y[k] = y[k] * MaxMin[k] + Min[k];
+		//			yy = yy * MaxMin[k] + Min[k];
+		//		}
+
+		//		d = (y[k] - yy);
+
+		//		chi_square += d*d / (y[k] + 1.e-10);
+		//	}
+		//}
 
 		Chi_distribution chi_distribution(freedom);
 		double chi_pdf = chi_distribution.p_value(α);
 
 		fprintf(fp, "Status:%d\n", getStatus());
 		fprintf(fp, "--------------------------------------------------------------------\n");
-		fprintf(fp, "RMSE             :%f\n", rmse);
-		fprintf(fp, "chi square       :%f\n", chi_square);
+		fprintf(fp, "MSE            :%f\n", mse);
+		fprintf(fp, "RMSE           :%f\n", rmse);
+		fprintf(fp, "SE(標準誤差)            :%f\n", SE);
+		fprintf(fp, "r(相関係数)             :%f\n", r);
+		fprintf(fp, "R^2(決定係数(寄与率))   :%f\n", R2);
 		fprintf(fp, "freedom          :%d\n", freedom);
-		fprintf(fp, "p value          :%f\n", chi_pdf);
+		//fprintf(fp, "chi square       :%f\n", chi_square);
+		//fprintf(fp, "p value          :%f\n", chi_pdf);
 		fprintf(fp, "--------------------------------------------------------------------\n");
-		if (chi_distribution.status != 0)
-		{
-			fprintf(fp, "chi_distribution status:%d\n", chi_distribution.status);
-		}
-		if (chi_square < chi_pdf)
-		{
-			fprintf(fp, "χ2値:%f < χ2(%.2f)=[%.2f]", chi_square, α, chi_pdf);
-			fprintf(fp, "=>良いフィッティングでしょう。\n予測に有効と思われます\n");
-		}
-		else
-		{
-			fprintf(fp, "χ2値:%f > χ2(%.2f)=[%.2f]", chi_square, α, chi_pdf);
-			fprintf(fp, "=>良いとは言えないフィッティングでしょう。\n予測に有効とは言えないと思われます\n");
-		}
+		//if (chi_distribution.status != 0)
+		//{
+		//	fprintf(fp, "chi_distribution status:%d\n", chi_distribution.status);
+		//}
+		//if (chi_square < chi_pdf)
+		//{
+		//	fprintf(fp, "χ2値:%f < χ2(%.2f)=[%.2f]", chi_square, α, chi_pdf);
+		//	fprintf(fp, "=>良いフィッティングでしょう。\n予測に有効と思われます\n");
+		//}
+		//else
+		//{
+		//	fprintf(fp, "χ2値:%f > χ2(%.2f)=[%.2f]", chi_square, α, chi_pdf);
+		//	fprintf(fp, "=>良いとは言えないフィッティングでしょう。\n予測に有効とは言えないと思われます\n");
+		//}
 
 
 		if (fp != stdout) fclose(fp);

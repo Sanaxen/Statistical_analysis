@@ -145,6 +145,21 @@ inline void rnn_state_reset(N &nn) {
 	}
 }
 
+inline size_t deconv_out_length(size_t in_length,
+	size_t window_size,
+	size_t stride) {
+	return (size_t)ceil((float_t)(in_length)*stride + window_size - 1);
+}
+
+inline size_t deconv_out_unpadded_length(size_t in_length,
+	size_t window_size,
+	size_t stride,
+	padding pad_type) {
+	return pad_type == padding::same
+		? (size_t)ceil((float_t)in_length * stride)
+		: (size_t)ceil((float_t)(in_length)*stride + window_size - 1);
+}
+
 namespace tiny_dnn {
 	template <typename NetType>
 	class network2 : public network<NetType>
@@ -369,6 +384,54 @@ public:
 	inline  tiny_dnn::softsign_layer softsign() { ACTIVATIN_FUNC(softsign_layer) }
 
 
+#if 0
+	inline tiny_dnn::deconvolutional_layer add_decnv(
+		size_t              out_channels = 1,
+		size_t              window_size = 1,
+		size_t              stride = 1,
+		tiny_dnn::padding   pad_type = tiny_dnn::padding::valid,
+		bool                has_bias = true	)
+	{
+		return add_decnv(out_channels, window_size, window_size, stride, stride, pad_type, has_bias);
+	}
+	inline tiny_dnn::deconvolutional_layer add_decnv(
+		size_t              out_channels = 1,
+		size_t              window_width = 1,
+		size_t              window_height = 1,
+		size_t              w_stride = 1,
+		size_t              h_stride = 1,
+		tiny_dnn::padding   pad_type = tiny_dnn::padding::valid,
+		bool                has_bias = true	)
+	{
+		size_t in_w = out_w;
+		size_t in_h = out_h;
+		size_t in_map = out_map;
+		out_map = out_channels;
+
+		size_t w_dilation = 1;
+		size_t h_dilation = 1;
+
+		tiny_dnn::deconvolutional_layer layer = tiny_dnn::deconvolutional_layer(in_w, in_h, window_width, window_height, in_map, out_map, pad_type, has_bias, w_stride, h_stride, backend_type);
+		out_w = conv_out_length(in_w, window_width, w_stride, w_dilation, pad_type);
+		out_h = conv_out_length(in_h, window_height, h_stride, h_dilation, pad_type);
+
+		//out_w = deconv_out_length(in_w, window_width, w_stride);
+		//out_h = deconv_out_length(in_h, window_height, h_stride);
+		out_w = deconv_out_unpadded_length(in_w, window_width, w_stride, pad_type);
+		out_h = deconv_out_unpadded_length(in_h, window_height, h_stride, pad_type);
+		//out_w = layer.out_shape()[0].size();
+		//out_h = layer.out_shape()[1].size();
+
+		printf("deconvolutional_layer %zdx%zd filter(%zd,%zd) stride(%zd,%zd) fmap:%zd->", in_w, in_h, window_width, window_height, w_stride, h_stride, in_map);
+		printf(" %zdx%zd fmap:%zd\n", out_w, out_h, out_map);
+		PARAMETER_NUM(layer);
+
+		return layer;
+	}
+#endif
+
+
+
 	inline tiny_dnn::convolutional_layer add_cnv(
 		size_t              out_channels = 1,
 		size_t              window_size = 1,
@@ -403,6 +466,7 @@ public:
 		tiny_dnn::convolutional_layer layer = tiny_dnn::convolutional_layer(in_w, in_h, window_width, window_height, in_map, out_map, pad_type, has_bias, w_stride, h_stride, w_dilation, h_dilation, backend_type);
 		out_w = conv_out_length(in_w, window_width, w_stride, w_dilation, pad_type);
 		out_h = conv_out_length(in_h, window_height, h_stride, h_dilation, pad_type);
+		//if (out_h <= 0 ) out_h = 1;
 
 		printf("convolutional_layer %zdx%zd filter(%zd,%zd) stride(%zd,%zd) fmap:%zd->", in_w, in_h, window_width, window_height, w_stride, h_stride, in_map);
 		printf(" %zdx%zd fmap:%zd\n", out_w, out_h, out_map);
@@ -445,6 +509,7 @@ public:
 
 		out_w = conv_out_length(in_w, pooling_size_x, stride_x, dilation, pad_type);
 		out_h = conv_out_length(in_h, pooling_size_y, stride_y, dilation, pad_type);
+		//if (out_h <= 0) out_h = 1;
 
 		printf("max_pooling_layer %zdx%zd filter(%zd,%zd) stride(%zd,%zd) fmap:%zd->", in_w, in_h, pooling_size_x, pooling_size_y, stride_x, stride_y, in_map);
 		printf(" %zdx%zd fmap:%zd\n", out_w, out_h, out_map);

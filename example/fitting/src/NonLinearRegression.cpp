@@ -26,6 +26,8 @@ int main(int argc, char** argv)
 	std::vector<std::string> y_var;
 	std::string normalization_type = "zscore";
 
+	double dec_random = 0.0;
+	float fluctuation = 0.0;
 	int read_max = -1;
 	bool header = false;
 	int start_col = 0;
@@ -37,31 +39,40 @@ int main(int argc, char** argv)
 		std::string argname(argv[count]);
 		if (argname == "--read_max") {
 			read_max = atoi(argv[count + 1]);
-		}else
-		if (argname == "--x") {
+		}
+		else if (argname == "--x") {
 			x_dim = atoi(argv[count + 1]);
-		}else if (argname == "--y") {
+		}
+		else if (argname == "--y") {
 			y_dim = atoi(argv[count + 1]);
 		}
 		else if (argname == "--csv") {
 			csvfile = std::string(argv[count + 1]);
 		}
-		if (argname == "--col") {
+		else if (argname == "--col") {
 			start_col = atoi(argv[count + 1]);
 		}
-		if (argname == "--header") {
+		else if (argname == "--header") {
 			header = (atoi(argv[count + 1]) != 0) ? true : false;
 		}
-		if (argname == "--x_var") {
+		else if (argname == "--x_var") {
 			x_var.push_back(argv[count + 1]);
 		}
-		if (argname == "--y_var") {
+		else if (argname == "--y_var") {
 			y_var.push_back(argv[count + 1]);
 		}
-		if (argname == "--normal")
+		else if (argname == "--normal")
 		{
 			normalization_type = argv[count + 1];
 			printf("--normal %s\n", argv[count + 1]);
+		}
+		else if (argname == "--dec_random") {
+			dec_random = atof(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--fluctuation") {
+			fluctuation = atof(argv[count + 1]);
+			continue;
 		}
 	}
 
@@ -279,7 +290,7 @@ int main(int argc, char** argv)
 	MatrixToTensor(x, X, read_max);
 	MatrixToTensor(y, Y, read_max);
 
-	NonLinearRegression regression(X, Y, normalization_type);
+	NonLinearRegression regression(X, Y, normalization_type, dec_random, fluctuation);
 
 	regression.tolerance = 1.0e-3;
 	regression.learning_rate = 1;
@@ -316,6 +327,12 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--normal") {
+			continue;
+		}
+		else if (argname == "--dec_random") {
+			continue;
+		}
+		else if (argname == "--fluctuation") {
 			continue;
 		}
 		else if (argname == "--capture") {
@@ -387,6 +404,8 @@ int main(int argc, char** argv)
 		<< "input_unit      : " << input_unit << std::endl
 		<< "n_layers        : " << n_layers << std::endl
 		<< "test_mode       : " << regression.test_mode << std::endl
+		<< "Decimation of random points       : " << regression.dec_random << std::endl
+		<< "random fluctuation       : " << regression.fluctuation << std::endl
 		<< std::endl;
 
 	regression.fit(n_layers, input_unit);

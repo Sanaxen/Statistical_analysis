@@ -153,7 +153,7 @@ class NonLinearRegression
 					}
 					if (minmax_normalization)
 					{
-						y_predict[k] * MaxMin_y[k] + Min_y[k];
+						yy = y_predict[k] * MaxMin_y[k] + Min_y[k];
 					}
 					fprintf(fp_test, "%f %f ", yy, y[k]);
 
@@ -295,6 +295,8 @@ class NonLinearRegression
 	int batch = 0;
 	bool early_stopp = false;
 public:
+	float_t fluctuation = 0.0;
+	float_t dec_random = 0;	//Decimation of random points
 	size_t freedom = 0;
 	bool minmax_normalization = false;
 	bool zscore_normalization = false;
@@ -331,7 +333,7 @@ public:
 	{
 		return error;
 	}
-	NonLinearRegression(tiny_dnn::tensor_t& Xi, tiny_dnn::tensor_t& Yi, std::string& normalize_type= std::string("zscore"))
+	NonLinearRegression(tiny_dnn::tensor_t& Xi, tiny_dnn::tensor_t& Yi, std::string& normalize_type= std::string("zscore"), double dec_random_=0.0, double fluctuation_=0.0)
 	{
 		iX = Xi;
 		iY = Yi;
@@ -339,6 +341,9 @@ public:
 		nY = Yi;
 		if (normalize_type == "zscore") zscore_normalization = true;
 		if (normalize_type == "minmax") minmax_normalization = true;
+
+		dec_random = dec_random_;
+		fluctuation = fluctuation_;
 
 		if (minmax_normalization)
 		{
@@ -357,6 +362,11 @@ public:
 			normalizeZ(nX, Mean_x, Sigma_x);
 			normalizeZ(nY, Mean_y, Sigma_y);
 			printf("zscore_normalization\n");
+
+			tiny_dnn::tensor_t dmyX = nX;
+			tiny_dnn::tensor_t dmyY = nY;
+			normalizeMinMax(dmyX, Min_x, MaxMin_x);
+			normalizeMinMax(dmyY, Min_y, MaxMin_y);
 		}
 	}
 	void visualize_loss(int n)
@@ -409,6 +419,33 @@ public:
 
 		std::vector<int> use_index(dataAll, -1);
 
+		//Add random fluctuation
+		if (fluctuation > 0)
+		{
+			printf("Add random fluctuation:%f\n", fluctuation);
+			std::normal_distribution<> rand_fl(0.0, 1.0);
+			for (int i = 0; i < dataAll; i++)
+			{
+				for (int k = 0; k < nY[0].size(); k++)
+				{
+					nY[i][k] = nY[i][k] * (1.0 + fluctuation*rand_fl(mt));
+				}
+			}
+		}
+
+		printf("dec_random:%f\n", dec_random);
+		if (dec_random > 0)
+		{
+			std::uniform_real_distribution<> rand(0.0, 1.0);
+			for (int i = 0; i < dataAll; i++)
+			{
+				if (rand(mt) < dec_random)
+				{
+					use_index[i] = i;
+				}
+			}
+		}
+
 		if (test_Num > 0)
 		{
 			do
@@ -435,12 +472,32 @@ public:
 		}
 		test_data_index = use_index;
 
+		std::vector<int> index(dataAll, -1);
+
+		size_t l = 0;
 		do
 		{
 			int ii = rand1(mt);
-			if (use_index[ii] != -1) continue;
+			if (test_data_index[ii] != -1) continue;
+			if (index[ii] != -1) continue;
 			train_images.push_back(nX[ii]);
 			train_labels.push_back(nY[ii]);
+			index[ii] = ii;
+			++l;
+			if (l > datasetNum * 100 && train_images.size() != datasetNum)
+			{
+				for (int k = 0; k < index.size(); k++)
+				{
+					if (index[k] != -1)
+					{
+			train_images.push_back(nX[ii]);
+			train_labels.push_back(nY[ii]);
+						index[ii] = ii;
+					}
+					if (train_images.size() == datasetNum) break;
+				}
+				break;
+			}
 		} while (train_images.size() != datasetNum);
 
 		FILE* fp = fopen("test_point.dat", "w");
@@ -480,6 +537,15 @@ public:
 		LayerInfo layers(in_w, in_h, in_map);
 		nn << layers.add_fc(input_size);
 		nn << layers.tanh();
+		
+		//nn << layers.add_cnv(in_w, 2, 1, 2, 1, tiny_dnn::padding::same);
+		//nn << layers.add_avepool(2, 1, 2, 1, tiny_dnn::padding::same);
+		//nn << layers.tanh();
+		//nn << layers.add_cnv(in_w, 2, 1, 2, 1, tiny_dnn::padding::same);
+		//nn << layers.add_avepool(2, 1, 2, 1, tiny_dnn::padding::same);
+		//nn << layers.tanh();
+		//nn << layers.add_dropout(0.1);
+
 		for (int i = 0; i < n_layers; i++) {
 			nn << layers.add_fc(input_size);
 			nn << layers.tanh();
@@ -738,6 +804,9 @@ public:
 			fp = stdout;
 		}
 
+		std::vector<double> yy;
+		std::vector<double> ff;
+		double mse = 0.0;
 		double rmse = 0.0;
 		for (int i = 0; i < train_images.size(); i++)
 		{
@@ -756,63 +825,97 @@ public:
 				{
 					d = (y[k] - train_labels[i][k]);
 				}
-				rmse += d*d;
-			}
-		}
-		rmse /= (train_images.size()*train_labels[0].size());
-		rmse = sqrt(rmse);
+				mse += d*d;
 
-		double chi_square = 0.0;
-		for (int i = 0; i < train_images.size(); i++)
-		{
-			tiny_dnn::vec_t& y = nn.predict(train_images[i]);
-			for (int k = 0; k < y.size(); k++)
-			{
-				float_t d;
-				if (zscore_normalization)
-				{
-					d = (y[k] - train_labels[i][k])* Sigma_y[k];
-				}
-				else
-				if (zscore_normalization)
-				{
-					d = (y[k] - train_labels[i][k])* MaxMin_y[k];
-				}
-				else
-				{
-					d = (y[k] - train_labels[i][k]);
-				}
-				chi_square += d*d/(y[k] + 1.e-10);
+				yy.push_back(y[k]);
+				ff.push_back(train_labels[i][k]);
 			}
 		}
+		mse /= (train_images.size()*train_labels[0].size());
+		rmse = sqrt(mse);
+
+		double SE = sqrt(mse / std::max((size_t)1, train_images.size()*train_labels[0].size() - freedom));
+
+		double mean_ff = 0.0;
+		double mean_yy = 0.0;
+		for (int i = 0; i < yy.size(); i++)
+		{
+			mean_yy += yy[i];
+			mean_ff += ff[i];
+		}
+		mean_ff /= yy.size();
+		mean_yy /= yy.size();
+
+		double syy = 0.0;
+		double sff = 0.0;
+		double y_yy_f_yy = 0.0;
+		for (int i = 0; i < yy.size(); i++)
+		{
+			double y_yy = (yy[i] - mean_yy);
+			double f_ff = (ff[i] - mean_ff);
+			y_yy_f_yy += y_yy*f_ff;
+			syy += y_yy*y_yy;
+			sff += f_ff*f_ff;
+		}
+
+		double r = y_yy_f_yy / sqrt(syy*sff);
+		double R2 = 1.0 - mse / syy;
+
+		//double chi_square = 0.0;
+		//for (int i = 0; i < train_images.size(); i++)
+		//{
+		//	tiny_dnn::vec_t& y = nn.predict(train_images[i]);
+		//	for (int k = 0; k < y.size(); k++)
+		//	{
+		//		float_t d;
+		//		if (zscore_normalization)
+		//		{
+		//			d = (y[k] - train_labels[i][k])* Sigma_y[k];
+		//		}
+		//		else
+		//		if (zscore_normalization)
+		//		{
+		//			d = (y[k] - train_labels[i][k])* MaxMin_y[k];
+		//		}
+		//		else
+		//		{
+		//			d = (y[k] - train_labels[i][k]);
+		//		}
+		//		chi_square += d*d/(y[k] + 1.e-10);
+		//	}
+		//}
 
 		Chi_distribution chi_distribution(freedom);
 		double chi_pdf = chi_distribution.p_value(α);
 
 		fprintf(fp, "Status:%d\n", getStatus());
 		fprintf(fp, "--------------------------------------------------------------------\n");
-		fprintf(fp, "RMSE             :%f\n", rmse);
-		fprintf(fp, "chi square       :%f\n", chi_square);
+		fprintf(fp, "MSE            :%f\n", mse);
+		fprintf(fp, "RMSE           :%f\n", rmse);
+		fprintf(fp, "SE(標準誤差)            :%f\n", SE);
+		fprintf(fp, "r(相関係数)             :%f\n", r);
+		fprintf(fp, "R^2(決定係数(寄与率))   :%f\n", R2);
 		fprintf(fp, "freedom          :%d\n", freedom);
-		fprintf(fp, "p value          :%f\n", chi_pdf);
+		//fprintf(fp, "chi square       :%f\n", chi_square);
+		//fprintf(fp, "p value          :%f\n", chi_pdf);
 		fprintf(fp, "--------------------------------------------------------------------\n");
 
 
-		if (chi_distribution.status != 0)
-		{
-			fprintf(fp, "chi_distribution status:%d\n", chi_distribution.status);
-		}
-		if (chi_square < chi_pdf)
-		{
-			fprintf(fp, "χ2値:%f < χ2(%.2f)=[%.2f]", chi_square, α, chi_pdf);
-			fprintf(fp, "=>良いフィッティングでしょう。\n予測に有効と思われます\n");
-			fprintf(fp, "ただし、データ点範囲外での予測が正しい保証はありません。\n");
-		}
-		else
-		{
-			fprintf(fp, "χ2値:%f < χ2(%.2f)=[%.2f]", chi_square, α, chi_pdf);
-			fprintf(fp, "=>良いとは言えないフィッティングでしょう。\n予測に有効とは言えないと思われます\n");
-		}
+		//if (chi_distribution.status != 0)
+		//{
+		//	fprintf(fp, "chi_distribution status:%d\n", chi_distribution.status);
+		//}
+		//if (chi_square < chi_pdf)
+		//{
+		//	fprintf(fp, "χ2値:%f < χ2(%.2f)=[%.2f]", chi_square, α, chi_pdf);
+		//	fprintf(fp, "=>良いフィッティングでしょう。\n予測に有効と思われます\n");
+		//	fprintf(fp, "ただし、データ点範囲外での予測が正しい保証はありません。\n");
+		//}
+		//else
+		//{
+		//	fprintf(fp, "χ2値:%f < χ2(%.2f)=[%.2f]", chi_square, α, chi_pdf);
+		//	fprintf(fp, "=>良いとは言えないフィッティングでしょう。\n予測に有効とは言えないと思われます\n");
+		//}
 		if (fp != stdout) fclose(fp);
 	}
 
