@@ -804,45 +804,58 @@ public:
 			fp = stdout;
 		}
 
+		std::vector<double> xx;
 		std::vector<double> yy;
 		std::vector<double> ff;
+		std::vector<double> dd;
 		double mse = 0.0;
 		double rmse = 0.0;
-		for (int i = 0; i < train_images.size(); i++)
+		for (int i = 0; i < nY.size(); i++)
 		{
-			tiny_dnn::vec_t& y = nn.predict(train_images[i]);
+			tiny_dnn::vec_t& y = nn.predict(nX[i]);
 			for (int k = 0; k < y.size(); k++)
 			{
 				float_t d;
 				if (zscore_normalization)
 				{
-					d = (y[k] - train_labels[i][k])* Sigma_y[k];
+					d = (y[k] - nY[i][k])* Sigma_y[k];
 				}else
 				if (minmax_normalization)
 				{
-					d = (y[k] - train_labels[i][k])* MaxMin_y[k];
+					d = (y[k] - nY[i][k])* MaxMin_y[k];
 				}else
 				{
-					d = (y[k] - train_labels[i][k]);
+					d = (y[k] - nY[i][k]);
 				}
 				mse += d*d;
 
+				dd.push_back(d);
+				xx.push_back(nX[i][0]);
 				yy.push_back(y[k]);
-				ff.push_back(train_labels[i][k]);
+				ff.push_back(nY[i][k]);
 			}
 		}
-		mse /= (train_images.size()*train_labels[0].size());
+		mse /= (nY.size()*nY[0].size());
 		rmse = sqrt(mse);
+		double Maximum_likelihood_estimator = mse;
+		double Maximum_log_likelihood = log(2.0*M_PI) + log(Maximum_likelihood_estimator) + 1.0;
 
-		double SE = sqrt(mse / std::max((size_t)1, train_images.size()*train_labels[0].size() - freedom));
+		Maximum_log_likelihood *= -0.5*(train_images.size()*train_labels[0].size());
 
+		double AIC = -2.0*Maximum_log_likelihood + 2.0*freedom;
+		double SE = sqrt(mse / std::max(1, (int)(train_images.size()*train_labels[0].size()) - (int)freedom));
+
+		double d_sum = 0.0;
+		double f_sum = 0.0;
 		double mean_ff = 0.0;
 		double mean_yy = 0.0;
 		for (int i = 0; i < yy.size(); i++)
 		{
 			mean_yy += yy[i];
 			mean_ff += ff[i];
+			d_sum += dd[i];
 		}
+		f_sum = mean_ff;
 		mean_ff /= yy.size();
 		mean_yy /= yy.size();
 
@@ -861,40 +874,26 @@ public:
 		double r = y_yy_f_yy / sqrt(syy*sff);
 		double R2 = 1.0 - mse / syy;
 
-		//double chi_square = 0.0;
-		//for (int i = 0; i < train_images.size(); i++)
-		//{
-		//	tiny_dnn::vec_t& y = nn.predict(train_images[i]);
-		//	for (int k = 0; k < y.size(); k++)
-		//	{
-		//		float_t d;
-		//		if (zscore_normalization)
-		//		{
-		//			d = (y[k] - train_labels[i][k])* Sigma_y[k];
-		//		}
-		//		else
-		//		if (zscore_normalization)
-		//		{
-		//			d = (y[k] - train_labels[i][k])* MaxMin_y[k];
-		//		}
-		//		else
-		//		{
-		//			d = (y[k] - train_labels[i][k]);
-		//		}
-		//		chi_square += d*d/(y[k] + 1.e-10);
-		//	}
-		//}
+		double chi_square = 0.0;
+		for (int i = 0; i < yy.size(); i++)
+		{
+			double d = dd[i] / d_sum;
+			double f = ff[i] / f_sum;
+			chi_square += (d / (f + 1.e-10))*(d / (f + 1.e-10));
+		}
 
-		Chi_distribution chi_distribution(freedom);
+		Chi_distribution chi_distribution(yy.size() -1);
 		double chi_pdf = chi_distribution.p_value(α);
 
 		fprintf(fp, "Status:%d\n", getStatus());
 		fprintf(fp, "--------------------------------------------------------------------\n");
-		fprintf(fp, "MSE            :%f\n", mse);
-		fprintf(fp, "RMSE           :%f\n", rmse);
-		fprintf(fp, "SE(標準誤差)            :%f\n", SE);
-		fprintf(fp, "r(相関係数)             :%f\n", r);
-		fprintf(fp, "R^2(決定係数(寄与率))   :%f\n", R2);
+		fprintf(fp, "MSE                                 :%.4f\n", mse);
+		fprintf(fp, "RMSE                                :%.4f\n", rmse);
+		fprintf(fp, "SE(標準誤差)                        :%.4f\n", SE);
+		fprintf(fp, "r(相関係数)                         :%.4f\n", r);
+		fprintf(fp, "R^2(決定係数(寄与率))               :%.4f\n", R2);
+		fprintf(fp, "Maximum log likelihood(最大対数尤度):%.4f\n",Maximum_log_likelihood);
+		fprintf(fp, "AIC                                 :%.3f\n", AIC);
 		fprintf(fp, "freedom          :%d\n", freedom);
 		//fprintf(fp, "chi square       :%f\n", chi_square);
 		//fprintf(fp, "p value          :%f\n", chi_pdf);
@@ -905,9 +904,9 @@ public:
 		//{
 		//	fprintf(fp, "chi_distribution status:%d\n", chi_distribution.status);
 		//}
-		//if (chi_square < chi_pdf)
+		//if (chi_square > chi_pdf)
 		//{
-		//	fprintf(fp, "χ2値:%f < χ2(%.2f)=[%.2f]", chi_square, α, chi_pdf);
+		//	fprintf(fp, "χ2値:%f > χ2(%.2f)=[%.2f]", chi_square, α, chi_pdf);
 		//	fprintf(fp, "=>良いフィッティングでしょう。\n予測に有効と思われます\n");
 		//	fprintf(fp, "ただし、データ点範囲外での予測が正しい保証はありません。\n");
 		//}
