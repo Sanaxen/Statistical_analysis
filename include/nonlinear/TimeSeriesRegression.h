@@ -9,6 +9,21 @@
 
 #define EARLY_STOPPING_	60
 
+/* シグナル受信/処理 */
+bool ctr_c_stopping_time_series_regression = false;
+inline void SigHandler_time_series_regression(int p_signame)
+{
+	static int sig_catch = 0;
+	if (sig_catch)
+	{
+		printf("割り込みです。終了します\n");
+		ctr_c_stopping_time_series_regression = true;
+	}
+	sig_catch++;
+	//exit(0);
+	return;
+}
+
 class TimeSeriesRegression
 {
 	bool convergence = false;
@@ -606,6 +621,8 @@ public:
 
 	void construct_net(int n_rnn_layers = 2, int n_layers = 2, int n_hidden_size = -1)
 	{
+		SigHandler_time_series_regression(0);
+		signal(SIGINT, SigHandler_time_series_regression);
 		using tanh = tiny_dnn::activation::tanh;
 		using recurrent = tiny_dnn::recurrent_layer;
 
@@ -616,7 +633,7 @@ public:
 
 		// clip gradients
 		tiny_dnn::recurrent_layer_parameters params;
-		params.clip = 0;	// 1～5
+		params.clip = 0;	// 1～5?
 
 		if (n_bptt_max == 0) n_bptt_max = sequence_length;
 		params.bptt_max = n_bptt_max;
@@ -628,38 +645,60 @@ public:
 
 		LayerInfo layers(in_w, in_h, in_map);
 		nn << layers.add_input(input_size);
+
+		size_t usize = input_size * 1;
+		nn << layers.add_fc(usize, false);
+		nn << layers.tanh();
+
+		//size_t w_stride = 2;
+		//size_t window_width = size_t(float(sequence_length) / float(3.3));
+		//printf("window_width %d\n", window_width);
+		//size_t ow = tiny_dnn::conv_out_length(usize, window_width, w_stride, 1, tiny_dnn::padding::valid);
+		//printf("add_cnv skipp\n");
+		//if (ow >= 1)
+		//{
+		//	printf("nY:%d\n", nY[0].size());
+		//	nn << layers.add_cnv(nY[0].size(), window_width, 1, w_stride, 1, tiny_dnn::padding::valid);
+		//	//nn << layers.add_maxpool(window_width, 1, w_stride, 1, tiny_dnn::padding::same);
+		//}
 		nn << layers.add_fc(input_size, false);
-		//nn << layers.relu();
-		//nn << layers.add_fc(input_size);
-		//nn << layers.relu();
 		for (int i = 0; i < n_rnn_layers; i++) {
+			//nn << layers.add_batnorm(0.0001, 0.9);
+			//nn << layers.add_fc(input_size, false);
 			nn << layers.add_rnn(rnn_type, hidden_size, sequence_length, params);
 			input_size = hidden_size;
 			//Scaled Exponential Linear Unit. (Klambauer et al., 2017)
 			//nn << layers.selu_layer();
 			nn << layers.tanh();
+			//nn << layers.relu();
 		}
-		//nn << layers.add_batnorm();
-		//nn << layers.add_cnv(1, hidden_size, 1, tiny_dnn::padding::same);
-		//nn << layers.add_maxpool(2, 1, tiny_dnn::padding::same);
 
-		size_t sz = hidden_size;
 
-		if (sz > train_labels[0].size() * 10)
-		{
-			sz = train_labels[0].size() * 10;
-		}
-		for (int i = 0; i < n_layers; i++) {
+		int n_layers_tmp = n_layers;
+		size_t sz = hidden_size / 2;
+		//while (sz > train_labels[0].size() * 10)
+		//{
+		//	nn << layers.add_fc(sz);
+		//	nn << layers.tanh();
+		//	sz /= 2;
+		//	n_layers_tmp--;
+		//}
+
+		sz = train_labels[0].size() * 10;
+		for (int i = 0; i < n_layers_tmp; i++) {
 			nn << layers.add_fc(sz);
+			//nn << layers.relu();
 			nn << layers.tanh();
 		}
 		nn << layers.add_fc(sz);
-		//nn << layers.relu();
 		nn << layers.tanh();
+		//nn << layers.leaky_relu();
 		nn << layers.add_fc(train_labels[0].size());
 		nn << layers.add_linear(train_labels[0].size());
 
 		nn.weight_init(tiny_dnn::weight_init::xavier());
+		//nn.weight_init(tiny_dnn::weight_init::he());
+		
 		for (auto n : nn) n->set_parallelize(true);
 		printf("layers:%zd\n", nn.depth());
 		freedom = layers.get_parameter_num();
@@ -765,7 +804,6 @@ public:
 				error = 1;
 				printf("early_stopp!!\n");
 			}
-
 			if (progress) disp.restart(nn.get_input_size());
 			t.restart();
 			rnn_state_reset(nn);
@@ -788,6 +826,12 @@ public:
 				nn.stop_ongoing_training();
 				error = 1;
 				printf("early_stopp!!\n");
+			}
+			if (ctr_c_stopping_time_series_regression)
+			{
+				nn.stop_ongoing_training();
+				error = 1;
+				printf("CTR-C stopp!!\n");
 			}
 			++batch;
 		};
@@ -953,6 +997,7 @@ public:
 
 		double r = y_yy_f_yy / sqrt(syy*sff);
 		double R2 = 1.0 - mse / syy;
+
 
 		//set_test(nn, OUT_SEQ_LEN);
 		//double chi_square = 0.0;

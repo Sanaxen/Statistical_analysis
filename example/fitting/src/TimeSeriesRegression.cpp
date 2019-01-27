@@ -373,6 +373,64 @@ int main(int argc, char** argv)
 	x.print();
 	y.print();
 
+	if(0)
+	{
+		int n = 3;
+		std::vector<dnn_double> new_y;
+		std::vector<dnn_double> new_x;
+		std::mt19937 mt(1);
+		std::normal_distribution<> norm(0.0, 1.0);
+		for (int i = 0; i < y.m - 1; i++)
+		{
+			for (int k = 0; k < y.n; k++)
+			{
+				double ys = y(i + 1, k) - y(i, k);
+				double yd = ys / (double)n;
+				for (int j = 0; j < n; j++)
+				{
+					if (j > 0 && j < n - 1)
+					{
+						new_y.push_back(y(i, k) + j*yd + 0.3*fabs(ys)*norm(mt));
+					}
+					else
+					{
+						new_y.push_back(y(i, k) + j*yd);
+					}
+				}
+				if (i == y.m - 1)
+				{
+					new_y.push_back(y(y.m - 1, k));
+				}
+			}
+			for (int k = 0; k < x.n; k++)
+			{
+				double xs = x(i + 1, k) - x(i, k);
+				double xd = xs / (double)n;
+				for (int j = 0; j < n; j++)
+				{
+					new_x.push_back(x(i, k) + j*xd);
+				}
+				if (i == y.m - 1)
+				{
+					new_y.push_back(x(y.m - 1, k));
+				}
+			}
+		}
+		Matrix<dnn_double> yy(new_y.size() / y.n, y.n);
+		Matrix<dnn_double> xx(new_x.size() / x.n, x.n);
+		memcpy(yy.v, &(new_y[0]), sizeof(dnn_double)*new_y.size());
+		memcpy(xx.v, &(new_x[0]), sizeof(dnn_double)*new_x.size());
+
+		yy.print_csv("yy.csv");
+		xx.print_csv("xx.csv");
+		
+		y = yy;
+		x = xx;
+		int sequence_length2 = (sequence_length - 1)*(n - 1);
+		sequence_length = sequence_length2 - sequence_length2%sequence_length;
+		//exit(0);
+	}
+
 	tiny_dnn::tensor_t X, Y;
 	MatrixToTensor(x, X, read_max);
 	MatrixToTensor(y, Y, read_max);

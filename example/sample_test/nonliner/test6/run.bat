@@ -10,19 +10,13 @@ del /Q images\*.png
 
 %LDM%\TimeSeriesRegression.exe  --header 1 --x 1 --y 1 --csv "co2-ppm-mauna-loa-19651980.csv" ^
 --learning_rate 1 --opt_type adam ^
---test 0.01 --progress %progress% --plot 5 --tol 0.0001 --early_stopping 0 ^
---epochs 26000 --n_layers 2  --n_rnn_layers 1 --rnn_type lstm ^
---seq_len 40 --minibatch_size 40 --hidden_size 50 --test_mode 0 --normal zscore --prophecy 60
+--test 0.01 --progress %progress% --plot 5 --tol 0.0001 --early_stopping 1 ^
+--epochs 26000 --n_layers 5  --n_rnn_layers 1 --rnn_type lstm ^
+--seq_len 16 --minibatch_size 16 --hidden_size 128 --test_mode 0 --normal zscore --prophecy 60
 : > log1.txt
 goto end
 
-%LDM%\TimeSeriesRegression.exe  --header 1 --x 1 --y 1 --csv "co2-ppm-mauna-loa-19651980.csv" ^
---learning_rate 1 --opt_type adam ^
---test 0.01 --progress %progress% --plot 5 --tol 0.0001 --early_stopping 0 ^
---epochs 26000 --n_layers 2  --n_rnn_layers 1 --rnn_type lstm ^
---seq_len 20 --minibatch_size 40 --hidden_size 10 --test_mode 0 --normal zscore
-: > log1.txt
-:call timer_cpy log1.txt
+
 
 ffmpeg -y -i "images/test_%%04d.png" -r 2 -crf 30 bbb.mp4
 ffmpeg -y -i "images/test_%%04d.png" -r 2 -crf 30 bbb.flv

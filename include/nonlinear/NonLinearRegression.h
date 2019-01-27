@@ -3,9 +3,25 @@
 #define _NonLinearRegression_H
 
 #include "../../include/util/mathutil.h"
+#include <signal.h>
 #pragma warning( disable : 4305 ) 
 
 #define EARLY_STOPPING_	60
+
+/* シグナル受信/処理 */
+bool ctr_c_stopping_nonlinear_regression = false;
+inline void SigHandler_nonlinear_regression(int p_signame)
+{
+	static int sig_catch = 0;
+	if (sig_catch)
+	{
+		printf("割り込みです。終了します\n");
+		ctr_c_stopping_nonlinear_regression = true;
+	}
+	sig_catch++;
+	//exit(0);
+	return;
+}
 
 class NonLinearRegression
 {
@@ -520,6 +536,9 @@ public:
 
 	void construct_net(int n_layers = 5)
 	{
+		SigHandler_nonlinear_regression(0);
+		signal(SIGINT, SigHandler_nonlinear_regression);
+
 		using tanh = tiny_dnn::activation::tanh;
 		using recurrent = tiny_dnn::recurrent_layer;
 
@@ -679,6 +698,12 @@ public:
 				nn.stop_ongoing_training();
 				error = 1;
 				printf("early_stopp!!\n");
+			}
+			if (ctr_c_stopping_nonlinear_regression)
+			{
+				nn.stop_ongoing_training();
+				error = 1;
+				printf("CTR-C stopp!!\n");
 			}
 			++batch;
 		};
