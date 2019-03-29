@@ -6,8 +6,8 @@ copy ..\..\..\..\third_party\bin\*.dll
 
 
 del /Q images\*.png
-%LDM%\TimeSeriesRegression.exe --header 1 --x 2 --y 1 ^
---y_var "データ" --x_var 0 --yx_var "休日フラグ2" ^
+%LDM%\TimeSeriesRegression.exe --header 1 --x 1 --y 1 ^
+--y_var "データ" --x_var "休日フラグ2" --t_var 0 ^
 --csv sample.csv --test 0.2 --progress 1 --plot 50 --learning_rate 1 --tol 0.0001 ^
 --seq_len 200 --minibatch_size 200 --hidden_size 200 ^
 --n_layers 2 --n_rnn_layers 1 --read_max 1000 --normal minmax --test_mode 0 --support 0

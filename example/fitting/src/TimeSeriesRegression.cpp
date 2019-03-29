@@ -29,7 +29,7 @@ int main(int argc, char** argv)
 {
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
-	std::vector<std::string> yx_var;
+	std::string t_var = "";
 	int sequence_length = -1;
 	std::string normalization_type = "";
 
@@ -63,8 +63,8 @@ int main(int argc, char** argv)
 		if (argname == "--y_var") {
 			y_var.push_back(argv[count + 1]);
 		}
-		if (argname == "--yx_var") {
-			yx_var.push_back(argv[count + 1]);
+		if (argname == "--t_var") {
+			t_var = argv[count + 1];
 		}
 		if (argname == "--seq_len") {
 			sequence_length = atoi(argv[count + 1]);
@@ -117,7 +117,7 @@ int main(int argc, char** argv)
 
 	std::vector<int> x_var_idx;
 	std::vector<int> y_var_idx;
-	std::vector<int> yx_var_idx;
+	int t_var_idx = -1;
 
 	if (x_var.size())
 	{
@@ -206,47 +206,32 @@ int main(int argc, char** argv)
 		}
 	}
 
-	if (yx_var.size())
+	if (t_var != "")
 	{
-		for (int i = 0; i < yx_var.size(); i++)
+		for (int j = 0; j < header_names.size(); j++)
 		{
-			for (int j = 0; j < header_names.size(); j++)
+			if (t_var == header_names[j])
 			{
-				if (yx_var[i] == header_names[j])
+				t_var_idx = j;
+			}
+			else if ("\"" + t_var + "\"" == header_names[j])
+			{
+				t_var_idx = j;
+			}
+			else
+			{
+				char buf[32];
+				sprintf(buf, "%d", j);
+				if (t_var == std::string(buf))
 				{
-					yx_var_idx.push_back(j);
+					t_var_idx = j;
 				}
-				else if ("\"" + yx_var[i] + "\"" == header_names[j])
+				sprintf(buf, "\"%d\"", j);
+				if (t_var == std::string(buf))
 				{
-					yx_var_idx.push_back(j);
-				}
-				else
-				{
-					char buf[32];
-					sprintf(buf, "%d", j);
-					if (yx_var[i] == std::string(buf))
-					{
-						yx_var_idx.push_back(j);
-					}
-					sprintf(buf, "\"%d\"", j);
-					if (yx_var[i] == std::string(buf))
-					{
-						yx_var_idx.push_back(j);
-					}
+					t_var_idx = j;
 				}
 			}
-		}
-		if (yx_var_idx.size() == 0)
-		{
-			for (int i = 0; i < yx_var.size(); i++)
-			{
-				yx_var_idx.push_back(atoi(yx_var[i].c_str()));
-			}
-		}
-		if (yx_var_idx.size() != yx_var.size())
-		{
-			printf("--yx_var ERROR\n");
-			return -1;
 		}
 	}
 
@@ -262,7 +247,7 @@ int main(int argc, char** argv)
 	}
 	if (x_var.size() > 0 && x_dim > 0)
 	{
-		if (x_var.size()+yx_var.size() != x_dim)
+		if (x_var.size()/*+yx_var.size()*/ != x_dim)
 		{
 			printf("arguments number error:--x_var != --x");
 			return -1;
@@ -301,7 +286,7 @@ int main(int argc, char** argv)
 	}
 	if (x_var.size() > 0 && x_dim == 0)
 	{
-		x_dim = x_var.size()+yx_var.size();
+		x_dim = x_var.size()/*+yx_var.size()*/;
 	}
 	if (y_var.size() > 0 && y_dim == 0)
 	{
@@ -316,15 +301,19 @@ int main(int argc, char** argv)
 	{
 		printf("y_var:%s %d\n", y_var[i].c_str(), y_var_idx[i]);
 	}
-	for (int i = 0; i < yx_var.size(); i++)
-	{
-		printf("yx_var:%s %d\n", yx_var[i].c_str(), yx_var_idx[i]);
-	}
+	//for (int i = 0; i < yx_var.size(); i++)
+	//{
+	//	printf("yx_var:%s %d\n", yx_var[i].c_str(), yx_var_idx[i]);
+	//}
 
-	Matrix<dnn_double> x = z.Col(x_var_idx[0]);
-	for (int i = 1; i < x_dim- yx_var.size(); i++)
+	Matrix<dnn_double> x;
+	if (x_dim > 0)
 	{
-		x = x.appendCol(z.Col(x_var_idx[i]));
+		x = z.Col(x_var_idx[0]);
+		for (int i = 1; i < x_dim/*- yx_var.size()*/; i++)
+		{
+			x = x.appendCol(z.Col(x_var_idx[i]));
+		}
 	}
 
 	Matrix<dnn_double> y = z.Col(y_var_idx[0]);
@@ -334,14 +323,26 @@ int main(int argc, char** argv)
 	}
 	y.print("y");
 
-	if (yx_var.size())
+	if (x_var.size())
 	{
-		for (int i = 0; i < yx_var.size(); i++)
+		for (int i = 0; i < x_var.size(); i++)
 		{
-			y = y.appendCol(z.Col(yx_var_idx[i]));
+			y = y.appendCol(z.Col(x_var_idx[i]));
 		}
 	}
-	y.print("y+yx");
+	//y.print("y+yx");
+
+	Matrix<dnn_double> tvar;
+	if (t_var_idx >= 0)
+	{
+		tvar = z.Col(t_var_idx);
+	}
+	else
+	{
+		tvar = Matrix<dnn_double>(y.m, 1);
+		for (int i = 0; i < y.m; i++) tvar(i, 0) = i;
+	}
+
 
 	if(0)
 	{
@@ -438,6 +439,7 @@ int main(int argc, char** argv)
 
 	TimeSeriesRegression timeSeries(X, Y, normalization_type);
 
+	timeSeries.timevar = tvar;
 	timeSeries.x_dim = x_dim;
 	timeSeries.y_dim = y_dim;
 	timeSeries.tolerance = 0.009;
@@ -478,7 +480,7 @@ int main(int argc, char** argv)
 		else if (argname == "--y_var") {
 			continue;
 		}
-		else if (argname == "--yx_var") {
+		else if (argname == "--t_var") {
 			continue;
 		}
 		else if (argname == "--normal") {

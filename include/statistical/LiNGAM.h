@@ -331,7 +331,7 @@ public:
 			}
 			else
 			{
-			utf8.fprintf(fp, "%s[color=blue shape=note]\n", item1.c_str());
+				utf8.fprintf(fp, "%s[color=blue shape=note]\n", item1.c_str());
 			}
 			
 			for (int j = 0; j < B_tmp.n; j++)

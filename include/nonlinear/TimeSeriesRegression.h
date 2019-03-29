@@ -172,7 +172,7 @@ class TimeSeriesRegression
 						y[k] = y[k] * MaxMin[k] + Min[k];
 					}
 				}
-				fprintf(fp_test, "%f ", iX[i][0]);
+				fprintf(fp_test, "%f ", timevar(i,0));
 				for (int k = 0; k < y_dim - 1; k++)
 				{
 					fprintf(fp_test, "%f %f ", y[k], y[k]);
@@ -237,7 +237,7 @@ class TimeSeriesRegression
 						}
 					}
 
-					fprintf(fp_test, "%f ", iX[i + sequence_length - 1][0]);
+					fprintf(fp_test, "%f ", timevar(i + sequence_length - 1,0));
 					for (int k = 0; k < y_dim - 1; k++)
 					{
 						fprintf(fp_test, "%f %f ", y_pre[k], y[k]);
@@ -269,7 +269,7 @@ class TimeSeriesRegression
 						}
 					}
 
-					fprintf(fp_test, "%f ", iX[i + sequence_length-1][0]);
+					fprintf(fp_test, "%f ", timevar(i + sequence_length-1,0));
 					for (int k = 0; k < y_dim - 1; k++)
 					{
 						fprintf(fp_test, "%f %f ", y_pre[k], y[k]);
@@ -333,36 +333,36 @@ class TimeSeriesRegression
 				if (i + sequence_length < iY.size())
 				{
 					y = nY[i + sequence_length];
-				for (int k = 0; k < y_dim; k++)
-				{
-					if (zscore_normalization)
+					for (int k = 0; k < y_dim; k++)
 					{
-						y_predict[k] = y_predict[k] * Sigma[k] + Mean[k];
-						y[k] = y[k] * Sigma[k] + Mean[k];
+						if (zscore_normalization)
+						{
+							y_predict[k] = y_predict[k] * Sigma[k] + Mean[k];
+							y[k] = y[k] * Sigma[k] + Mean[k];
+						}
+						if (minmax_normalization)
+						{
+							y_predict[k] = y_predict[k] * MaxMin[k] + Min[k];
+							y[k] = y[k] * MaxMin[k] + Min[k];
+						}
+						if (i < train_images.size())
+						{
+							cost += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
+						}
+						else
+						{
+							vari_cost += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
+						}
+						cost_tot += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
 					}
-					if (minmax_normalization)
-					{
-						y_predict[k] = y_predict[k] * MaxMin[k] + Min[k];
-						y[k] = y[k] * MaxMin[k] + Min[k];
-					}
-					if (i < train_images.size())
-					{
-						cost += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
-					}
-					else
-					{
-						vari_cost += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
-					}
-					cost_tot += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
-				}
 
-				fprintf(fp_test, "%f ", iX[i + sequence_length][0]);
-				for (int k = 0; k < y_dim - 1; k++)
-				{
-					fprintf(fp_test, "%f %f ", y_predict[k], y[k]);
-				}
-				fprintf(fp_test, "%f %f\n", y_predict[y_dim - 1], y[y_dim - 1]);
-					x_value = iX[i + sequence_length][0];
+					fprintf(fp_test, "%f ", timevar(i + sequence_length,0));
+					for (int k = 0; k < y_dim - 1; k++)
+					{
+						fprintf(fp_test, "%f %f ", y_predict[k], y[k]);
+					}
+					fprintf(fp_test, "%f %f\n", y_predict[y_dim - 1], y[y_dim - 1]);
+					x_value = timevar(i + sequence_length,0);
 				}
 				else
 				{
@@ -377,13 +377,13 @@ class TimeSeriesRegression
 							y_predict[k] = y_predict[k] * MaxMin[k] + Min[k];
 						}
 					}
-					fprintf(fp_test, "%f ", x_value+(iX[iX.size() - 1][0]-iX[iX.size()-2][0]));
+					fprintf(fp_test, "%f ", x_value + (timevar(timevar.m - 1,0) - timevar(timevar.m - 2,0)));
 					for (int k = 0; k < y_dim - 1; k++)
 					{
 						fprintf(fp_test, "%f ", y_predict[k]);
 					}
 					fprintf(fp_test, "%f\n", y_predict[y_dim - 1]);
-					x_value = x_value + (iX[iX.size() - 1][0] - iX[iX.size() - 2][0]);
+					x_value = x_value + (timevar(timevar.m - 1, 0) - timevar(timevar.m - 2, 0));
 				}
 			}
 			fclose(fp_test);
@@ -461,6 +461,7 @@ class TimeSeriesRegression
 	bool early_stopp = false;
 
 public:
+	Matrix<dnn_double> timevar;
 	size_t x_dim;
 	size_t y_dim;
 	size_t prophecy = 0;
