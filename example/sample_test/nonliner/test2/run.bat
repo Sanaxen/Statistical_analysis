@@ -14,7 +14,7 @@ del /Q images\*.png
 %LDM%\TimeSeriesRegression.exe  --x 0 --y 3 --y_var 2 --y_var 3 --y_var 4 --t_var "0" --csv sample.csv --learning_rate 1 --opt_type adam ^
 --test 0.5 --progress %progress% --plot 5 --tol 0.01 ^
 --epochs 26000 --n_layers 6  --n_rnn_layers 1 --rnn_type lstm ^
---seq_len 24 --minibatch_size 48 --hidden_size 6 --test_mode 0 --normal zscore --early_stopping 0 > log1.txt
+--seq_len 24 --minibatch_size 48 --hidden_size 64 --test_mode 0 --normal zscore --early_stopping 0 > log1.txt
 goto end
 
 
