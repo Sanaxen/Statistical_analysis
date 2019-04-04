@@ -449,7 +449,7 @@ public:
 					sprintf(histogram_name, "plot_(%d)%d_hist.dat", plot_count, i);
 					h.print_csv(histogram_name);
 
-					fprintf(script, "set style fill solid border  lc rgb \"black\"\n");
+					fprintf(script, "set style fill solid border  lc rgb \"dark-gray\"\n");
 					fprintf(script, "plot '%s' using 1:2 %s with boxes linewidth %.1f %s\n",
 						histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/, linecolor.c_str());
 
@@ -486,15 +486,20 @@ public:
 				//	fprintf(script, "plot '%s' %s using 1:%d %s with lines linewidth %.1f %s\n",
 				//		buf, every.c_str(), 2, line_header_names.c_str(), linewidth, linecolor.c_str());
 				//}
+				fprintf(script, "set style fill  transparent solid 0.85 noborder\n");
 				if (palette)
 				{
-					fprintf(script, "plot '%s' %s using %d:%d:%d %s with points pointsize %.1f pt %d lc palette\n",
-						data_name.c_str(), every.c_str(), i + 1, j + 1, j+1, title.c_str(), pointsize, pointtype);
+					//fprintf(script, "plot '%s' %s using %d:%d:%d %s with points pointsize %.1f pt %d lc palette\n",
+					//	data_name.c_str(), every.c_str(), i + 1, j + 1, j+1, title.c_str(), pointsize, pointtype);
+					fprintf(script, "plot '%s' %s using %d:%d:(-1) %s with circles lc rgb \"sea-green\"\n",
+						data_name.c_str(), every.c_str(), i + 1, j + 1, title.c_str());
 				}
 				else
 				{
-					fprintf(script, "plot '%s' %s using %d:%d %s with points pointsize %.1f pt %d\n",
-						data_name.c_str(), every.c_str(), i + 1, j + 1, title.c_str(), pointsize, pointtype);
+					//fprintf(script, "plot '%s' %s using %d:%d %s with points pointsize %.1f pt %d\n",
+					//	data_name.c_str(), every.c_str(), i + 1, j + 1, title.c_str(), pointsize, pointtype);
+					fprintf(script, "plot '%s' %s using %d:%d:(-1) %s with circles lc rgb \"sea-green\"\n",
+						data_name.c_str(), every.c_str(), i + 1, j + 1, title.c_str());
 				}
 				fflush(script);
 			}
@@ -574,6 +579,10 @@ public:
 	{
 		script_reopen();
 		if (script == NULL) return;
+		
+
+		fprintf(script, "set style circle radius screen 0.01\n");
+		fprintf(script, "set style fill  transparent solid 0.35 noborder\n");
 		fprintf(script, "set datafile separator \",\"\n");
 
 		Matrix<dnn_double> x = X.Col(col1);
@@ -684,8 +693,10 @@ public:
 		{
 
 #if 10
-			fprintf(script, "%s '%s' %s using 1:2:3 %s with points pointsize %.1f pt %d lc palette\n",
-				plot, data_name.c_str(), every.c_str(), label.c_str(), point_size, pointtype);
+			//fprintf(script, "%s '%s' %s using 1:2:3 %s with points pointsize %.1f pt %d lc palette\n",
+			//	plot, data_name.c_str(), every.c_str(), label.c_str(), point_size, pointtype);
+			fprintf(script, "%s '%s' %s using 1:2:(-1) %s with circles lc  rgb \"dark-orange\"\n",
+				plot, data_name.c_str(), every.c_str(), label.c_str());
 #else			
 			fprintf(script, "set style circle radius graph 0.005\n");
 			fprintf(script, "%s '%s' %s using 1:2:3 %s with circles fs transparent solid 0.85 lw 0.1 pal\n",
@@ -696,8 +707,10 @@ public:
 		{
 			//fprintf(script, "%s '%s' %s using 1:2:(rgb(255,$3*255,$3*255)) %s with points pointsize %.1f pt %d rgb variable\n",
 			//	plot, data_name.c_str(), every.c_str(), label.c_str(), point_size, pointtype);
-			fprintf(script, "%s '%s' %s using 1:2 %s with points pointsize %.1f pt %d\n",
-				plot, data_name.c_str(), every.c_str(), label.c_str(), point_size, pointtype);
+			//fprintf(script, "%s '%s' %s using 1:2 %s with points pointsize %.1f pt %d\n",
+			//	plot, data_name.c_str(), every.c_str(), label.c_str(), point_size, pointtype);
+			fprintf(script, "%s '%s' %s using 1:2:(1.5) %s with circles lc  rgb \"dark-orange\"\n",
+				plot, data_name.c_str(), every.c_str(), label.c_str());
 		}
 		linecolor = "";
 		plot_count++;
