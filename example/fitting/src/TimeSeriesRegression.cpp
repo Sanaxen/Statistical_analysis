@@ -37,6 +37,7 @@ int main(int argc, char** argv)
 	bool header = false;
 	int start_col = 0;
 	int x_dim = 0, y_dim = 0;
+	int use_cnn = 1;
 	std::string csvfile("sample.csv");
 	std::string report_file("report.txt");
 
@@ -314,6 +315,17 @@ int main(int argc, char** argv)
 		{
 			x = x.appendCol(z.Col(x_var_idx[i]));
 		}
+
+		//Shift the explanatory variable by one time ago
+		Matrix<dnn_double> xx = x.Row(1);
+		for (int i = 2; i < x.m - 1; i++)
+		{
+			xx = xx.appendRow(x.Row(i));
+		}
+		x.print("x");
+		xx = xx.appendRow(x.Row(x.m - 1));
+		x = xx;
+		x.print("x");
 	}
 
 	Matrix<dnn_double> y = z.Col(y_var_idx[0]);
@@ -321,13 +333,16 @@ int main(int argc, char** argv)
 	{
 		y = y.appendCol(z.Col(y_var_idx[i]));
 	}
+	y = y.removeRow(y.m - 1);
+
 	y.print("y");
 
 	if (x_var.size())
 	{
 		for (int i = 0; i < x_var.size(); i++)
 		{
-			y = y.appendCol(z.Col(x_var_idx[i]));
+			//y = y.appendCol(z.Col(x_var_idx[i]));
+			y = y.appendCol(x.Col(i));
 		}
 	}
 	//y.print("y+yx");
@@ -559,6 +574,10 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--prophecy") {
 			timeSeries.prophecy = atoi(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--use_cnn") {
+			timeSeries.use_cnn = atoi(argv[count + 1]);
 			continue;
 		}
 		else {
