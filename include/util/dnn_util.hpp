@@ -340,6 +340,10 @@ public:
 		backend_type = backend_type_;
 	}
 
+	inline size_t out(size_t& s) const
+	{
+		return out_w*out_h*out_map;
+	}
 #define ACTIVATIN_SYMBL(name) \
 	{\
 		if (name == "selu_layer")	return selu_layer();\
