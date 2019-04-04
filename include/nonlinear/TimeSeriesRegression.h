@@ -473,6 +473,7 @@ public:
 	bool capture = false;
 	bool progress = true;
 	float tolerance = 1.0e-6;
+	int use_cnn = 1;
 
 	tiny_dnn::core::backend_t default_backend_type = tiny_dnn::core::backend_t::internal;
 
@@ -651,18 +652,63 @@ public:
 		nn << layers.add_fc(usize, false);
 		nn << layers.tanh();
 
-		//size_t w_stride = 2;
-		//size_t window_width = size_t(float(sequence_length) / float(3.3));
-		//printf("window_width %d\n", window_width);
-		//size_t ow = tiny_dnn::conv_out_length(usize, window_width, w_stride, 1, tiny_dnn::padding::valid);
-		//printf("add_cnv skipp\n");
-		//if (ow >= 1)
-		//{
-		//	printf("nY:%d\n", nY[0].size());
-		//	nn << layers.add_cnv(nY[0].size(), window_width, 1, w_stride, 1, tiny_dnn::padding::valid);
-		//	//nn << layers.add_maxpool(window_width, 1, w_stride, 1, tiny_dnn::padding::same);
-		//}
-		nn << layers.add_fc(input_size, false);
+		if (use_cnn > 0)
+		{
+#if 10
+			const int cnn_win_size = 3;
+			const int pool_size = 2;
+			size_t sz = 0;
+			bool error = false;
+			printf("////////////////////////\n");
+			do {
+
+				LayerInfo tmp_layers(nn.out_data_size(), 1, 1);
+				tiny_dnn::network2<tiny_dnn::sequential> tmp_nn;
+
+				tmp_nn << tmp_layers.add_fc(usize);
+				tmp_nn << tmp_layers.tanh();
+
+				error = false;
+				try {
+					for (int i = 0; i < use_cnn; i++)
+					{
+						if (tmp_nn.out_data_size() < 2)
+						{
+							error = true;
+							break;
+						}
+						tmp_nn << tmp_layers.add_cnv(1, cnn_win_size, 1, 1, 1, tiny_dnn::padding::valid);
+						if (tmp_nn.out_data_size() < 2)
+						{
+							error = true;
+							break;
+						}
+						tmp_nn << tmp_layers.add_maxpool(pool_size, 1, 2, 1, tiny_dnn::padding::valid);
+					}
+					sz = tmp_nn.out_data_size();
+				}catch(...)
+				{ }
+				usize += 10;
+			} while (sz < 2 || error);
+			printf("////////////////////////\n\n");
+#endif
+			nn << layers.add_fc(usize);
+			nn << layers.tanh();
+
+			for (int i = 0; i < use_cnn; i++)
+			{
+				nn << layers.add_cnv(1, cnn_win_size, 1, 1, 1, tiny_dnn::padding::valid);
+				nn << layers.tanh();
+				nn << layers.add_maxpool(pool_size, 1, 2, 1, tiny_dnn::padding::valid);
+				//nn << layers.add_dropout(0.25);
+			}
+			nn << layers.add_fc(input_size, false);
+		}
+		else
+		{
+			nn << layers.add_fc(input_size, false);
+		}
+
 		for (int i = 0; i < n_rnn_layers; i++) {
 			//nn << layers.add_batnorm(0.0001, 0.9);
 			//nn << layers.add_fc(input_size, false);
@@ -677,13 +723,6 @@ public:
 
 		int n_layers_tmp = n_layers;
 		size_t sz = hidden_size / 2;
-		//while (sz > train_labels[0].size() * 10)
-		//{
-		//	nn << layers.add_fc(sz);
-		//	nn << layers.tanh();
-		//	sz /= 2;
-		//	n_layers_tmp--;
-		//}
 
 		sz = train_labels[0].size() * 10;
 		for (int i = 0; i < n_layers_tmp; i++) {
