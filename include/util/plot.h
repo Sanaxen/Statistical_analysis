@@ -581,7 +581,7 @@ public:
 		if (script == NULL) return;
 		
 
-		fprintf(script, "set style circle radius screen 0.01\n");
+		fprintf(script, "set style circle radius screen 0.007\n");
 		fprintf(script, "set style fill  transparent solid 0.35 noborder\n");
 		fprintf(script, "set datafile separator \",\"\n");
 

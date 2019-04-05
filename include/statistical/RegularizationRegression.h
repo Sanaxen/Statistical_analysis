@@ -25,6 +25,7 @@ inline double _soft_thresholding_operator(const double x, const double lambda)
 class RegressionBase
 {
 public:
+	int y_var_idx;
 	int error;
 
 	dnn_double lambda1 = 0.001;
@@ -61,6 +62,8 @@ public:
 		}
 		printf("--------------\n");
 
+		FILE* fp = fopen("select_variables.dat", "w");
+		if (fp)fprintf(fp, "%d,%s\n", y_var_idx, header[0].c_str());
 		std::vector<int> var_indexs;
 		printf("•K—v‚Èà–¾•Ï”\n");
 		int num = 0;
@@ -71,8 +74,11 @@ public:
 				var_indexs.push_back(i);
 				num++;
 				printf("[%03d]%-10.10s %10.4f\n", i+1, header[i+1].c_str(), coef(0, i));
+
+				if ( fp )fprintf(fp, "%d,%s\n", i, header[i + 1].c_str());
 			}
 		}
+		fclose(fp);
 		printf("à–¾•Ï”:%d -> %d\n", coef.n - 1, num);
 
 		bool war = false;

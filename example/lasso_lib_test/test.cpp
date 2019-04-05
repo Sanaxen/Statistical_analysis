@@ -76,93 +76,91 @@ int main(int argc, char** argv)
 	if (fp == NULL)
 	{
 
-	CSVReader csv1("Boston.csv");
-	Matrix<dnn_double> df = csv1.toMat();
+		CSVReader csv1("Boston.csv");
+		Matrix<dnn_double> df = csv1.toMat();
 
-	df = df.removeCol(0);
-	header_str = csv1.getHeader();
-	header_str.erase(header_str.begin() + 0);
+		df = df.removeCol(0);
+		header_str = csv1.getHeader();
+		header_str.erase(header_str.begin() + 0);
 
-	y = df.Col(13);	//7
-	y.print("", "%.3f ");
+		y = df.Col(13);	//7
+		y.print("", "%.3f ");
 
-	X = df.removeCol(13, -1);
-	X.print("", "%.3f ");
-	printf("***%d\n", X.n);
+		X = df.removeCol(13, -1);
+		X.print("", "%.3f ");
+		printf("***%d\n", X.n);
 
-	Matrix<dnn_double> T = y;
-	T = T.appendCol(X);
-	T.print_csv("sample.csv", header_str);
-
-#ifdef USE_GNUPLOT
-	{
-		gnuPlot plot1(std::string(GNUPLOT_PATH), 0);
-		plot1.plot_lines(X, header_str);
-		plot1.draw();
-
-		gnuPlot plot2(std::string(GNUPLOT_PATH), 1);
-		plot2.set_label_x("crim[î∆çﬂó¶]");
-		plot2.set_label_y("mdev[èZëÓâøäiÇÃíÜâõíl]");
-		plot2.scatter(T, 0, 13, 1, 30, header_str, 6, "rgbformulae 31, 13, 10");
-		plot2.draw();
-
-
-		gnuPlot plot3(std::string(GNUPLOT_PATH), 3);
-		plot3.linecolor = "rgb \"light-cyan\"";
-		plot3.set_label_x("mdev[èZëÓâøäiÇÃíÜâõíl]");
-		plot3.plot_histogram(Histogram(y, 5), "mdev-histogram");
-		plot3.draw();
-	}
-#endif
-
-	LassoRegression lasso_my(1.0, 1000, 0.0001);
-
-	lasso_my.fit(X, y);
-	lasso_my.report(X, header_str);
-
-	printf("scikit-learn\n");
-	printf("22.5328063241\n"
-		"[-0.          0. - 0.          0. - 0.          2.71517992\n"
-		"- 0. - 0. - 0. - 0. - 1.34423287  0.18020715\n"
-		"- 3.54700664]\n");
-	
-
-	LassoRegression lasso_my2(0.0, 1000, 0.0001);
-
-	lasso_my2.fit(X, y);
-	lasso_my2.report(X, header_str);
-	printf("scikit-learn\n");
-	printf("22.5328063241\n"
-		"[-0.92906457  1.08263896  0.14103943  0.68241438 - 2.05875361  2.67687661\n"
-		"0.01948534 - 3.10711605  2.6648522 - 2.07883689 - 2.06264585  0.85010886\n"
-		"- 3.74733185]\n");
-
-	/*
-		scikit-learnÇÃLasso
-		22.5328063241
-		[-0.          0.         -0.          0.         -0.          2.71517992
-		-0.         -0.         -0.         -0.         -1.34423287  0.18020715
-		-3.54700664]
-		*/
+		Matrix<dnn_double> T = y;
+		T = T.appendCol(X);
+		T.print_csv("sample.csv", header_str);
 
 #ifdef USE_GNUPLOT
-	{
-		Matrix<dnn_double> yy = lasso_my.predict(X) - y;
-		Matrix<dnn_double> yy2 = lasso_my2.predict(X) - y;
+		{
+			gnuPlot plot1(std::string(GNUPLOT_PATH), 0);
+			plot1.plot_lines(X, header_str);
+			plot1.draw();
 
-		gnuPlot plot1(std::string(GNUPLOT_PATH), 4);
-		plot1.plot_lines(yy, std::vector<std::string>());
-		plot1.plot_lines(yy2, std::vector<std::string>());
-		plot1.draw();
+			gnuPlot plot2(std::string(GNUPLOT_PATH), 1);
+			plot2.set_label_x("crim[î∆çﬂó¶]");
+			plot2.set_label_y("mdev[èZëÓâøäiÇÃíÜâõíl]");
+			plot2.scatter(T, 0, 13, 1, 30, header_str, 6, "rgbformulae 31, 13, 10");
+			plot2.draw();
 
-		plot1 = gnuPlot(std::string(GNUPLOT_PATH), 4, true);
-		plot1.plot_lines(yy, std::vector<std::string>());
-		plot1.plot_lines(yy2, std::vector<std::string>());
-		plot1.draw();
-	}
+
+			gnuPlot plot3(std::string(GNUPLOT_PATH), 3);
+			plot3.linecolor = "rgb \"light-cyan\"";
+			plot3.set_label_x("mdev[èZëÓâøäiÇÃíÜâõíl]");
+			plot3.plot_histogram(Histogram(y, 5), "mdev-histogram");
+			plot3.draw();
+		}
 #endif
 
+		LassoRegression lasso_my(1.0, 1000, 0.0001);
 
+		lasso_my.fit(X, y);
+		lasso_my.report(X, header_str);
+
+		printf("scikit-learn\n");
+		printf("22.5328063241\n"
+			"[-0.          0. - 0.          0. - 0.          2.71517992\n"
+			"- 0. - 0. - 0. - 0. - 1.34423287  0.18020715\n"
+			"- 3.54700664]\n");
+
+
+		LassoRegression lasso_my2(0.0, 1000, 0.0001);
+
+		lasso_my2.fit(X, y);
+		lasso_my2.report(X, header_str);
+		printf("scikit-learn\n");
+		printf("22.5328063241\n"
+			"[-0.92906457  1.08263896  0.14103943  0.68241438 - 2.05875361  2.67687661\n"
+			"0.01948534 - 3.10711605  2.6648522 - 2.07883689 - 2.06264585  0.85010886\n"
+			"- 3.74733185]\n");
+
+		/*
+			scikit-learnÇÃLasso
+			22.5328063241
+			[-0.          0.         -0.          0.         -0.          2.71517992
+			-0.         -0.         -0.         -0.         -1.34423287  0.18020715
+			-3.54700664]
+			*/
+
+#ifdef USE_GNUPLOT
+		{
+			Matrix<dnn_double> yy = lasso_my.predict(X) - y;
+			Matrix<dnn_double> yy2 = lasso_my2.predict(X) - y;
+
+			gnuPlot plot1(std::string(GNUPLOT_PATH), 4);
+			plot1.plot_lines(yy, std::vector<std::string>());
+			plot1.plot_lines(yy2, std::vector<std::string>());
+			plot1.draw();
+
+			plot1 = gnuPlot(std::string(GNUPLOT_PATH), 4, true);
+			plot1.plot_lines(yy, std::vector<std::string>());
+			plot1.plot_lines(yy2, std::vector<std::string>());
+			plot1.draw();
+		}
+#endif
 	}
 	else
 	{
@@ -283,7 +281,7 @@ int main(int argc, char** argv)
 		{
 			solver = new RidgeRegression(lambda1, max_iteration, tol);
 		}
-
+		solver->y_var_idx = y_var_idx;
 		solver->fit(X, y);
 		solver->report(X, header_names);
 

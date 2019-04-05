@@ -318,6 +318,37 @@ int main(int argc, char** argv)
 		}
 		plot1.draw();
 	}
+
+	{
+		Matrix<dnn_double> b(mreg.y_predict);
+		Matrix<dnn_double> T = B;
+
+		T = T.appendCol(b);
+		std::vector<std::string> header_names(2);
+		header_names[0] = "observed";
+		header_names[1] = "predict";
+
+		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 7, false);
+
+		plot1.scatter(T, 0, 1, 1, 30, header_names, 5);
+		if (10)
+		{
+			double max_x = B.Max();
+			double min_x = B.Min();
+			double step = (max_x - min_x) / 5.0;
+			Matrix<dnn_double> x(6, 2);
+			Matrix<dnn_double> v(1, 1);
+			for (int i = 0; i < 6; i++)
+			{
+				v(0, 0) = min_x + i*step;
+				x(i, 0) = v(0, 0);
+				x(i, 1) = v(0, 0);
+			}
+			plot1.set_label(0.5, 0.85, 1, "observed=predict");
+			plot1.plot_lines2(x, header_names);
+			plot1.draw();
+		}
+	}
 #endif
 
 

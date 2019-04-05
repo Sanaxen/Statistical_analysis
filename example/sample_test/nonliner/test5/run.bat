@@ -11,7 +11,7 @@ del /Q images\*.png
 %LDM%\TimeSeriesRegression.exe  --header 1 --x 0 --y 1 --y_var 1 --t_var 0 --csv "annual-changes-in-global-tempera.csv" ^
 --learning_rate 1 --opt_type adam ^
 --test 0.11 --progress %progress% --plot 5 --tol 0.0001 --early_stopping 0 ^
---epochs 26000 --n_layers 3  --n_rnn_layers 1 --rnn_type lstm ^
+--epochs 26000 --n_layers 6  --n_rnn_layers 1 --rnn_type lstm --use_cnn 2 ^
 --seq_len 24 --minibatch_size 24 --hidden_size 128 --test_mode 0 --normal zscore --support 0 --prophecy 60 --test_mode 0
 : > log1.txt
 

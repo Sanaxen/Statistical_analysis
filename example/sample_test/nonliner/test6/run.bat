@@ -11,7 +11,7 @@ del /Q images\*.png
 %LDM%\TimeSeriesRegression.exe  --header 1 --x 0 --y 1 --y_var 1 --t_var 0 --csv "co2-ppm-mauna-loa-19651980.csv" ^
 --learning_rate 1 --opt_type adam ^
 --test 0.01 --progress %progress% --plot 5 --tol 0.0001 --early_stopping 1 ^
---epochs 26000 --n_layers 5  --n_rnn_layers 1 --rnn_type lstm --use_cnn 2 ^
+--epochs 26000 --n_layers 8  --n_rnn_layers 1 --rnn_type lstm --use_cnn 2 ^
 --seq_len 36 --minibatch_size 36 --hidden_size 200 --test_mode 0 --normal zscore --prophecy 60
 : > log1.txt
 goto end
