@@ -3,6 +3,7 @@
 #include "../../include/statistical/RegularizationRegression.h"
 #include "../../include/statistical/LinearRegression.h"
 #include "../../include/util/csvreader.h"
+#include "../../include/util/swilk.h"
 
 #ifdef USE_GNUPLOT
 #include "../../include/util/plot.h"
@@ -95,10 +96,34 @@ int main(int argc, char** argv)
 	X.print("X");
 
 	printf("=========\n\n");
+	printf("shapiro_wilk test(0.05) start\n");
+	shapiro_wilk shapiro;
+	int shapiro_wilk_test = 0;
+	{
+		Matrix<dnn_double> tmp = X;
+		//tmp = tmp.whitening(tmp.Mean(), tmp.Std(tmp.Mean()));
+		//tmp = tmp.Centers(tmp.Mean());
+
+		int stat = shapiro.test(tmp);
+		if (stat == 0)
+		{
+			printf("w:%-8.3f p_value:%-10.16f\n", shapiro.get_w(), shapiro.p_value());
+			if (shapiro.p_value() > 0.05)
+			{
+				shapiro_wilk_test = 1;
+			}
+		}
+		else
+		{
+			printf("error shapiro.test=%d\n", stat);
+		}
+	}
+	printf("shapiro_wilk test end\n\n");
+
 #ifdef USE_GNUPLOT
 	{
 		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6, false);
-		plot1.plot_histogram(Histogram(X,N), (char*)header_names[col1].c_str());
+		plot1.plot_histogram(Histogram(X,N), (char*)header_names[col1].c_str(), shapiro_wilk_test);
 		plot1.draw();
 	}
 #endif		
