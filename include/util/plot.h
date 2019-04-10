@@ -11,6 +11,115 @@
 
 #pragma warning( disable : 4244 ) 
 
+class SJIStoUTF8
+{
+	inline bool convSJIStoUTF8(BYTE* pSource, BYTE* pDist, int* pSize)
+	{
+		*pSize = 0;
+
+		// Convert SJIS -> UTF-16
+		const int nSize = ::MultiByteToWideChar(CP_ACP, 0, (LPCSTR)pSource, -1, NULL, 0);
+
+		BYTE* buffUtf16 = new BYTE[nSize * 2 + 2];
+		::MultiByteToWideChar(CP_ACP, 0, (LPCSTR)pSource, -1, (LPWSTR)buffUtf16, nSize);
+
+		// Convert UTF-16 -> UTF-8
+		const int nSizeUtf8 = ::WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)buffUtf16, -1, NULL, 0, NULL, NULL);
+		if (!pDist) {
+			*pSize = nSizeUtf8;
+			delete buffUtf16;
+			return true;
+		}
+
+		BYTE* buffUtf8 = new BYTE[nSizeUtf8 * 2];
+		ZeroMemory(buffUtf8, nSizeUtf8 * 2);
+		::WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)buffUtf16, -1, (LPSTR)buffUtf8, nSizeUtf8, NULL, NULL);
+
+		*pSize = lstrlenA((char*)(buffUtf8));
+		memcpy(pDist, buffUtf8, *pSize);
+
+		delete buffUtf16;
+		delete buffUtf8;
+
+		return true;
+	}
+
+	/*
+	* convert: sjis -> utf8
+	*/
+	inline bool sjis2utf8(BYTE* source, BYTE** dest) {
+		// Calculate result size
+		int size = 0;
+		convSJIStoUTF8(source, NULL, &size);
+
+		// Peform convert
+		*dest = new BYTE[size + 1];
+		ZeroMemory(*dest, size + 1);
+		convSJIStoUTF8(source, *dest, &size);
+
+		return true;
+	}
+	BYTE* Dest;
+
+public:
+	SJIStoUTF8() {}
+	~SJIStoUTF8()
+	{
+		delete[] Dest;
+	}
+	inline void conv(char* sjis)
+	{
+		sjis2utf8((BYTE*)sjis, &Dest);
+	}
+	inline char* get()
+	{
+		return (char*)Dest;
+	}
+};
+
+inline void convf(const char* filename)
+{
+	FILE* fp = fopen(filename, "r");
+	if (!fp) return;
+
+	char fname[640];
+	sprintf(fname, "%s_%s", filename, ".tmp");
+
+	FILE* fp2 = fopen(fname, "w");
+	if (!fp2) return;
+
+	SJIStoUTF8 sjis2utf8;
+	sjis2utf8.conv("set encoding utf8\n");
+	fprintf(fp2, "%s", sjis2utf8.get());
+
+	char buf[1024];
+	while (fgets(buf, 1024, fp) != NULL)
+	{
+		{
+			SJIStoUTF8 sjis2utf8;
+			sjis2utf8.conv(buf);
+			fprintf(fp2, "%s", sjis2utf8.get());
+		}
+	}
+	fclose(fp);
+	fclose(fp2);
+
+
+	fp = fopen(filename, "w");
+	if (!fp) return;
+
+	fp2 = fopen(fname, "r");
+	if (!fp2) return;
+
+	while (fgets(buf, 1024, fp2) != NULL)
+	{
+		fprintf(fp, "%s", buf);
+	}
+	fclose(fp);
+	fclose(fp2);
+	_unlink(fname);
+}
+
 class ScatterWrk
 {
 public:
@@ -222,9 +331,13 @@ public:
 
 		if (maxpoint > 0)
 		{
-			//int every_num = X.m / maxpoint;
-			//every = "every " + std::to_string(every_num);
+			int every_num = X.m / maxpoint;
+			if (every_num != 0)
+			{
+				every = "every " + std::to_string(every_num);
+			}
 		}
+		printf("%s\n", every.c_str());
 
 		if (headers.size())
 		{
@@ -891,6 +1004,7 @@ public:
 			//fprintf(script, "mouse keypress\n");
 		}
 		close();
+		convf(script_name.c_str());
 		system((gnuplot_exe_path + " " + script_name).c_str());
 	}
 
@@ -898,6 +1012,7 @@ public:
 	{
 		if (script ) fclose(script);
 		close();
+		convf(script_name.c_str());
 		system((gnuplot_exe_path + " " + script_name).c_str());
 	}
 
