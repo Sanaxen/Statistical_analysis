@@ -75,7 +75,8 @@ int main(int argc, char** argv)
 	double lasso = 0.0;
 
 	double min_cor_delete = -1;
-	bool error_distr = true;
+	double min_delete = -1;
+	bool error_distr = false;
 	int error_distr_size[2] = { 1,1 };
 	bool capture = false;
 	bool sideways = false;
@@ -127,7 +128,10 @@ int main(int argc, char** argv)
 		else if (argname == "--min_cor_delete") {
 			min_cor_delete = atof(argv[count + 1]);
 		}
-		
+		else if (argname == "--min_delete") {
+			min_delete = atof(argv[count + 1]);
+		}
+
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
@@ -215,6 +219,19 @@ int main(int argc, char** argv)
 			for (int j = 0; j < LiNGAM.B.n; j++)
 			{
 				if (fabs(XCor(i, j)) < min_cor_delete)
+				{
+					LiNGAM.B(i, j) = 0.0;
+				}
+			}
+		}
+	}
+	if (min_delete > 0)
+	{
+		for (int i = 0; i < LiNGAM.B.m; i++)
+		{
+			for (int j = 0; j < LiNGAM.B.n; j++)
+			{
+				if (fabs(LiNGAM.B(i, j)) < min_delete)
 				{
 					LiNGAM.B(i, j) = 0.0;
 				}

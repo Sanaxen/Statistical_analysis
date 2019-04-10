@@ -16,6 +16,7 @@ int main(int argc, char** argv)
 	Matrix<dnn_double> x, coef;
 	std::vector<dnn_double> component;
 	int n, variablesNum;
+	std::vector<std::string> x_var;
 
 	std::string csvfile("2-3c.csv");
 
@@ -33,6 +34,10 @@ int main(int argc, char** argv)
 		}
 		if (argname == "--col") {
 			start_col = atoi(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--x_var") {
+			x_var.push_back(argv[count + 1]);
 			continue;
 		}
 		else {
@@ -68,6 +73,80 @@ int main(int argc, char** argv)
 			sprintf(buf, "%d", i);
 			header_names[i] = buf;
 		}
+	}
+
+	std::vector<int> x_var_idx;
+
+	if (x_var.size())
+	{
+		for (int i = 0; i < x_var.size(); i++)
+		{
+			for (int j = 0; j < header_names.size(); j++)
+			{
+				if (x_var[i] == header_names[j])
+				{
+					x_var_idx.push_back(j);
+				}
+				else if ("\"" + x_var[i] + "\"" == header_names[j])
+				{
+					x_var_idx.push_back(j);
+				}
+				else
+				{
+					char buf[32];
+					sprintf(buf, "%d", j);
+					if (x_var[i] == std::string(buf))
+					{
+						x_var_idx.push_back(j);
+					}
+					sprintf(buf, "\"%d\"", j);
+					if (x_var[i] == std::string(buf))
+					{
+						x_var_idx.push_back(j);
+					}
+				}
+			}
+		}
+		if (x_var_idx.size() == 0)
+		{
+			for (int i = 0; i < x_var.size(); i++)
+			{
+				x_var_idx.push_back(atoi(x_var[i].c_str()));
+			}
+		}
+		if (x_var_idx.size() != x_var.size())
+		{
+			printf("--x_var ERROR\n");
+			return -1;
+		}
+	}
+	if (x_var_idx.size() == 0 && x_var.size() == 0)
+	{
+		for (int i = 0; i < x.n; i++)
+		{
+			char buf[32];
+			sprintf(buf, "%d", i);
+			x_var.push_back(std::string(buf));
+			x_var_idx.push_back(i);
+		}
+	}
+
+	for (int i = 0; i < x_var_idx.size(); i++)
+	{
+		printf("[%s]%d\n", header_names[i].c_str(), x_var_idx[i]);
+	}
+	Matrix<dnn_double> A;
+	if (x_var.size())
+	{
+		std::vector<std::string> header_names_wrk = header_names;
+		A = x.Col(x_var_idx[0]);
+		header_names[0] = header_names_wrk[x_var_idx[0]];
+		for (int i = 1; i < x_var.size(); i++)
+		{
+			A = A.appendCol(x.Col(x_var_idx[i]));
+			header_names[i] = header_names_wrk[x_var_idx[i]];
+		}
+		x = A;
 	}
 
 	variablesNum = x.n;

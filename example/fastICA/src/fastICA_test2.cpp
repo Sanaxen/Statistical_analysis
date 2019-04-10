@@ -65,6 +65,7 @@ static Matrix<dnn_double> mat_read2(FILE *fp, int *rows)
 int main(int argc, char *argv[])
 {
 	std::string csvfile("sample.csv");
+	std::vector<std::string> x_var;
 
 	int max_ica_iteration = MAX_ITERATIONS;
 	double ica_tolerance = TOLERANCE;
@@ -78,6 +79,10 @@ int main(int argc, char *argv[])
 		}
 		else if (argname == "--header") {
 			header = (atoi(argv[count + 1]) != 0) ? true : false;
+			continue;
+		}
+		else if (argname == "--x_var") {
+			x_var.push_back(argv[count + 1]);
 			continue;
 		}
 		else if (argname == "--col") {
@@ -105,25 +110,25 @@ int main(int argc, char *argv[])
 
 	if (fp == NULL)
 	{
-	compc = 3;
+		compc = 3;
 
-	CSVReader csv1("mix_1.csv", ',', false);
-	CSVReader csv2("mix_2.csv", ',', false);
-	CSVReader csv3("mix_3.csv", ',', false);
+		CSVReader csv1("mix_1.csv", ',', false);
+		CSVReader csv2("mix_2.csv", ',', false);
+		CSVReader csv3("mix_3.csv", ',', false);
 
-	Matrix<dnn_double> X1 = csv1.toMat().transpose();
-	Matrix<dnn_double> X2 = csv2.toMat().transpose();
-	Matrix<dnn_double> X3 = csv3.toMat().transpose();
-	rows = X1.m;
+		Matrix<dnn_double> X1 = csv1.toMat().transpose();
+		Matrix<dnn_double> X2 = csv2.toMat().transpose();
+		Matrix<dnn_double> X3 = csv3.toMat().transpose();
+		rows = X1.m;
 
 		X = Matrix<dnn_double>(rows, 3);
 
-	for (int i = 0; i < rows; i++)
-	{
-		X(i, 0) = X1(i, 0);
-		X(i, 1) = X2(i, 0);
-		X(i, 2) = X3(i, 0);
-	}
+		for (int i = 0; i < rows; i++)
+		{
+			X(i, 0) = X1(i, 0);
+			X(i, 1) = X2(i, 0);
+			X(i, 2) = X3(i, 0);
+		}
 		X.print_csv("sample.csv");
 	}
 	else
@@ -131,43 +136,123 @@ int main(int argc, char *argv[])
 		fclose(fp);
 	}
 
-	CSVReader csv(csvfile, ',', header);
-	X = csv.toMat_removeEmptyRow();
+	CSVReader csv1(csvfile, ',', header);
+	Matrix<dnn_double> T = csv1.toMat();
+	T = csv1.toMat_removeEmptyRow();
 	if (start_col)
 	{
 		for (int i = 0; i < start_col; i++)
 		{
-			X = X.removeCol(0);
+			T = T.removeCol(0);
 		}
 	}
-	compc = X.n;
-	rows = X.m;
 
 	std::vector<std::string> header_names;
-	header_names.resize(X.n);
-	if (header && csv.getHeader().size() > 0)
+	header_names.resize(T.n);
+	if (header && csv1.getHeader().size() > 0)
 	{
-		for (int i = 0; i < X.n; i++)
+		for (int i = 0; i < T.n; i++)
 		{
-			header_names[i] = csv.getHeader(i+ start_col);
+			header_names[i] = csv1.getHeader(i + start_col);
 		}
 	}
 	else
 	{
-		for (int i = 0; i < X.n; i++)
+		for (int i = 0; i < T.n; i++)
 		{
 			char buf[32];
 			sprintf(buf, "%d", i);
 			header_names[i] = buf;
 		}
 	}
+	for (int i = 0; i < T.n; i++)
+	{
+		printf("[%s]\n", header_names[i].c_str());
+	}
+	std::vector<int> x_var_idx;
+
+	if (x_var.size())
+	{
+		for (int i = 0; i < x_var.size(); i++)
+		{
+			for (int j = 0; j < header_names.size(); j++)
+			{
+				if (x_var[i] == header_names[j])
+				{
+					x_var_idx.push_back(j);
+				}
+				else if ("\"" + x_var[i] + "\"" == header_names[j])
+				{
+					x_var_idx.push_back(j);
+				}
+				else
+				{
+					char buf[32];
+					sprintf(buf, "%d", j);
+					if (x_var[i] == std::string(buf))
+					{
+						x_var_idx.push_back(j);
+					}
+					sprintf(buf, "\"%d\"", j);
+					if (x_var[i] == std::string(buf))
+					{
+						x_var_idx.push_back(j);
+					}
+				}
+			}
+		}
+		if (x_var_idx.size() == 0)
+		{
+			for (int i = 0; i < x_var.size(); i++)
+			{
+				x_var_idx.push_back(atoi(x_var[i].c_str()));
+			}
+		}
+		if (x_var_idx.size() != x_var.size())
+		{
+			printf("--x_var ERROR\n");
+			return -1;
+		}
+	}
+	if (x_var_idx.size() == 0 && x_var.size() == 0)
+	{
+		for (int i = 0; i < T.n; i++)
+		{
+			char buf[32];
+			sprintf(buf, "%d", i);
+			x_var.push_back(std::string(buf));
+			x_var_idx.push_back(i);
+		}
+	}
+
+	for (int i = 0; i < x_var_idx.size(); i++)
+	{
+		printf("[%s]%d\n", header_names[i].c_str(), x_var_idx[i]);
+	}
+	Matrix<dnn_double> A;
+	if (x_var.size())
+	{
+		std::vector<std::string> header_names_wrk = header_names;
+		A = T.Col(x_var_idx[0]);
+		header_names[0] = header_names_wrk[x_var_idx[0]];
+		for (int i = 1; i < x_var.size(); i++)
+		{
+			A = A.appendCol(T.Col(x_var_idx[i]));
+			header_names[i] = header_names_wrk[x_var_idx[i]];
+		}
+	}
+
+
+	compc = A.n;
+	rows = A.m;
+
 
 #ifdef USE_GNUPLOT
 	{
 		gnuPlot plot1(std::string(GNUPLOT_PATH));
 		plot1.linewidth = 1;
 		plot1.set_title("mixing signale");
-		plot1.plot_lines(X, header_names, 2000);
+		plot1.plot_lines(A, header_names, 2000);
 		plot1.draw();
 	}
 #endif
@@ -177,7 +262,7 @@ int main(int argc, char *argv[])
 	ica.set(compc);
 
 	// ICA computation
-	ica.fit(X, max_ica_iteration, ica_tolerance);
+	ica.fit(A, max_ica_iteration, ica_tolerance);
 
 	// Output
 	ica.K.print();
@@ -206,11 +291,15 @@ int main(int argc, char *argv[])
 
 #ifdef USE_GNUPLOT
 	{
-		for (int i = 0; i < X.n; i++)
+		for (int i = 0; i < A.n; i++)
 		{
 			char buf[32];
 			sprintf(buf, "source%d", i);
 			header_names[i] = buf;
+		}
+		for (int i = 0; i < A.n; i++)
+		{
+			printf("[%s]\n", header_names[i].c_str());
 		}
 		gnuPlot plot1(std::string(GNUPLOT_PATH));
 
@@ -218,7 +307,9 @@ int main(int argc, char *argv[])
 		plot1.set_title("source signale");
 		for (int c = 0; c < compc; c++)
 		{
-			plot1.plot_lines(Xo[c], header_names, 2000);
+			std::vector<std::string> header;
+			header.push_back(header_names[c]);
+			plot1.plot_lines(Xo[c], header, 2000);
 		}
 		plot1.draw();
 	}
