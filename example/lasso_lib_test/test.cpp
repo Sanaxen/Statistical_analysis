@@ -24,6 +24,7 @@ int main(int argc, char** argv)
 	double tol = 0.001;
 	double lambda1 = 0.001;
 	double lambda2 = 0.001;
+	int auto_search = 0;
 	std::string solver_name = "lasso";
 
 	for (int count = 1; count + 1 < argc; count += 2) {
@@ -55,6 +56,10 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--L2") {
 			lambda2 = atof(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--auto") {
+			auto_search = (atoi(argv[count + 1]) != 0) ? true : false;
 			continue;
 		}
 		else if (argname == "--solver") {
@@ -279,12 +284,126 @@ int main(int argc, char** argv)
 		}
 		if (solver_name == "ridge")
 		{
-			solver = new RidgeRegression(lambda1, max_iteration, tol);
+			solver = new RidgeRegression(lambda2, max_iteration, tol);
 		}
 		solver->y_var_idx = y_var_idx;
 		solver->fit(X, y);
-		solver->report(X, header_names);
+		solver->report(X, header_names, &y);
 
+		double auto_search_aic = 0;
+		double auto_search_l1 = 0;
+		double auto_search_l2 = 0;
+
+		if (auto_search)
+		{
+			int kmax = 4;
+			double l1_max = 10.0;
+			double l2_max = 10.0;
+			double l1_min = 0.0;
+			double l2_min = 0.0;
+			for (int k = 0; k < kmax; k++)
+			{
+				int n = 5;
+				double stp1 = l1_max / (double)n;
+				double stp2 = l2_max / (double)n;
+
+				Matrix<dnn_double> aic(n + 1, n + 1);
+				Matrix<dnn_double> l1(n + 1, n + 1);
+				Matrix<dnn_double> l2(n + 1, n + 1);
+				Matrix<dnn_double> se(n + 1, n + 1);
+
+				aic = aic.zeros(n + 1, n + 1);
+				l1 = l1.zeros(n + 1, n + 1);
+				l2 = l2.zeros(n + 1, n + 1);
+				se = se.zeros(n + 1, n + 1);
+
+				int m = 0;
+				if (solver_name == "elasticnet") m = n;
+#pragma omp parallel for
+				for (int i = 0; i <= n; i++)
+				{
+					for (int j = 0; j <= m; j++)
+					{
+						RegressionBase* solver = NULL;
+						if (solver_name == "lasso")
+						{
+							solver = new LassoRegression(l1_min + stp1*i, max_iteration, tol);
+						}
+						if (solver_name == "ridge")
+						{
+							solver = new RidgeRegression(l1_min + stp1*i, max_iteration, tol);
+						}
+						if (solver_name == "elasticnet")
+						{
+							solver = new ElasticNetRegression(l1_min + stp1*i, l2_min + stp2*j, max_iteration, tol);
+						}
+						solver->fit(X, y);
+						aic(i, j) = solver->calc_AIC(X, y);
+						se(i, j) = solver->se;
+						l1(i, j) = l1_min + stp1*i;
+						l2(i, j) = l2_min + stp2*j;
+
+						if (solver) delete solver;
+					}
+				}
+
+				int id1 = -1;
+				int id2 = -1;
+				double min_aic = 9999999.0;
+				for (int i = 0; i <= n; i++)
+				{
+					for (int j = 0; j <= m; j++)
+					{
+						if (min_aic > aic(i,j))
+						{
+							min_aic = aic(i, j);
+							id1 = i;
+							id2 = j;
+						}
+						//printf("L1:%.3f SE:%.3f AIC:%.3f\n", l1(i, j), se(i, j), aic(i, j));
+					}
+				}
+				l1_max = l1(id1, id2) + stp1;
+				l2_max = l2(id1, id2) + stp2;
+				l1_min = l1(id1, id2) - stp1;
+				l2_min = l2(id1, id2) - stp2;
+				if (l1_min < 0) l1_min = 0.0;
+				if (l2_min < 0) l2_min = 0.0;
+				
+				auto_search_aic = aic(id1, id2);
+				auto_search_l1 = l1(id1, id2);
+				auto_search_l2 = l2(id1, id2);
+
+			}
+			FILE* fp = fopen("auto_search.dat", "w");
+			if (fp)
+			{
+				if (solver_name == "lasso")
+				{
+					fprintf(fp, "%.3f,%.3f,%.3f\n", auto_search_l1, 0, auto_search_aic);
+				}else
+				if (solver_name == "ridge")
+				{
+					fprintf(fp, "%.3f,%.3f,%.3f\n", 0, auto_search_l1, auto_search_aic);
+				}
+				else
+				{
+					fprintf(fp, "%.3f,%.3f,%.3f\n", auto_search_l1, auto_search_l2, auto_search_aic);
+				}
+				fclose(fp);
+			}
+			if (solver_name == "lasso")
+			{
+				printf("%.3f,%.3f,%.3f\n", auto_search_l1, 0, auto_search_aic);
+			}else
+			if (solver_name == "ridge")
+			{
+				printf("%.3f,%.3f,%.3f\n", 0, auto_search_l1, auto_search_aic);
+			}else
+			{
+				printf("%.3f,%.3f,%.3f\n", auto_search_l1, auto_search_l2, auto_search_aic);
+			}
+		}
 #if 0
 #ifdef USE_GNUPLOT
 		{
