@@ -39,6 +39,9 @@ public:
 	Matrix<dnn_double> coef;
 	bool use_bias = true;
 
+	double AIC;
+	double se;
+
 	//Global Contrast Normalization (GCN)
 	inline Matrix<dnn_double> whitening_( Matrix<dnn_double>& X)
 	{
@@ -50,7 +53,40 @@ public:
 		return error;
 	}
 
-	void report(Matrix<dnn_double>& A, std::vector<std::string>& header)
+	double calc_AIC(Matrix<dnn_double>& A, Matrix<dnn_double>& y, int num = 0)
+	{
+		if (num == 0)
+		{
+			for (int i = 0; i < coef.n - 1; i++)
+			{
+				if (fabs(coef(0, i)) > 1.0e-6)
+				{
+					num++;
+				}
+			}
+		}
+		if (num == 0)
+		{
+			AIC = 999999999.0;
+			se = AIC;
+			return AIC;
+		}
+		Matrix<dnn_double> y_predict = predict(A);
+		se = 0.0;
+		for (int i = 0; i < A.m; i++)
+		{
+			se += (y(i, 0) - y_predict(i, 0))*(y(i, 0) - y_predict(i, 0));
+		}
+
+		AIC = A.m*(log(2.0*M_PI*se / A.m) + 1) + 2.0*(num + 2.0);
+		if (fabs(coef(0, coef.n - 1)) < 1.0e-16)
+		{
+			AIC = A.m*(log(2.0*M_PI*se / A.m) + 1) + 2.0*(num + 1.0);
+		}
+		return AIC;
+	}
+
+	void report(Matrix<dnn_double>& A, std::vector<std::string>& header, Matrix<dnn_double>* y = NULL)
 	{
 		printf("--------------\n");
 		printf("     ŒW”     \n");
@@ -80,6 +116,13 @@ public:
 		}
 		fclose(fp);
 		printf("à–¾•Ï”:%d -> %d\n", coef.n - 1, num);
+
+		if (y != NULL)
+		{
+			calc_AIC(A, *y, num);
+			printf("SE:%.3f\n", se);
+			printf("AIC:%.3f\n", AIC);
+		}
 
 		bool war = false;
 		Matrix<dnn_double>& cor = A.Cor();
