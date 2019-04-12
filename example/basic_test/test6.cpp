@@ -277,16 +277,25 @@ int main(int argc, char** argv)
 
 	mreg.set(A.n);
 	mreg.fit(A, B);
-	mreg.report(header_names, 0.05);
+	if (A.n == 1)
+	{
+		mreg.report(std::string("regression1.rep"), header_names, 0.05);
+	}
+	else
+	{
+		mreg.report(std::string("regression.rep"), header_names, 0.05);
+	}
+	mreg.report(std::string(""), header_names, 0.05);
 
 	Matrix<dnn_double> cor = A.Cor();
 	cor.print_csv("cor.csv");
 #ifdef USE_GNUPLOT
+	int win_size[2] = { 640 * 2, 480 * 2 };
 	if (A.n > 1)
 	{
 		if (heat_map)
 		{
-			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 1, false);
+			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 1);
 			plot1.Heatmap(cor, header_names, header_names);
 			plot1.draw();
 		}
@@ -307,7 +316,8 @@ int main(int argc, char** argv)
 		std::vector<std::string> line_header_names(1);
 		line_header_names[0] = "linear regression";
 
-		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6, false);
+		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6);
+		plot1.set_capture(win_size, std::string("inear_regression.png"));
 		plot1.plot_lines2(x, line_header_names);
 
 		plot1.scatter(T, x_var_idx[0], y_var_idx, 1, 30, header_names, 5);
@@ -328,7 +338,8 @@ int main(int argc, char** argv)
 		header_names[0] = "observed";
 		header_names[1] = "predict";
 
-		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 7, false);
+		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 7);
+		plot1.set_capture(win_size, std::string("observed_predict.png"));
 
 		plot1.scatter(T, 0, 1, 1, 30, header_names, 5);
 		if (10)

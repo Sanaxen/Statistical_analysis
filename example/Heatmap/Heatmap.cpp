@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 
 
 #ifdef USE_GNUPLOT
-	gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 1, false);
+	gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 1);
 	plot1.Heatmap(T, header_names, rows_names, palette);
 	plot1.draw();
 #endif

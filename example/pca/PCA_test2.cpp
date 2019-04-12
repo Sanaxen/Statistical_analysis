@@ -171,7 +171,7 @@ int main(int argc, char** argv)
 
 #ifdef USE_GNUPLOT
 
-	gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6, false);
+	gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6);
 	header_names[0] = "First principal component";
 	header_names[1] = "Second principal component";
 	plot1.scatter(pca2.principal_component(), 0, 1, 1, 30, header_names, 6);

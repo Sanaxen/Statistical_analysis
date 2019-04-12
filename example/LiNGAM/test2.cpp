@@ -113,7 +113,7 @@ int main()
 
 #ifdef USE_GNUPLOT
 	{
-		gnuPlot plot1(std::string(GNUPLOT_PATH), 0, true);
+		gnuPlot plot1(std::string(GNUPLOT_PATH), 0);
 		plot1.set_label_x("X");
 		plot1.set_label_y("W");
 		plot1.scatter(xs, 4, 3, 1, 30, names);

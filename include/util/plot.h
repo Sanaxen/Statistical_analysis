@@ -154,26 +154,28 @@ class gnuPlot
 		data_name = buff;
 	}
 
+	bool capture_image = false;
+	int capture_winsize[2] = { 640,480 };
 public:
 	std::string save_image_name = "image.png";
 	std::string script_name = "plot.plt";
 	std::string data_name = "plot.dat";
 
-	bool save_image = false;
+
 	std::string title = "";
 	float linewidth = 2.0;
 	float pointsize = 1.0;
 
 	std::string linecolor = "";
 
-	gnuPlot(std::string& gnuplot_exe_path_, const int script_id=-1, bool save_image_=false)
+	gnuPlot(std::string& gnuplot_exe_path_, const int script_id=-1)
 	{
 		gnuplot_exe_path = gnuplot_exe_path_;
 
 		id = script_id;
 		if (script_id < 0) id = rand();
 
-		save_image = save_image_;
+		//save_image = save_image_;
 
 		char buff[512];
 		sprintf(buff, "plot_%04d.plt", id);
@@ -193,10 +195,22 @@ public:
 		//fprintf(script, "set colorsequence default\n");
 		fprintf(script, "set colorsequence podo\n");
 
-		if (save_image)
-		{
-			fprintf(script, "set terminal png\n");
-		}
+		//if (save_image)
+		//{
+		//	fprintf(script, "set terminal pngcairo\n");
+		//}
+	}
+
+	void set_capture(int win[2], std::string& imagefile)
+	{
+		capture_image = true;
+		capture_winsize[0] = win[0];
+		capture_winsize[1] = win[1];
+		save_image_name = imagefile;
+
+		fprintf(script, "set term windows size %d,%d\n", capture_winsize[0], capture_winsize[1]);
+		fprintf(script, "set term pngcairo size %d,%d\n", capture_winsize[0], capture_winsize[1]);
+		fprintf(script, "set output \"%s\"\n", imagefile.c_str());
 	}
 
 	FILE* fp()
@@ -214,7 +228,7 @@ public:
 			txt = "\"" + txt + "\"";
 		}
 		fprintf(script, "set label %d at graph %.2f,%.2f %s\n", number, pos_x, pos_y, txt.c_str());
-		fprintf(script, "set label %d font %s\n", number, "'Arial,30'");
+		//fprintf(script, "set label %d font %s\n", number, "'Arial,30'");
 	}
 
 	void set_palette(char* palette)
@@ -498,9 +512,15 @@ public:
 		}
 		if (capture)
 		{
-			fprintf(script, "set term png size %d,%d\n", win_x, win_y);
+			fprintf(script, "set term pngcairo size %d,%d\n", win_x, win_y);
 			fprintf(script, "set output \"multi_scatter.png\"\n");
 		}
+
+		//if (scatter_back_color_dark_mode)
+		//{
+		//	back_color_dark();
+		//}
+
 		fprintf(script, "set datafile separator \",\"\n");
 		fprintf(script, "set multiplot layout %d,%d\n", X.n, X.n);
 		fprintf(script, "set nokey\n");
@@ -688,6 +708,15 @@ public:
 		plot_count++;
 	}
 
+	bool scatter_back_color_dark_mode = false;
+	void back_color_dark()
+	{
+		fprintf(script,
+			"set object 1 rect behind from screen 0,0 to screen 1,1 fc rgb \"#dcdcdc\" fillstyle solid 1.0\n"
+			"set grid lc rgb \"white\" lt 2\n"
+			"set border lc rgb \"white\"\n"
+		);
+	}
 	void scatter(Matrix<dnn_double>&X, int col1, int col2, float point_size, int grid, std::vector<std::string>& headers, int pointtype = 6, char* palette = "rgbformulae 22, 13, -31", int maxpoint = -1)
 	{
 		script_reopen();
@@ -698,6 +727,10 @@ public:
 		fprintf(script, "set style fill  transparent solid 0.35 noborder\n");
 		fprintf(script, "set datafile separator \",\"\n");
 
+		if (scatter_back_color_dark_mode)
+		{
+			back_color_dark();
+		}
 		Matrix<dnn_double> x = X.Col(col1);
 		Matrix<dnn_double> y = X.Col(col2);
 
@@ -805,16 +838,23 @@ public:
 		if (palette)
 		{
 
-#if 10
-			//fprintf(script, "%s '%s' %s using 1:2:3 %s with points pointsize %.1f pt %d lc palette\n",
-			//	plot, data_name.c_str(), every.c_str(), label.c_str(), point_size, pointtype);
-			fprintf(script, "%s '%s' %s using 1:2:(-1) %s with circles lc  rgb \"dark-orange\"\n",
-				plot, data_name.c_str(), every.c_str(), label.c_str());
-#else			
-			fprintf(script, "set style circle radius graph 0.005\n");
-			fprintf(script, "%s '%s' %s using 1:2:3 %s with circles fs transparent solid 0.85 lw 0.1 pal\n",
-				plot, data_name.c_str(), every.c_str(), label.c_str());
-#endif
+			if (!scatter_back_color_dark_mode)
+			{
+				//fprintf(script, "%s '%s' %s using 1:2:3 %s with points pointsize %.1f pt %d lc palette\n",
+				//	plot, data_name.c_str(), every.c_str(), label.c_str(), point_size, pointtype);
+				fprintf(script, "%s '%s' %s using 1:2:(-1) %s with circles lc  rgb \"dark-orange\"\n",
+					plot, data_name.c_str(), every.c_str(), label.c_str());
+			}
+			else
+			{
+				//fprintf(script, "set style circle radius graph 0.005\n");
+				//fprintf(script, "%s '%s' %s using 1:2:3 %s with circles fs transparent solid 0.85 lw 0.1 pal\n",
+				//	plot, data_name.c_str(), every.c_str(), label.c_str());
+
+				fprintf(script, "#set style circle radius graph 0.005\n");
+				fprintf(script, "%s '%s' %s using 1:2:3 %s with circles lw 0.1 pal\n",
+					plot, data_name.c_str(), every.c_str(), label.c_str());
+			}
 		}
 		else
 		{
@@ -827,6 +867,7 @@ public:
 		}
 		linecolor = "";
 		plot_count++;
+		scatter_back_color_dark_mode = false;
 	}
 
 
@@ -871,7 +912,7 @@ public:
 		plot_count++;
 	}
 
-	void multi_histgram(Matrix<dnn_double>&X, std::vector<std::string>& headers, std::vector<int>& residual_flag, bool capture = false, int win_x = -1, int win_y = -1, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
+	void multi_histgram(std::string& imagefile, Matrix<dnn_double>&X, std::vector<std::string>& headers, std::vector<int>& residual_flag, bool capture = false, int win_x = -1, int win_y = -1, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
 	{
 		script_reopen();
 		if (script == NULL) return;
@@ -887,8 +928,8 @@ public:
 		}
 		if (capture)
 		{
-			fprintf(script, "set term png size %d,%d\n", win_x, win_y);
-			fprintf(script, "set output \"multi_histgram.png\"\n");
+			fprintf(script, "set term pngcairo size %d,%d\n", win_x, win_y);
+			fprintf(script, "set output \"%s\"\n", imagefile.c_str());
 		}
 		fprintf(script, "set datafile separator \",\"\n");
 		fprintf(script, "set multiplot layout %d,%d\n", (int)sqrt(X.n)+1, (int)sqrt(X.n) + 1);
@@ -992,13 +1033,22 @@ public:
 	void draw(int pause=1000)
 	{
 		if (script == NULL) return;
-		if (save_image)
+		//if (save_image)
+		//{
+		//	fprintf(script, "set out \"%s\"\n", save_image_name.c_str());
+		//	fprintf(script, "replot\n");
+		//}
+		//else
 		{
-			fprintf(script, "set out \"%s\"\n", save_image_name.c_str());
-			fprintf(script, "replot\n");
-		}
-		else
-		{
+			if (capture_image)
+			{
+				pause = 0;
+				fprintf(script, "set term windows size %d,%d\n", capture_winsize[0], capture_winsize[1]);
+				fprintf(script, "set term pngcairo size %d,%d\n", capture_winsize[0], capture_winsize[1]);
+				fprintf(script, "set output \"%s\"\n", save_image_name.c_str());
+				fprintf(script, "replot\n");
+			}
+
 			fprintf(script, "pause %d\n", pause);
 			//fprintf(script, "pause -1\n");
 			//fprintf(script, "mouse keypress\n");
@@ -1006,6 +1056,8 @@ public:
 		close();
 		convf(script_name.c_str());
 		system((gnuplot_exe_path + " " + script_name).c_str());
+
+		capture_image = false;
 	}
 
 	void newplot()
@@ -1014,6 +1066,7 @@ public:
 		close();
 		convf(script_name.c_str());
 		system((gnuplot_exe_path + " " + script_name).c_str());
+		capture_image = false;
 	}
 
 	void Heatmap(Matrix<dnn_double>&X, std::vector<std::string>& headers, std::vector<std::string>& rows, char* palette = "rgbformulae 21,22,23", int maxpoint = -1)

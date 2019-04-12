@@ -17,6 +17,7 @@ int main(int argc, char** argv)
 	Matrix<dnn_double> y;
 	std::vector<std::string> header_str;
 
+	bool back_color_dark = false;
 	bool capture = false;
 	int win_size[2] = { -1,-1 };
 	int grid = 30;
@@ -76,6 +77,10 @@ int main(int argc, char** argv)
 		if (argname == "--capture") {
 			capture = atoi(argv[count + 1]) == 0 ? false : true;
 		}
+		else
+		if (argname == "--back_color_dark") {
+			back_color_dark = atoi(argv[count + 1]) == 0 ? false : true;
+		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
@@ -118,7 +123,7 @@ int main(int argc, char** argv)
 	if ( col1 < 0 && col2 < 0)
 	{
 #ifdef USE_GNUPLOT
-		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 5, false);
+		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 5);
 		if (capture)
 		{
 			plot1.multi_scatter(T, header_names, true, win_size[0], win_size[1], 2, palette);
@@ -178,10 +183,13 @@ int main(int argc, char** argv)
 			std::vector<std::string> line_header_names(1);
 			line_header_names[0] = "linear regression";
 			
-			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6, false);
+			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6);
+			
+			plot1.set_capture(win_size, std::string("scatter.png"));
+
 			plot1.set_label(0.5, 0.85, 1, text);
 			plot1.plot_lines2(x, line_header_names);
-
+			plot1.scatter_back_color_dark_mode = back_color_dark;
 			plot1.scatter(T, col1, col2, pointsize, grid, header_names, 5, palette);
 
 			if (ellipse)
@@ -192,8 +200,11 @@ int main(int argc, char** argv)
 		}
 		else
 		{
-			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6, false);
+			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6);
+			plot1.set_capture(win_size, std::string("scatter.png"));
+
 			plot1.set_label(0.5, 0.5, 1, text);
+			plot1.scatter_back_color_dark_mode = back_color_dark;
 			plot1.scatter(T, col1, col2, pointsize, grid, header_names, 5, palette);
 			if (ellipse)
 			{

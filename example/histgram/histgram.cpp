@@ -122,7 +122,9 @@ int main(int argc, char** argv)
 
 #ifdef USE_GNUPLOT
 	{
-		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6, false);
+		int win_size[2] = { 640 * 2,480 * 2 };
+		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6);
+		plot1.set_capture(win_size, std::string("histogram.png"));
 		plot1.plot_histogram(Histogram(X,N), (char*)header_names[col1].c_str(), shapiro_wilk_test);
 		plot1.draw();
 	}

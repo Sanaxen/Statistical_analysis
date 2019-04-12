@@ -312,38 +312,44 @@ public:
 		return y;
 	}
 
-	void report(std::vector<std::string>& header, double α = 0.05)
+	void report(std::string& filename, std::vector<std::string>& header, double α = 0.05)
 	{
-		printf("--------------------------------------------------------------------\n");
-		printf("SE(残差)                :%f\n", se);
-		printf("SR(変動平方和)          :%f\n", sr);
-		printf("ST(SE+SR)               :%f\n", st);
-		printf("R^2(決定係数(寄与率))   :%f\n", r2);
-		printf("重相関係数              :%f\n", sqrt(r2));
-		printf("自由度調整済寄与率(補正):%f\n", r_2);
-		printf("不偏分散(平均平方)       VE:%f VR:%f\n", ve, vr);
-		printf("AIC                     :%f\n\n", AIC);
+		FILE* fp = stdout;
+		if (filename != "")
+		{
+			fp = fopen(filename.c_str(), "w");
+			if (!fp) return;
+		}
+		fprintf(fp, "--------------------------------------------------------------------\n");
+		fprintf(fp, "SE(残差)                :%f\n", se);
+		fprintf(fp, "SR(変動平方和)          :%f\n", sr);
+		fprintf(fp, "ST(SE+SR)               :%f\n", st);
+		fprintf(fp, "R^2(決定係数(寄与率))   :%f\n", r2);
+		fprintf(fp, "重相関係数              :%f\n", sqrt(r2));
+		fprintf(fp, "自由度調整済寄与率(補正):%f\n", r_2);
+		fprintf(fp, "不偏分散(平均平方)       VE:%f VR:%f\n", ve, vr);
+		fprintf(fp, "AIC                     :%f\n\n", AIC);
 
 		F_distribution f_distribution(A.n - 1, A.m - A.n);
 		double f_pdf = f_distribution.p_value(α);
 
 		if (f_distribution.status != 0)
 		{
-			printf("f_distribution status:%d\n", f_distribution.status);
+			fprintf(fp, "f_distribution status:%d\n", f_distribution.status);
 		}
-		printf("F値:%f > F(%.2f)_%d,%d=[%.2f]", F_value, α, A.n - 1, A.m - A.n, f_pdf);
+		fprintf(fp, "F値:%f > F(%.2f)_%d,%d=[%.2f]", F_value, α, A.n - 1, A.m - A.n, f_pdf);
 		if (F_value > f_pdf)
 		{
-			printf("=>予測に有効であると結論できる\n");
+			fprintf(fp, "=>予測に有効であると結論できる\n");
 		}
 		else
 		{
-			printf("=>予測に有効とは言えないと結論できる\n");
+			fprintf(fp, "=>予測に有効とは言えないと結論できる\n");
 		}
 
 		Student_t_distribution t_distribution(A.m - A.n - 1);
 
-		printf("\n係数・定数項の推定(信頼幅:%.2f%%)\n", 100 * (1 - α));
+		fprintf(fp, "\n係数・定数項の推定(信頼幅:%.2f%%)\n", 100 * (1 - α));
 		//printf("(bias)%f ", bias - t_distribution.p_value(α / 2.0)*se_ii[A.n]);
 		//printf("%f\n", bias + t_distribution.p_value(α / 2.0)*se_ii[A.n]);
 		//for (int i = 0; i < A.n; i++)
@@ -352,84 +358,84 @@ public:
 		//	printf("%f\n", les.x(i, 0) + t_distribution.p_value(α / 2.0)*se_ii[i]);
 		//}
 
-		printf("---------------------------------------------------------------------------------------------\n");
-		printf("               係数     標準誤差    t値      p値    下限(%.1f%%)  上限(%.1f%%)  係数が0の可能性\n", 100 * (1 - α), 100 * (1 - α));
-		printf("---------------------------------------------------------------------------------------------\n");
-		printf("           %10.4f", bias);
-		printf("%10.4f", se_ii[A.n]);
-		printf("%10.4f", t_value[A.n]);
-		printf("%10.4f", p_value[A.n]);
+		fprintf(fp, "---------------------------------------------------------------------------------------------\n");
+		fprintf(fp, "               係数     標準誤差    t値      p値    下限(%.1f%%)  上限(%.1f%%)  係数が0の可能性\n", 100 * (1 - α), 100 * (1 - α));
+		fprintf(fp, "---------------------------------------------------------------------------------------------\n");
+		fprintf(fp, "           %10.4f", bias);
+		fprintf(fp, "%10.4f", se_ii[A.n]);
+		fprintf(fp, "%10.4f", t_value[A.n]);
+		fprintf(fp, "%10.4f", p_value[A.n]);
 
 		double min_c = bias - t_distribution.p_value(α / 2.0)*se_ii[A.n];
 		double max_c = bias + t_distribution.p_value(α / 2.0)*se_ii[A.n];
-		printf("%10.4f", min_c);
-		printf("%10.4f", max_c);
-		if (min_c*max_c < 0.0) printf("          ○\n");
-		else printf("          ×\n");
+		fprintf(fp, "%10.4f", min_c);
+		fprintf(fp, "%10.4f", max_c);
+		if (min_c*max_c < 0.0) fprintf(fp, "          ○\n");
+		else fprintf(fp, "          ×\n");
 
 		for (int i = 0; i < A.n; i++)
 		{
-			printf("%-10.8s %10.4f", header[i + 1].c_str(), les.coef(i, 0));
-			printf("%10.4f", se_ii[i]);
-			printf("%10.4f", t_value[i]);
-			printf("%10.4f", p_value[i]);
+			fprintf(fp, "%-10.8s %10.4f", header[i + 1].c_str(), les.coef(i, 0));
+			fprintf(fp, "%10.4f", se_ii[i]);
+			fprintf(fp, "%10.4f", t_value[i]);
+			fprintf(fp, "%10.4f", p_value[i]);
 
 			double min_c = les.coef(i, 0) - t_distribution.p_value(α / 2.0)*se_ii[i];
 			double max_c = les.coef(i, 0) + t_distribution.p_value(α / 2.0)*se_ii[i];
 
-			printf("%10.4f", min_c);
-			printf("%10.4f", max_c);
-			if (min_c*max_c < 0.0) printf("          ○\n");
-			else printf("          ×\n");
+			fprintf(fp, "%10.4f", min_c);
+			fprintf(fp, "%10.4f", max_c);
+			if (min_c*max_c < 0.0) fprintf(fp, "          ○\n");
+			else fprintf(fp, "          ×\n");
 		}
-		printf("--------------------------------------------------------------------------------------------\n");
+		fprintf(fp, "--------------------------------------------------------------------------------------------\n");
 
-		printf("※p値が小さいほど係数はゼロでは無いと考えられる．\n");
-		printf("※AICの値は小さいほど当てはまりがよいとされている\n");
-		printf("※データ点外で線形の関係が成り立つ保証はありません。\n\n");
+		fprintf(fp, "※p値が小さいほど係数はゼロでは無いと考えられる．\n");
+		fprintf(fp, "※AICの値は小さいほど当てはまりがよいとされている\n");
+		fprintf(fp, "※データ点外で線形の関係が成り立つ保証はありません。\n\n");
 
 		if (r2 <= 0.6)
 		{
-			printf("決定係数は0.6以下なので目的変数をうまく説明できていないかも知れません。\n");
+			fprintf(fp, "決定係数は0.6以下なので目的変数をうまく説明できていないかも知れません。\n");
 		}
 		if (r2 > 0.6 && r2 < 0.7)
 		{
-			printf("決定係数は0.6を超えているので目的変数を比較的よく説明できています。\n");
+			fprintf(fp, "決定係数は0.6を超えているので目的変数を比較的よく説明できています。\n");
 		}
 		if (r2 >= 0.7 && r2 < 0.9)
 		{
-			printf("決定係数は0.7以上なので目的変数を良く説明できています。\n");
+			fprintf(fp, "決定係数は0.7以上なので目的変数を良く説明できています。\n");
 		}
 		if (r2 >= 0.9)
 		{
-			printf("決定係数は0.9以上なので目的変数を非常に良く説明できています。\n");
+			fprintf(fp, "決定係数は0.9以上なので目的変数を非常に良く説明できています。\n");
 		}
-		printf("※決定係数は説明変数を追加すれば，それが何であれ(無意味なものでも)必ず増加する点に注意して下さい\n");
-		printf("\n");
+		fprintf(fp, "※決定係数は説明変数を追加すれば，それが何であれ(無意味なものでも)必ず増加する点に注意して下さい\n");
+		fprintf(fp, "\n");
 
 		if (A.n > 1)
 		{
 			bool war = false;
 			Matrix<dnn_double>& cor = A.Cor();
 
-			printf("[相関係数(多重共線性の可能性評価)]\n");
-			printf("    %-10.8s", "");
+			fprintf(fp, "[相関係数(多重共線性の可能性評価)]\n");
+			fprintf(fp, "    %-10.8s", "");
 			for (int j = 0; j < A.n; j++)
 			{
-				printf("%-10.8s", header[j + 1].c_str());
+				fprintf(fp, "%-10.8s", header[j + 1].c_str());
 			}
-			printf("\n");
-			printf("--------------------------------------------------------------------------------------------\n");
+			fprintf(fp, "\n");
+			fprintf(fp, "--------------------------------------------------------------------------------------------\n");
 			for (int i = 0; i < A.n; i++)
 			{
-				printf("%-10.8s", header[i + 1].c_str());
+				fprintf(fp, "%-10.8s", header[i + 1].c_str());
 				for (int j = 0; j < A.n; j++)
 				{
-					printf("%10.4f", cor(i, j));
+					fprintf(fp, "%10.4f", cor(i, j));
 				}
-				printf("\n");
+				fprintf(fp, "\n");
 			}
-			printf("--------------------------------------------------------------------------------------------\n");
+			fprintf(fp, "--------------------------------------------------------------------------------------------\n");
 
 			for (int i = 0; i < cor.m; i++)
 			{
@@ -439,31 +445,31 @@ public:
 					{
 
 						war = true;
-						printf("%-10.10s & %-10.10s", header[i + 1].c_str(), header[j + 1].c_str());
-						printf(" => %10.4f multicollinearity(多重共線性)の疑いがあります\n", cor(i, j));
+						fprintf(fp, "%-10.10s & %-10.10s", header[i + 1].c_str(), header[j + 1].c_str());
+						fprintf(fp, " => %10.4f multicollinearity(多重共線性)の疑いがあります\n", cor(i, j));
 					}
 					if (fabs(cor(i, j)) >= 0.6 && fabs(cor(i, j)) < 0.8)
 					{
 						war = true;
-						printf("%-10.10s & %-10.10s", header[i + 1].c_str(), header[j + 1].c_str());
-						printf(" => %10.4f multicollinearity(多重共線性)の疑いがかなりあります\n", cor(i, j));
+						fprintf(fp, "%-10.10s & %-10.10s", header[i + 1].c_str(), header[j + 1].c_str());
+						fprintf(fp, " => %10.4f multicollinearity(多重共線性)の疑いがかなりあります\n", cor(i, j));
 					}
 					if (fabs(cor(i, j)) >= 0.8)
 					{
 						war = true;
-						printf("%-10.10s & %-10.10s", header[i + 1].c_str(), header[j + 1].c_str());
-						printf(" => %10.4f multicollinearity(多重共線性)の強い疑いがあります\n", cor(i, j));
+						fprintf(fp, "%-10.10s & %-10.10s", header[i + 1].c_str(), header[j + 1].c_str());
+						fprintf(fp, " => %10.4f multicollinearity(多重共線性)の強い疑いがあります\n", cor(i, j));
 					}
 				}
 			}
 			if (war)
 			{
-				printf("multicollinearity(多重共線性)の疑いがある説明変数がある場合は\n");
-				printf("どちらか一方を外して再度分析することで、多重共線性を解消する場合があります。\n");
+				fprintf(fp, "multicollinearity(多重共線性)の疑いがある説明変数がある場合は\n");
+				fprintf(fp, "どちらか一方を外して再度分析することで、多重共線性を解消する場合があります。\n");
 			}
 			else
 			{
-				printf("multicollinearity(多重共線性)の疑いがある説明変数は無さそうです\n");
+				fprintf(fp, "multicollinearity(多重共線性)の疑いがある説明変数は無さそうです\n");
 			}
 
 #ifdef USE_GRAPHVIZ_DOT
@@ -543,27 +549,27 @@ public:
 				}
 			}
 
-			printf("\n");
-			printf("多重共線性の深刻さを定量化した評価");
-			printf("[分散拡大係数(variance inflation factor)VIF(多重共線性の可能性評価)]\n");
-			printf("    %-10.8s", "");
+			fprintf(fp, "\n");
+			fprintf(fp, "多重共線性の深刻さを定量化した評価");
+			fprintf(fp, "[分散拡大係数(variance inflation factor)VIF(多重共線性の可能性評価)]\n");
+			fprintf(fp, "    %-10.8s", "");
 			for (int j = 0; j < A.n; j++)
 			{
-				printf("%-10.8s", header[j + 1].c_str());
+				fprintf(fp, "%-10.8s", header[j + 1].c_str());
 			}
-			printf("\n");
-			printf("--------------------------------------------------------------------------------------------\n");
+			fprintf(fp, "\n");
+			fprintf(fp, "--------------------------------------------------------------------------------------------\n");
 			for (int i = 0; i < A.n; i++)
 			{
-				printf("%-10.8s", header[i + 1].c_str());
+				fprintf(fp, "%-10.8s", header[i + 1].c_str());
 				for (int j = 0; j < A.n; j++)
 				{
-					if (i == j) printf("%10.8s", "-----");
-					else printf("%10.4f", vif(i, j));
+					if (i == j) fprintf(fp, "%10.8s", "-----");
+					else fprintf(fp, "%10.4f", vif(i, j));
 				}
-				printf("\n");
+				fprintf(fp, "\n");
 			}
-			printf("--------------------------------------------------------------------------------------------\n");
+			fprintf(fp, "--------------------------------------------------------------------------------------------\n");
 
 			bool war2 = false;
 			for (int i = 0; i < cor.m; i++)
@@ -573,25 +579,33 @@ public:
 					if (fabs(cor(i, j)) >= 10)
 					{
 						war2 = true;
-						printf("%-10.10s & %-10.10s", header[i + 1].c_str(), header[j + 1].c_str());
-						printf(" => %10.4f multicollinearity(多重共線性)の強い疑いがあります\n", cor(i, j));
+						fprintf(fp, "%-10.10s & %-10.10s", header[i + 1].c_str(), header[j + 1].c_str());
+						fprintf(fp, " => %10.4f multicollinearity(多重共線性)の強い疑いがあります\n", cor(i, j));
 					}
 				}
 			}
 			if (war2)
 			{
-				printf("multicollinearity(多重共線性)の疑いがある説明変数がある場合は\n");
-				printf("どちらか一方を外して再度分析することで、多重共線性を解消する場合があります。\n");
+				fprintf(fp, "multicollinearity(多重共線性)の疑いがある説明変数がある場合は\n");
+				fprintf(fp, "どちらか一方を外して再度分析することで、多重共線性を解消する場合があります。\n");
 			}
 			else
 			{
-				printf("VIF値からはmulticollinearity(多重共線性)の疑いがある説明変数は無さそうです\n");
+				fprintf(fp, "VIF値からはmulticollinearity(多重共線性)の疑いがある説明変数は無さそうです\n");
 			}
 
 			if (war || war2)
 			{
-				printf("multicollinearity(多重共線性)が解消できない場合はLasso回帰も試して下さい。\n");
+				fprintf(fp, "multicollinearity(多重共線性)が解消できない場合はLasso回帰も試して下さい。\n");
 			}
+		}
+		if (fp == stdout || fp == NULL || filename == "")
+		{
+			/* empty */
+		}
+		else
+		{
+			if (fp) fclose(fp);
 		}
 	}
 };

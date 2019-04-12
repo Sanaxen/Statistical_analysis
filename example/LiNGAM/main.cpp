@@ -78,7 +78,7 @@ int main(int argc, char** argv)
 	double min_delete = -1;
 	bool error_distr = false;
 	int error_distr_size[2] = { 1,1 };
-	bool capture = false;
+	bool capture = true;
 	bool sideways = false;
 	int diaglam_size = 20;
 	char* output_diaglam_type = "png";
@@ -88,55 +88,57 @@ int main(int argc, char** argv)
 		std::string argname(argv[count]);
 		if (argname == "--csv") {
 			continue;
-		}else
-		if (argname == "--header") {
-			continue;
-		}else
-		if (argname == "--col") {
-			continue;
 		}
-		else if (argname == "--iter") {
-			max_ica_iteration = atoi(argv[count + 1]);
-		}
-		else if (argname == "--tol") {
-			ica_tolerance = atof(argv[count + 1]);
-		}
-		else if (argname == "--lasso") {
-			lasso = atof(argv[count + 1]);
-		}
-		else if (argname == "--sideways") {
-			sideways = atoi(argv[count + 1]) != 0 ? true : false;
-		}
-		else if (argname == "--output_diaglam_type") {
-			output_diaglam_type = argv[count + 1];
-		}
-		else if (argname == "--diaglam_size") {
-			diaglam_size = atoi(argv[count + 1]);
-		}
-		else if (argname == "--x_var") {
-			x_var.push_back(argv[count + 1]);
-		}
-		else if (argname == "--error_distr") {
-			error_distr = atoi(argv[count + 1]) != 0 ? true : false;
-		}
-		else if (argname == "--capture") {
-			capture = atoi(argv[count + 1]) == 0 ? false : true;
-		}
-		else if (argname == "--error_distr_size") {
-			sscanf(argv[count + 1], "%d,%d", error_distr_size, error_distr_size + 1);
-		}
-		else if (argname == "--min_cor_delete") {
-			min_cor_delete = atof(argv[count + 1]);
-		}
-		else if (argname == "--min_delete") {
-			min_delete = atof(argv[count + 1]);
-		}
+		else
+			if (argname == "--header") {
+				continue;
+			}
+			else
+				if (argname == "--col") {
+					continue;
+				}
+				else if (argname == "--iter") {
+					max_ica_iteration = atoi(argv[count + 1]);
+				}
+				else if (argname == "--tol") {
+					ica_tolerance = atof(argv[count + 1]);
+				}
+				else if (argname == "--lasso") {
+					lasso = atof(argv[count + 1]);
+				}
+				else if (argname == "--sideways") {
+					sideways = atoi(argv[count + 1]) != 0 ? true : false;
+				}
+				else if (argname == "--output_diaglam_type") {
+					output_diaglam_type = argv[count + 1];
+				}
+				else if (argname == "--diaglam_size") {
+					diaglam_size = atoi(argv[count + 1]);
+				}
+				else if (argname == "--x_var") {
+					x_var.push_back(argv[count + 1]);
+				}
+				else if (argname == "--error_distr") {
+					error_distr = atoi(argv[count + 1]) != 0 ? true : false;
+				}
+				else if (argname == "--capture") {
+					capture = atoi(argv[count + 1]) == 0 ? false : true;
+				}
+				else if (argname == "--error_distr_size") {
+					sscanf(argv[count + 1], "%d,%d", error_distr_size, error_distr_size + 1);
+				}
+				else if (argname == "--min_cor_delete") {
+					min_cor_delete = atof(argv[count + 1]);
+				}
+				else if (argname == "--min_delete") {
+					min_delete = atof(argv[count + 1]);
+				}
 
-		else {
-			std::cerr << "Invalid parameter specified - \"" << argname << "\""
-				<< std::endl;
-			return -1;
-		}
+				else {
+					std::cerr << "Invalid parameter specified - \"" << argname << "\""
+						<< std::endl;
+					return -1;
+				}
 
 	}
 	std::vector<std::string> header_names;
@@ -274,7 +276,7 @@ int main(int argc, char** argv)
 				if (stat == 0)
 				{
 					char buf[256];
-					sprintf(buf,"w:%-4.4f p_value:%-.16g", shapiro.get_w(), shapiro.p_value());
+					sprintf(buf, "w:%-4.4f p_value:%-.16g", shapiro.get_w(), shapiro.p_value());
 					shapiro_wilk_values.push_back(buf);
 					//printf("%s\n", buf);
 
@@ -292,19 +294,56 @@ int main(int argc, char** argv)
 			printf("shapiro_wilk test end\n\n");
 		}
 #ifdef USE_GNUPLOT
-		gnuPlot plot1(std::string(GNUPLOT_PATH), 3, false);
+		gnuPlot plot1(std::string(GNUPLOT_PATH), 3);
 		int win_x = error_distr_size[0];
 		int win_y = error_distr_size[1];
-		plot1.multi_histgram(r, header_names, residual_flag, capture, win_x, win_y);
+		plot1.multi_histgram(std::string("causal_multi_histgram.png"), r, header_names, residual_flag, capture, win_x, win_y);
 		if (capture)
 			plot1.draw(0);
-		else 
+		else
 			plot1.draw();
 
 #endif
 	}
+
+	if (x_var.size())
+	{
+		LiNGAM.linear_regression_var.push_back(x_var[0]);
+	}
 	LiNGAM.digraph(header_names, x_var, residual_flag, "digraph.txt", sideways, diaglam_size, output_diaglam_type);
 	LiNGAM.report(header_names);
 
+	{
+		std::vector<std::string>& var = LiNGAM.linear_regression_var;
 
+		std::vector<int> var_index;
+		if (var.size())
+		{
+			var_index.resize(var.size());
+			for (int i = 0; i < var.size(); i++)
+			{
+				for (int j = 0; j < header_names.size(); j++)
+				{
+					if (var[i] == header_names[j])
+					{
+						var_index[i] = j;
+					}
+					else if ("\"" + var[i] + "\"" == header_names[j])
+					{
+						var_index[i] = j;
+					}
+				}
+			}
+		}
+
+		FILE* fp = fopen("select_variables.dat", "w");
+		if (fp)
+		{
+			for (int i = 0; i < var_index.size(); i++)
+			{
+				fprintf(fp, "%d,%s\n", var_index[i], var[i].c_str());
+			}
+			fclose(fp);
+		}
+	}
 }

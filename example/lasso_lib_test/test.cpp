@@ -123,7 +123,7 @@ int main(int argc, char** argv)
 		LassoRegression lasso_my(1.0, 1000, 0.0001);
 
 		lasso_my.fit(X, y);
-		lasso_my.report(X, header_str);
+		lasso_my.report(std::string(""), X, header_str);
 
 		printf("scikit-learn\n");
 		printf("22.5328063241\n"
@@ -135,7 +135,7 @@ int main(int argc, char** argv)
 		LassoRegression lasso_my2(0.0, 1000, 0.0001);
 
 		lasso_my2.fit(X, y);
-		lasso_my2.report(X, header_str);
+		lasso_my2.report(std::string(""), X, header_str);
 		printf("scikit-learn\n");
 		printf("22.5328063241\n"
 			"[-0.92906457  1.08263896  0.14103943  0.68241438 - 2.05875361  2.67687661\n"
@@ -160,7 +160,7 @@ int main(int argc, char** argv)
 			plot1.plot_lines(yy2, std::vector<std::string>());
 			plot1.draw();
 
-			plot1 = gnuPlot(std::string(GNUPLOT_PATH), 4, true);
+			plot1 = gnuPlot(std::string(GNUPLOT_PATH), 4);
 			plot1.plot_lines(yy, std::vector<std::string>());
 			plot1.plot_lines(yy2, std::vector<std::string>());
 			plot1.draw();
@@ -288,7 +288,7 @@ int main(int argc, char** argv)
 		}
 		solver->y_var_idx = y_var_idx;
 		solver->fit(X, y);
-		solver->report(X, header_names, &y);
+		solver->report(std::string("regularization.rep"), X, header_names, &y);
 
 		double auto_search_aic = 0;
 		double auto_search_l1 = 0;

@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 
 #ifdef USE_GNUPLOT
 	{
-		gnuPlot plot1(std::string(GNUPLOT_PATH), 0, false);
+		gnuPlot plot1(std::string(GNUPLOT_PATH), 0);
 
 		plot1.plot_lines(X1, std::vector<std::string>());
 		plot1.plot_lines(X2, std::vector<std::string>());
