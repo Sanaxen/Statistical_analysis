@@ -37,11 +37,11 @@ int main()
 	header_names.push_back(name);
 
 
-	gnuPlot plot1(std::string(GNUPLOT_PATH), 3, false);
+	gnuPlot plot1(std::string(GNUPLOT_PATH), 3);
 	plot1.plot_lines(xx, header_names);
 	plot1.draw();
 
-	gnuPlot plot2(std::string(GNUPLOT_PATH), 4, false);
+	gnuPlot plot2(std::string(GNUPLOT_PATH), 4);
 	shapiro.test(xx);
 	plot2.plot_histogram(Histogram(xx, 40), "", (shapiro.p_value() > 0.05) ? 1 : 0);
 	plot2.draw();
@@ -60,7 +60,7 @@ int main()
 	printf("p value          :%f\n", chi_pdf);
 
 #ifdef USE_GNUPLOT
-	gnuPlot plot3(std::string(GNUPLOT_PATH), 5, false);
+	gnuPlot plot3(std::string(GNUPLOT_PATH), 5);
 	plot3.plot_histogram(Histogram(xx, 40), "", (shapiro.p_value() > 0.05) ? 1 : 0);
 
 #endif

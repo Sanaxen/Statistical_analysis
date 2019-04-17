@@ -59,7 +59,7 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--auto") {
-			auto_search = (atoi(argv[count + 1]) != 0) ? true : false;
+			auto_search = atoi(argv[count + 1]);
 			continue;
 		}
 		else if (argname == "--solver") {
@@ -294,9 +294,13 @@ int main(int argc, char** argv)
 		double auto_search_l1 = 0;
 		double auto_search_l2 = 0;
 
+		std::vector<double> aic_list;
+		std::vector<double> l1_list;
+		std::vector<double> l2_list;
+		if (auto_search < 2) auto_search = 3;
 		if (auto_search)
 		{
-			int kmax = 4;
+			int kmax = auto_search;
 			double l1_max = 10.0;
 			double l2_max = 10.0;
 			double l1_min = 0.0;
@@ -319,6 +323,7 @@ int main(int argc, char** argv)
 
 				int m = 0;
 				if (solver_name == "elasticnet") m = n;
+
 #pragma omp parallel for
 				for (int i = 0; i <= n; i++)
 				{
@@ -344,6 +349,19 @@ int main(int argc, char** argv)
 						l2(i, j) = l2_min + stp2*j;
 
 						if (solver) delete solver;
+					}
+				}
+
+				aic_list.clear();
+				l1_list.clear();
+				l2_list.clear();
+				for (int i = 0; i <= n; i++)
+				{
+					for (int j = 0; j <= m; j++)
+					{
+						aic_list.push_back(aic(i, j));
+						l1_list.push_back(l1(i, j));
+						l2_list.push_back(l2(i, j));
 					}
 				}
 
@@ -373,8 +391,92 @@ int main(int argc, char** argv)
 				auto_search_aic = aic(id1, id2);
 				auto_search_l1 = l1(id1, id2);
 				auto_search_l2 = l2(id1, id2);
-
 			}
+
+			{
+				FILE* fp = fopen("AIC_list.dat", "w");
+				if (fp)
+				{
+					for (int i = 0; i < aic_list.size(); i++)
+					{
+						fprintf(fp, "%.4f,%.4f,%.4f\n",
+							aic_list[i], l1_list[i], l2_list[i]);
+					}
+					fclose(fp);
+				}
+#ifdef USE_GNUPLOT
+				Matrix<dnn_double> aic_mat(aic_list);
+				Matrix<dnn_double> l1_mat(l1_list);
+				Matrix<dnn_double> l2_mat(l2_list);
+
+				char text[128];
+				if (solver_name == "lasso")
+				{
+					sprintf(text, "AIC:%.2f L1:%.3f", auto_search_aic,auto_search_l1);
+				}
+				if (solver_name == "ridge")
+				{
+					sprintf(text, "AIC:%.2f L2:%.3f", auto_search_aic, auto_search_l2);
+				}
+				if (solver_name == "elasticnet")
+				{
+					sprintf(text, "AIC:%.2f L1:%.3f L2:%.3f", auto_search_aic, auto_search_l1, auto_search_l2);
+				}
+				std::vector<std::string> header_names_tmp;
+				Matrix<dnn_double> T;
+				header_names_tmp.push_back("AIC");
+				if (solver_name == "lasso" || solver_name == "elasticnet")
+				{
+					sprintf(text, "AIC:%.2f L1:%.3f", auto_search_aic, auto_search_l1);
+					header_names_tmp.push_back("L1");
+					T = aic_mat;
+					T = T.appendCol(l1_mat);
+				}
+				if (solver_name == "ridge")
+				{
+					sprintf(text, "AIC:%.2f L2:%.3f", auto_search_aic, auto_search_l2);
+					header_names_tmp.push_back("L2");
+					T = aic_mat;
+					T = T.appendCol(l2_mat);
+				}
+
+				int win_size[2] = { 640 * 3, 480 * 3 };
+				char* palette = "rgbformulae 22, 13, -31";
+				int grid = 30;
+				float pointsize = 1.0;
+
+				if (solver_name == "lasso" || solver_name == "ridge" || solver_name == "elasticnet")
+				{
+
+					//palette = "defined"; //"rgbformulae 7,5,15";
+					gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 8);
+					plot1.set_label(0.8, 0.95, 1, text);
+					plot1.scatter_density_mode = false;
+					plot1.set_palette(palette);
+					plot1.set_capture(win_size, std::string("AIC_list.png"));
+					plot1.scatter(T, 1, 0, pointsize, grid, header_names_tmp, 5, palette);
+					plot1.draw();
+				}
+				if (solver_name == "elasticnet")
+				{
+					sprintf(text, "AIC:%.2f L2:%.3f", auto_search_aic, auto_search_l2);
+					header_names_tmp.clear();
+					header_names_tmp.push_back("AIC");
+					header_names_tmp.push_back("L2");
+
+					T = aic_mat;
+					T = T.appendCol(l2_mat);
+					gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 9);
+					plot1.set_label(0.8, 0.95, 1, text);
+					plot1.scatter_density_mode = false;
+					plot1.set_palette(palette);
+					plot1.set_capture(win_size, std::string("AIC_list2.png"));
+					plot1.scatter(T, 1, 0, pointsize, grid, header_names_tmp, 5, palette);
+					plot1.draw();
+				}
+#endif		
+			}
+
 			FILE* fp = fopen("auto_search.dat", "w");
 			if (fp)
 			{

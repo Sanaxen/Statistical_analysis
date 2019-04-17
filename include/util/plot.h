@@ -136,6 +136,7 @@ public:
 
 class gnuPlot
 {
+	bool multiplot = false;
 	std::string gnuplot_exe_path;
 	int id;
 	FILE* script = NULL;
@@ -157,6 +158,7 @@ class gnuPlot
 	bool capture_image = false;
 	int capture_winsize[2] = { 640,480 };
 public:
+	bool histogram_gradation = true;
 	std::string save_image_name = "image.png";
 	std::string script_name = "plot.plt";
 	std::string data_name = "plot.dat";
@@ -235,7 +237,10 @@ public:
 	{
 		script_reopen();
 		if (script == NULL) return;
-		fprintf(script, "set palette %s\n", palette);
+		if (palette && *palette != '\0')
+		{
+			fprintf(script, "set palette %s\n", palette);
+		}
 	}
 	void set_title(char* title)
 	{
@@ -496,7 +501,7 @@ public:
 		plot_count++;
 	}
 
-	void multi_scatter(Matrix<dnn_double>&X, std::vector<std::string>& headers, bool capture=false, int win_x=-1, int win_y=-1, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
+	void multi_scatter(Matrix<dnn_double>&X, std::vector<std::string>& headers, int grid, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
 	{
 		script_reopen();
 		if (script == NULL) return;
@@ -506,21 +511,13 @@ public:
 		fprintf(script, "set term png size 3024,3024\n");
 		fprintf(script, "set output \"multi_scatter.png\"\n");
 		*/
-		if (win_x > 10 && win_y >= 10)
-		{
-			fprintf(script, "set term windows size %d,%d\n", win_x, win_y);
-		}
-		if (capture)
-		{
-			fprintf(script, "set term pngcairo size %d,%d\n", win_x, win_y);
-			fprintf(script, "set output \"multi_scatter.png\"\n");
-		}
 
 		//if (scatter_back_color_dark_mode)
 		//{
 		//	back_color_dark();
 		//}
 
+		multiplot = true;
 		fprintf(script, "set datafile separator \",\"\n");
 		fprintf(script, "set multiplot layout %d,%d\n", X.n, X.n);
 		fprintf(script, "set nokey\n");
@@ -529,6 +526,7 @@ public:
 		if (palette)
 		{
 			set_palette(palette);
+			fprintf(script, "unset colorbox\n");
 		}
 
 
@@ -582,14 +580,39 @@ public:
 					sprintf(histogram_name, "plot_(%d)%d_hist.dat", plot_count, i);
 					h.print_csv(histogram_name);
 
+					fprintf(script, "set xrange[*:*]\n");
+					fprintf(script, "set yrange[*:*]\n");
 					fprintf(script, "set style fill solid border  lc rgb \"dark-gray\"\n");
-					fprintf(script, "plot '%s' using 1:2 %s with boxes linewidth %.1f %s\n",
-						histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/, linecolor.c_str());
-
+					
+					if (palette)
+					{
+						//fprintf(script, "plot '%s' using 1:2:2 %s with boxes linewidth %.1f pal\n",
+						//	histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/);
+						fprintf(script, "plot '%s' using 1:2 %s with boxes linewidth %.1f %s\n",
+							histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/, linecolor.c_str());
+					}
+					else
+					{
+						fprintf(script, "plot '%s' using 1:2 %s with boxes linewidth %.1f %s\n",
+							histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/, linecolor.c_str());
+					}
 					continue;
 				}
+
+#if 10
+				//fprintf(script, "set style fill  transparent solid 0.85 noborder\n");
+				scatter(X, j, i, pointsize, grid, headers, 5, palette);
+#else
 				fprintf(script, "set xlabel %s\n", x.c_str());
 				fprintf(script, "set ylabel %s\n", y.c_str());
+				double max_x = X.Col(j).Max();
+				double min_x = X.Col(j).Min();
+				double max_y = X.Col(i).Max();
+				double min_y = X.Col(i).Min();
+				double rate_x = (max_x - min_x) * 0.1 + 0.001;
+				double rate_y = (max_y - min_y) * 0.1 + 0.001;
+				fprintf(script, "set xrange[%.3f:%.3f]\n", min_x - rate_x, max_x + rate_x);
+				fprintf(script, "set yrange[%.3f:%.3f]\n", min_y - rate_x, max_y + rate_x);
 
 				//{
 				//	multiple_regression mreg;
@@ -624,16 +647,17 @@ public:
 				{
 					//fprintf(script, "plot '%s' %s using %d:%d:%d %s with points pointsize %.1f pt %d lc palette\n",
 					//	data_name.c_str(), every.c_str(), i + 1, j + 1, j+1, title.c_str(), pointsize, pointtype);
-					fprintf(script, "plot '%s' %s using %d:%d:(-1) %s with circles lc rgb \"sea-green\"\n",
-						data_name.c_str(), every.c_str(), i + 1, j + 1, title.c_str());
+					fprintf(script, "plot '%s' %s using %d:%d:%d %s with circles pal\n",
+						data_name.c_str(), every.c_str(), j + 1, i + 1, j+1, title.c_str());
 				}
 				else
 				{
 					//fprintf(script, "plot '%s' %s using %d:%d %s with points pointsize %.1f pt %d\n",
 					//	data_name.c_str(), every.c_str(), i + 1, j + 1, title.c_str(), pointsize, pointtype);
 					fprintf(script, "plot '%s' %s using %d:%d:(-1) %s with circles lc rgb \"sea-green\"\n",
-						data_name.c_str(), every.c_str(), i + 1, j + 1, title.c_str());
+						data_name.c_str(), every.c_str(), j + 1, i + 1, title.c_str());
 				}
+#endif
 				fflush(script);
 			}
 		}
@@ -641,7 +665,7 @@ public:
 		plot_count++;
 	}
 
-	void multi_scatter_for_list(std::vector<int> indexs, Matrix<dnn_double>&X, std::vector<std::string>& headers, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
+	void multi_scatter_for_list(std::vector<int> indexs, Matrix<dnn_double>&X, std::vector<std::string>& headers, int grid, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
 	{
 		script_reopen();
 		if (script == NULL) return;
@@ -709,6 +733,7 @@ public:
 	}
 
 	bool scatter_back_color_dark_mode = false;
+	bool scatter_density_mode = true;
 	void back_color_dark()
 	{
 		fprintf(script,
@@ -717,16 +742,27 @@ public:
 			"set border lc rgb \"white\"\n"
 		);
 	}
+	double scatter_circle_radius_screen = 0.01;
 	void scatter(Matrix<dnn_double>&X, int col1, int col2, float point_size, int grid, std::vector<std::string>& headers, int pointtype = 6, char* palette = "rgbformulae 22, 13, -31", int maxpoint = -1)
 	{
 		script_reopen();
 		if (script == NULL) return;
 		
 
-		fprintf(script, "set style circle radius screen 0.007\n");
-		fprintf(script, "set style fill  transparent solid 0.35 noborder\n");
+		fprintf(script, "set style circle radius screen %f\n", scatter_circle_radius_screen);
+		if (scatter_density_mode)
+		{
+			fprintf(script, "set style fill  transparent solid 0.35 noborder\n");
+		}
+		else
+		{
+			fprintf(script, "set style fill  transparent solid 1.0 noborder\n");
+		}
 		fprintf(script, "set datafile separator \",\"\n");
-
+		
+		//ñ}ó·OFF
+		fprintf(script, "set nokey\n");
+		
 		if (scatter_back_color_dark_mode)
 		{
 			back_color_dark();
@@ -746,52 +782,55 @@ public:
 
 		x = x.appendCol(y);
 
-		Matrix<dnn_double>& z = Matrix<dnn_double>().ones(N, N);
-		for (int i = 0; i < x.m; i++)
+		if (scatter_density_mode)
 		{
-			int idx = (x(i, 0) - x_min) / dx;
-			int idy = (x(i, 1) - y_min) / dy;
-			if (idx < 0) idx = 0;
-			if (idy < 0) idy = 0;
-			if (idx >= N - 1) idx = N - 1;
-			if (idy >= N - 1) idy = N - 1;
-			z(idy, idx) += 1;
-		}
-		std::vector<ScatterWrk> wrk;
-		for (int i = 0; i < x.m; i++)
-		{
-			int idx = (x(i, 0) - x_min) / dx;
-			int idy = (x(i, 1) - y_min) / dy;
-			if (idx < 0) idx = 0;
-			if (idy < 0) idy = 0;
-			if (idx >= N - 1) idx = N - 1;
-			if (idy >= N - 1) idy = N - 1;
-			ScatterWrk d;
-			d.id = i;
-			d.depth = z(idy, idx);
-			wrk.push_back(d);
-		}
-		std::sort(wrk.begin(), wrk.end());
-		Matrix<dnn_double>& z_tmp = Matrix<dnn_double>(x.m, 1);
-		Matrix<dnn_double> x_tmp = x;
-		for (int i = 0; i < x.m; i++)
-		{
-			z_tmp(i, 0) = wrk[i].depth;
-			x_tmp(i, 0) = x(wrk[i].id, 0);
-			x_tmp(i, 1) = x(wrk[i].id, 1);
-		}
-		x = x_tmp;
-		z = z_tmp;
+			Matrix<dnn_double>& z = Matrix<dnn_double>().ones(N, N);
+			for (int i = 0; i < x.m; i++)
+			{
+				int idx = (x(i, 0) - x_min) / dx;
+				int idy = (x(i, 1) - y_min) / dy;
+				if (idx < 0) idx = 0;
+				if (idy < 0) idy = 0;
+				if (idx >= N - 1) idx = N - 1;
+				if (idy >= N - 1) idy = N - 1;
+				z(idy, idx) += 1;
+			}
+			std::vector<ScatterWrk> wrk;
+			for (int i = 0; i < x.m; i++)
+			{
+				int idx = (x(i, 0) - x_min) / dx;
+				int idy = (x(i, 1) - y_min) / dy;
+				if (idx < 0) idx = 0;
+				if (idy < 0) idy = 0;
+				if (idx >= N - 1) idx = N - 1;
+				if (idy >= N - 1) idy = N - 1;
+				ScatterWrk d;
+				d.id = i;
+				d.depth = z(idy, idx);
+				wrk.push_back(d);
+			}
+			std::sort(wrk.begin(), wrk.end());
+			Matrix<dnn_double>& z_tmp = Matrix<dnn_double>(x.m, 1);
+			Matrix<dnn_double> x_tmp = x;
+			for (int i = 0; i < x.m; i++)
+			{
+				z_tmp(i, 0) = wrk[i].depth;
+				x_tmp(i, 0) = x(wrk[i].id, 0);
+				x_tmp(i, 1) = x(wrk[i].id, 1);
+			}
+			x = x_tmp;
+			z = z_tmp;
 
-		if (palette)
-		{
-			x = x.appendCol(z);
-			set_palette(palette);
-		}
-		else
-		{
-			command(std::string("rgb(r,g,b)=int(r)*65536+int(g)*256+int(b)"));
-			x = x.appendCol(z);
+			if (palette)
+			{
+				x = x.appendCol(z);
+				set_palette(palette);
+			}
+			else
+			{
+				command(std::string("rgb(r,g,b)=int(r)*65536+int(g)*256+int(b)"));
+				x = x.appendCol(z);
+			}
 		}
 
 		//y = y / (y.Max() - y.Min());
@@ -834,25 +873,33 @@ public:
 
 		fprintf(script, "set xlabel %s\n", xx.c_str());
 		fprintf(script, "set ylabel %s\n", yy.c_str());
+		{
+			double max_x = x.Col(0).Max();
+			double min_x = x.Col(0).Min();
+			double max_y = x.Col(1).Max();
+			double min_y = x.Col(1).Min();
+			double rate_x = (max_x - min_x) * 0.1 + 0.001;
+			double rate_y = (max_y - min_y) * 0.1 + 0.001;
+			fprintf(script, "set xrange[%.3f:%.3f]\n", min_x - rate_x, max_x + rate_x);
+			fprintf(script, "set yrange[%.3f:%.3f]\n", min_y - rate_y, max_y + rate_y);
+		}
 		const char* plot = (plot_count) ? "replot" : "plot";
 		if (palette)
 		{
+			//fprintf(script, "set style circle radius graph 0.005\n");
+			//fprintf(script, "%s '%s' %s using 1:2:3 %s with circles fs transparent solid 0.85 lw 0.1 pal\n",
+			//	plot, data_name.c_str(), every.c_str(), label.c_str());
 
-			if (!scatter_back_color_dark_mode)
+			fprintf(script, "#set style circle radius graph 0.005\n");
+
+			if (scatter_density_mode)
 			{
-				//fprintf(script, "%s '%s' %s using 1:2:3 %s with points pointsize %.1f pt %d lc palette\n",
-				//	plot, data_name.c_str(), every.c_str(), label.c_str(), point_size, pointtype);
-				fprintf(script, "%s '%s' %s using 1:2:(-1) %s with circles lc  rgb \"dark-orange\"\n",
+				fprintf(script, "%s '%s' %s using 1:2:3 %s with circles lw 0.1 pal\n",
 					plot, data_name.c_str(), every.c_str(), label.c_str());
 			}
 			else
 			{
-				//fprintf(script, "set style circle radius graph 0.005\n");
-				//fprintf(script, "%s '%s' %s using 1:2:3 %s with circles fs transparent solid 0.85 lw 0.1 pal\n",
-				//	plot, data_name.c_str(), every.c_str(), label.c_str());
-
-				fprintf(script, "#set style circle radius graph 0.005\n");
-				fprintf(script, "%s '%s' %s using 1:2:3 %s with circles lw 0.1 pal\n",
+				fprintf(script, "%s '%s' %s using 1:2:2 %s with circles lw 0.1 pal\n",
 					plot, data_name.c_str(), every.c_str(), label.c_str());
 			}
 		}
@@ -862,8 +909,16 @@ public:
 			//	plot, data_name.c_str(), every.c_str(), label.c_str(), point_size, pointtype);
 			//fprintf(script, "%s '%s' %s using 1:2 %s with points pointsize %.1f pt %d\n",
 			//	plot, data_name.c_str(), every.c_str(), label.c_str(), point_size, pointtype);
-			fprintf(script, "%s '%s' %s using 1:2:(1.5) %s with circles lc  rgb \"dark-orange\"\n",
-				plot, data_name.c_str(), every.c_str(), label.c_str());
+			if (scatter_density_mode)
+			{
+				fprintf(script, "%s '%s' %s using 1:2:(-1) %s with circles lc  rgb \"dark-orange\"\n",
+					plot, data_name.c_str(), every.c_str(), label.c_str());
+			}
+			else
+			{
+				fprintf(script, "%s '%s' %s using 1:2:(-1) %s with circles lc  rgb \"dark-orange\"\n",
+					plot, data_name.c_str(), every.c_str(), label.c_str());
+			}
 		}
 		linecolor = "";
 		plot_count++;
@@ -878,7 +933,8 @@ public:
 		fprintf(script, "set datafile separator \",\"\n");
 		X.print_csv((char*)data_name.c_str());
 
-		fprintf(script, "set style fill solid border  lc rgb \"black\"\n");
+		fprintf(script, "set style fill solid\n");
+		fprintf(script, "set boxwidth 0.8 relative\n");
 
 		if (linecolor != "")
 		{
@@ -898,21 +954,40 @@ public:
 		}
 		const char* plot = (plot_count) ? "replot" : "plot";
 
-		if (shapiro_wilk_test != 1)
+		if (histogram_gradation)
 		{
-			fprintf(script, "%s '%s' using 1:2 %s with boxes lc rgb \"chartreuse\" linewidth %.1f %s\n",
-				plot, data_name.c_str(), label.c_str(), linewidth, linecolor.c_str());
+			if (shapiro_wilk_test != 1)
+			{
+				fprintf(script, "%s for [i=51:51:-1] '%s' using 1:($2*i/51):($2*i/51) %s with boxes lc palette\n",
+					plot, data_name.c_str(), label.c_str());
+
+				fprintf(script, "%s for [i=50:1:-1] '%s' using 1:($2*i/51):($2*i/51) with boxes lc palette notitle\n",
+					"replot", data_name.c_str());
+			}
+			else
+			{
+				fprintf(script, "%s '%s' using 1:2 %s with boxes lc rgb \"light-red\" linewidth %.1f %s\n",
+					plot, data_name.c_str(), label.c_str(), linewidth, linecolor.c_str());
+			}
 		}
 		else
 		{
-			fprintf(script, "%s '%s' using 1:2 %s with boxes lc rgb \"light-red\" linewidth %.1f %s\n",
-				plot, data_name.c_str(), label.c_str(), linewidth, linecolor.c_str());
+			if (shapiro_wilk_test != 1)
+			{
+				fprintf(script, "%s '%s' using 1:2 %s with boxes lc rgb \"chartreuse\" linewidth %.1f %s\n",
+					plot, data_name.c_str(), label.c_str(), linewidth, linecolor.c_str());
+			}
+			else
+			{
+				fprintf(script, "%s '%s' using 1:2 %s with boxes lc rgb \"light-red\" linewidth %.1f %s\n",
+					plot, data_name.c_str(), label.c_str(), linewidth, linecolor.c_str());
+			}
 		}
 		linecolor = "";
 		plot_count++;
 	}
 
-	void multi_histgram(std::string& imagefile, Matrix<dnn_double>&X, std::vector<std::string>& headers, std::vector<int>& residual_flag, bool capture = false, int win_x = -1, int win_y = -1, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
+	void multi_histgram(std::string& imagefile, Matrix<dnn_double>&X, std::vector<std::string>& headers, std::vector<int>& residual_flag, int pointtype = 6, int maxpoint = -1)
 	{
 		script_reopen();
 		if (script == NULL) return;
@@ -922,24 +997,14 @@ public:
 		fprintf(script, "set term png size 3024,3024\n");
 		fprintf(script, "set output \"multi_scatter.png\"\n");
 		*/
-		if (win_x > 10 && win_y >= 10)
-		{
-			fprintf(script, "set term windows size %d,%d\n", win_x, win_y);
-		}
-		if (capture)
-		{
-			fprintf(script, "set term pngcairo size %d,%d\n", win_x, win_y);
-			fprintf(script, "set output \"%s\"\n", imagefile.c_str());
-		}
+		multiplot = true;
 		fprintf(script, "set datafile separator \",\"\n");
 		fprintf(script, "set multiplot layout %d,%d\n", (int)sqrt(X.n)+1, (int)sqrt(X.n) + 1);
 		fprintf(script, "set nokey\n");
 		fprintf(script, "unset xtics\n");
 		fprintf(script, "unset ytics\n");
-		if (palette)
-		{
-			set_palette(palette);
-		}
+
+		fprintf(script, "unset colorbox\n");
 
 
 		std::string every = "";
@@ -953,6 +1018,7 @@ public:
 			}
 		}
 
+		const char* plot = (plot_count) ? "replot" : "plot";
 
 		X.print_csv((char*)data_name.c_str());
 		for (int i = 0; i < X.n; i++)
@@ -994,17 +1060,34 @@ public:
 					h.print_csv(histogram_name);
 
 					//fprintf(script, "set grid xtics mxtics ytics mytics\n");
-					fprintf(script, "set style fill solid border  lc rgb \"black\"\n");
+					fprintf(script, "set style fill solid\n");
+					fprintf(script, "set boxwidth 0.8 relative\n");
 
-					if (residual_flag[i])
+					if (histogram_gradation)
 					{
-						fprintf(script, "plot '%s' using 1:2 %s with boxes lc rgb \"light-red\" linewidth %.1f %s\n",
-							histogram_name, (std::string("t ") + y).c_str(), 1/*linewidth*/, linecolor.c_str());
+						if (residual_flag[i])
+						{
+							fprintf(script, "%s '%s' using 1:2 %s with boxes lc rgb \"light-red\" linewidth %.1f %s\n",
+								plot, histogram_name, (std::string("t ") + y).c_str(), 1/*linewidth*/, linecolor.c_str());
+						}
+						else
+						{
+							fprintf(script, "%s for [i=50:1:-1] '%s' using 1:($2*i/51):($2*i/51) with boxes lc palette notitle\n",
+								plot, histogram_name);
+						}
 					}
 					else
 					{
-						fprintf(script, "plot '%s' using 1:2 %s with boxes lc rgb \"chartreuse\" linewidth %.1f %s\n",
-							histogram_name, (std::string("t ") + y).c_str(), 1/*linewidth*/, linecolor.c_str());
+						if (residual_flag[i])
+						{
+							fprintf(script, "%s '%s' using 1:2 %s with boxes lc rgb \"light-red\" linewidth %.1f %s\n",
+								plot, histogram_name, (std::string("t ") + y).c_str(), 1/*linewidth*/, linecolor.c_str());
+						}
+						else
+						{
+							fprintf(script, "%s '%s' using 1:2 %s with boxes lc rgb \"chartreuse\" linewidth %.1f %s\n",
+								plot, histogram_name, (std::string("t ") + y).c_str(), 1/*linewidth*/, linecolor.c_str());
+						}
 					}
 					continue;
 				}
@@ -1042,11 +1125,17 @@ public:
 		{
 			if (capture_image)
 			{
+				if (multiplot)
+				{
+					fprintf(script, "set multiplot\n");
+				}
 				pause = 0;
 				fprintf(script, "set term windows size %d,%d\n", capture_winsize[0], capture_winsize[1]);
 				fprintf(script, "set term pngcairo size %d,%d\n", capture_winsize[0], capture_winsize[1]);
 				fprintf(script, "set output \"%s\"\n", save_image_name.c_str());
 				fprintf(script, "replot\n");
+				fprintf(script, "unset multiplot\n");
+				multiplot = false;
 			}
 
 			fprintf(script, "pause %d\n", pause);

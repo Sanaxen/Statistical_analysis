@@ -112,13 +112,18 @@ public:
 		int num = 0;
 		for (int i = 0; i < coef.n - 1; i++)
 		{
+			int k = i;
+			if (k >= y_var_idx)
+			{
+				k++;
+			}
 			if (fabs(coef(0, i)) > 1.0e-6)
 			{
 				var_indexs.push_back(i);
 				num++;
 				fprintf(fp1, "[%03d]%-10.10s %10.4f\n", i+1, header[i+1].c_str(), coef(0, i));
 
-				if ( fp )fprintf(fp, "%d,%s\n", i, header[i + 1].c_str());
+				if ( fp )fprintf(fp, "%d,%s\n", k, header[i + 1].c_str());
 			}
 		}
 		fclose(fp);

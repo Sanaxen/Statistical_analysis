@@ -248,8 +248,11 @@ int main(int argc, char *argv[])
 
 
 #ifdef USE_GNUPLOT
+	int win_size[2] = { 640 * 2,480 * 2 };
 	{
+		int win_size[2] = { 640 * 2,480 * 2 };
 		gnuPlot plot1(std::string(GNUPLOT_PATH));
+		plot1.set_capture(win_size, std::string("mixing_signale.png"));
 		plot1.linewidth = 1;
 		plot1.set_title("mixing signale");
 		plot1.plot_lines(A, header_names, 2000);
@@ -302,6 +305,7 @@ int main(int argc, char *argv[])
 			printf("[%s]\n", header_names[i].c_str());
 		}
 		gnuPlot plot1(std::string(GNUPLOT_PATH));
+		plot1.set_capture(win_size, std::string("source_signale.png"));
 
 		plot1.linewidth = 1;
 		plot1.set_title("source signale");

@@ -295,14 +295,9 @@ int main(int argc, char** argv)
 		}
 #ifdef USE_GNUPLOT
 		gnuPlot plot1(std::string(GNUPLOT_PATH), 3);
-		int win_x = error_distr_size[0];
-		int win_y = error_distr_size[1];
-		plot1.multi_histgram(std::string("causal_multi_histgram.png"), r, header_names, residual_flag, capture, win_x, win_y);
-		if (capture)
-			plot1.draw(0);
-		else
-			plot1.draw();
-
+		plot1.set_capture(error_distr_size, std::string("causal_multi_histgram.png"));
+		plot1.multi_histgram(std::string("causal_multi_histgram.png"), r, header_names, residual_flag);
+		plot1.draw();
 #endif
 	}
 

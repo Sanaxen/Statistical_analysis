@@ -88,6 +88,11 @@ int main(int argc, char** argv)
 		}
 	}
 
+	printf("arg\n");
+	for (int i = 1; i < argc; i++)
+	{
+		printf("%s\n", argv[i]);
+	}
 	CSVReader csv1(csvfile, ',', header);
 
 	Matrix<dnn_double> T = csv1.toMat_removeEmptyRow();
@@ -123,17 +128,16 @@ int main(int argc, char** argv)
 	if ( col1 < 0 && col2 < 0)
 	{
 #ifdef USE_GNUPLOT
+		//palette = "defined"; //"rgbformulae 7,5,15";
 		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 5);
-		if (capture)
+		if (palette != NULL)
 		{
-			plot1.multi_scatter(T, header_names, true, win_size[0], win_size[1], 2, palette);
-			plot1.draw(0);
+			plot1.set_palette(palette);
 		}
-		else
-		{
-			plot1.multi_scatter(T, header_names, false, win_size[0], win_size[1], 2, palette);
-			plot1.draw();
-		}
+		plot1.set_capture(win_size, std::string("multi_scatter.png"));
+		plot1.scatter_circle_radius_screen = 0.0015;
+		plot1.multi_scatter(T, header_names, grid, 2, palette);
+		plot1.draw();
 #endif		
 		return 0;
 	}
@@ -186,8 +190,12 @@ int main(int argc, char** argv)
 			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6);
 			
 			plot1.set_capture(win_size, std::string("scatter.png"));
+			if (palette != NULL)
+			{
+				plot1.set_palette(palette);
+			}
 
-			plot1.set_label(0.5, 0.85, 1, text);
+			plot1.set_label(0.95, 0.95, 1, text);
 			plot1.plot_lines2(x, line_header_names);
 			plot1.scatter_back_color_dark_mode = back_color_dark;
 			plot1.scatter(T, col1, col2, pointsize, grid, header_names, 5, palette);
@@ -201,9 +209,13 @@ int main(int argc, char** argv)
 		else
 		{
 			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6);
+			if (palette != NULL)
+			{
+				plot1.set_palette(palette);
+			}
 			plot1.set_capture(win_size, std::string("scatter.png"));
 
-			plot1.set_label(0.5, 0.5, 1, text);
+			plot1.set_label(0.95, 0.95, 1, text);
 			plot1.scatter_back_color_dark_mode = back_color_dark;
 			plot1.scatter(T, col1, col2, pointsize, grid, header_names, 5, palette);
 			if (ellipse)
