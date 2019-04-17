@@ -203,7 +203,7 @@ public:
 			bool background_Transparent = false;
 			int size = 20;
 			bool sideways = true;
-			char* filename = "multicollinearity.txt";
+			char* filename = "multicollinearity2.txt";
 			char* outformat = "png";
 
 			utf8str utf8;
@@ -248,7 +248,7 @@ public:
 					}
 					if (fabs(cor(i, j)) > 0.5 && fabs(cor(i, j)) < 0.6)
 					{
-						utf8.fprintf(fp, "%s -> %s [label=\"%8.3f\" color=olivedrab1 dir=\"both\"]\n", hd1.c_str(), hd2, cor(i, j));
+						utf8.fprintf(fp, "%s -> %s [label=\"%8.3f\" color=olivedrab1 dir=\"both\"]\n", hd1.c_str(), hd2.c_str(), cor(i, j));
 					}
 					if (fabs(cor(i, j)) >= 0.6 && fabs(cor(i, j)) < 0.8)
 					{
@@ -266,7 +266,7 @@ public:
 			fclose(fp);
 
 			char cmd[512];
-			sprintf(cmd, "dot.exe -T%s %s -o multicollinearity.%s", outformat, filename, outformat);
+			sprintf(cmd, "dot.exe -T%s %s -o multicollinearity2.%s", outformat, filename, outformat);
 			system(cmd);
 		}
 #endif
