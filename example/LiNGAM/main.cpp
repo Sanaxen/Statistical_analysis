@@ -56,16 +56,16 @@ int main(int argc, char** argv)
 		header = false;
 	}
 
-	CSVReader csv1(csvfile, ',', header);
-	Matrix<dnn_double> xs = csv1.toMat();
-	xs = csv1.toMat_removeEmptyRow();
-	if (start_col)
-	{
-		for (int i = 0; i < start_col; i++)
-		{
-			xs = xs.removeCol(0);
-		}
-	}
+	//CSVReader csv1(csvfile, ',', header);
+	//Matrix<dnn_double> xs = csv1.toMat();
+	//xs = csv1.toMat_removeEmptyRow();
+	//if (start_col)
+	//{
+	//	for (int i = 0; i < start_col; i++)
+	//	{
+	//		xs = xs.removeCol(0);
+	//	}
+	//}
 
 
 	Lingam LiNGAM;
@@ -83,6 +83,7 @@ int main(int argc, char** argv)
 	int diaglam_size = 20;
 	char* output_diaglam_type = "png";
 	std::vector<std::string> x_var;
+	std::vector<std::string> y_var;
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -118,6 +119,9 @@ int main(int argc, char** argv)
 				else if (argname == "--x_var") {
 					x_var.push_back(argv[count + 1]);
 				}
+				else if (argname == "--y_var") {
+					y_var.push_back(argv[count + 1]);
+				}
 				else if (argname == "--error_distr") {
 					error_distr = atoi(argv[count + 1]) != 0 ? true : false;
 				}
@@ -141,6 +145,7 @@ int main(int argc, char** argv)
 				}
 
 	}
+#if 0
 	std::vector<std::string> header_names;
 	header_names.resize(xs.n);
 	if (header && csv1.getHeader().size() > 0)
@@ -201,6 +206,166 @@ int main(int argc, char** argv)
 			printf("--x_var ERROR\n");
 		}
 	}
+#else
+	CSVReader csv1(csvfile, ',', header);
+	Matrix<dnn_double> T = csv1.toMat();
+	T = csv1.toMat_removeEmptyRow();
+	if (start_col)
+	{
+		for (int i = 0; i < start_col; i++)
+		{
+			T = T.removeCol(0);
+		}
+	}
+
+	std::vector<std::string> header_names;
+	header_names.resize(T.n);
+	if (header && csv1.getHeader().size() > 0)
+	{
+		for (int i = 0; i < T.n; i++)
+		{
+			header_names[i] = csv1.getHeader(i + start_col);
+		}
+	}
+	else
+	{
+		for (int i = 0; i < T.n; i++)
+		{
+			char buf[32];
+			sprintf(buf, "%d", i);
+			header_names[i] = buf;
+		}
+	}
+
+	std::vector<int> x_var_idx;
+	std::vector<int> y_var_idx;
+
+	if (x_var.size())
+	{
+		for (int i = 0; i < x_var.size(); i++)
+		{
+			for (int j = 0; j < header_names.size(); j++)
+			{
+				if (x_var[i] == header_names[j])
+				{
+					x_var_idx.push_back(j);
+				}
+				else if ("\"" + x_var[i] + "\"" == header_names[j])
+				{
+					x_var_idx.push_back(j);
+				}
+				else
+				{
+					char buf[32];
+					sprintf(buf, "%d", j);
+					if (x_var[i] == std::string(buf))
+					{
+						x_var_idx.push_back(j);
+					}
+					sprintf(buf, "\"%d\"", j);
+					if (x_var[i] == std::string(buf))
+					{
+						x_var_idx.push_back(j);
+					}
+				}
+			}
+		}
+		if (x_var_idx.size() == 0)
+		{
+			for (int i = 0; i < x_var.size(); i++)
+			{
+				x_var_idx.push_back(atoi(x_var[i].c_str()));
+			}
+		}
+		if (x_var_idx.size() != x_var.size())
+		{
+			printf("--x_var ERROR\n");
+			return -1;
+		}
+	}
+	if (y_var.size())
+	{
+		for (int i = 0; i < y_var.size(); i++)
+		{
+			for (int j = 0; j < header_names.size(); j++)
+			{
+				if (y_var[i] == header_names[j])
+				{
+					y_var_idx.push_back(j);
+				}
+				else if ("\"" + y_var[i] + "\"" == header_names[j])
+				{
+					y_var_idx.push_back(j);
+				}
+				else
+				{
+					char buf[32];
+					sprintf(buf, "%d", j);
+					if (y_var[i] == std::string(buf))
+					{
+						y_var_idx.push_back(j);
+					}
+					sprintf(buf, "\"%d\"", j);
+					if (y_var[i] == std::string(buf))
+					{
+						y_var_idx.push_back(j);
+					}
+				}
+			}
+		}
+		if (y_var_idx.size() != y_var.size())
+		{
+			printf("--y_var ERROR\n");
+			return -1;
+		}
+	}
+
+	if (x_var.size() == 0 )
+	{
+		for (int i = 0; i < T.n; i++)
+		{
+			char buf[32];
+			sprintf(buf, "\"%d\"", i);
+			x_var.push_back(buf);
+			x_var_idx.push_back(i);
+		}
+	}
+
+	for (int i = 0; i < x_var.size(); i++)
+	{
+		printf("x_var:%s %d\n", x_var[i].c_str(), x_var_idx[i]);
+	}
+	for (int i = 0; i < y_var.size(); i++)
+	{
+		printf("y_var:%s %d\n", y_var[i].c_str(), y_var_idx[i]);
+	}
+
+	std::vector<std::string> headers_tmp;
+	headers_tmp.push_back(header_names[x_var_idx[0]]);
+
+	Matrix<dnn_double> xs = T.Col(x_var_idx[0]);
+	for (int i = 1; i < x_var.size(); i++)
+	{
+		xs = xs.appendCol(T.Col(x_var_idx[i]));
+		headers_tmp.push_back(header_names[x_var_idx[i]]);
+	}
+	for (int i = 0; i < y_var.size(); i++)
+	{
+		bool dup = false;
+		for (int k = 0; k < x_var.size(); k++)
+		{
+			if (x_var_idx[k] == y_var_idx[i])
+			{
+				dup = true;
+			}
+		}
+		if (dup) continue;
+		xs = xs.appendCol(T.Col(y_var_idx[i]));
+		headers_tmp.push_back(header_names[y_var_idx[i]]);
+	}
+	std::vector<std::string> header_names_org = header_names;
+	header_names = headers_tmp;
+#endif
 
 	LiNGAM.set(xs.n);
 	LiNGAM.fit(xs);
@@ -301,11 +466,11 @@ int main(int argc, char** argv)
 #endif
 	}
 
-	if (x_var.size())
+	if (y_var.size())
 	{
-		LiNGAM.linear_regression_var.push_back(x_var[0]);
+		LiNGAM.linear_regression_var.push_back(y_var[0]);
 	}
-	LiNGAM.digraph(header_names, x_var, residual_flag, "digraph.txt", sideways, diaglam_size, output_diaglam_type);
+	LiNGAM.digraph(header_names, y_var, residual_flag, "digraph.txt", sideways, diaglam_size, output_diaglam_type);
 	LiNGAM.report(header_names);
 
 	{
@@ -317,13 +482,13 @@ int main(int argc, char** argv)
 			var_index.resize(var.size());
 			for (int i = 0; i < var.size(); i++)
 			{
-				for (int j = 0; j < header_names.size(); j++)
+				for (int j = 0; j < header_names_org.size(); j++)
 				{
-					if (var[i] == header_names[j])
+					if (var[i] == header_names_org[j])
 					{
 						var_index[i] = j;
 					}
-					else if ("\"" + var[i] + "\"" == header_names[j])
+					else if ("\"" + var[i] + "\"" == header_names_org[j])
 					{
 						var_index[i] = j;
 					}

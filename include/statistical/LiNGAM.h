@@ -279,7 +279,7 @@ public:
 
 	std::vector<std::string> linear_regression_var;
 
-	void digraph(const std::vector<std::string>& column_names, std::vector<std::string> x_var, std::vector<int>& residual_flag, const char* filename, bool sideways = false, int size=30, char* outformat="png", bool background_Transparent=false)
+	void digraph(const std::vector<std::string>& column_names, std::vector<std::string> y_var, std::vector<int>& residual_flag, const char* filename, bool sideways = false, int size=30, char* outformat="png", bool background_Transparent=false)
 	{
 		Matrix<dnn_double> B_tmp = B.chop(0.001);
 		B_tmp.print_e("remove 0.001");
@@ -352,9 +352,9 @@ public:
 					}
 					bool out_line = false;
 					bool in_line = false;
-					for (int k = 0; k < x_var.size(); k++)
+					for (int k = 0; k < y_var.size(); k++)
 					{
-						std::string x = x_var[k];
+						std::string x = y_var[k];
 						if (x.c_str()[0] != '\"')
 						{
 							x = "\"" + x + "\"";
@@ -392,10 +392,10 @@ public:
 				}
 			}
 		}
-		for (int i = 0; i < x_var.size(); i++)
+		for (int i = 0; i < y_var.size(); i++)
 		{
 			//€–Ú2[fillcolor="#ccddff", style="filled"];
-			std::string item1 = x_var[i];
+			std::string item1 = y_var[i];
 			if (item1.c_str()[0] != '\"')
 			{
 				item1 = "\"" + item1 + "\"";

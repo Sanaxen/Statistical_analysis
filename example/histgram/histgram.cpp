@@ -220,8 +220,8 @@ int main(int argc, char** argv)
 		{
 			plot1.histogram_gradation = false;
 		}
-		plot1.set_capture(win_size, std::string("histogram.png"));
-		plot1.multi_histgram(std::string("histogram.png"), X, header_names, shapiro_wilk_test);
+		plot1.set_capture(win_size, std::string("multi_histogram.png"));
+		plot1.multi_histgram(std::string("multi_histogram.png"), X, header_names, shapiro_wilk_test);
 		plot1.draw();
 	}
 #endif		

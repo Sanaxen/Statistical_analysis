@@ -307,7 +307,7 @@ int main(int argc, char** argv)
 			double l2_min = 0.0;
 			for (int k = 0; k < kmax; k++)
 			{
-				int n = 5;
+				int n = kmax;
 				double stp1 = l1_max / (double)n;
 				double stp2 = l2_max / (double)n;
 

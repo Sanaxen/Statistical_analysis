@@ -195,10 +195,10 @@ public:
 
 		if (error == 0) {
 			for (int i = 0; i < variablesNum; i++) {
-				printf("Žå¬•ª %f", component[i]);
+				printf("Žå¬•ª %.4f", component[i]);
 				printf(" ŒW”");
 				for (int j = 0; j < variablesNum; j++)
-					printf(" %f", coef(i, j));
+					printf(" %.4f", coef(i, j));
 				printf("\n");
 			}
 		}

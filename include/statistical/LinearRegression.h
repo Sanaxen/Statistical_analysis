@@ -321,14 +321,14 @@ public:
 			if (!fp) return;
 		}
 		fprintf(fp, "--------------------------------------------------------------------\n");
-		fprintf(fp, "SE(c·)                :%f\n", se);
-		fprintf(fp, "SR(•Ï“®•½•û˜a)          :%f\n", sr);
-		fprintf(fp, "ST(SE+SR)               :%f\n", st);
-		fprintf(fp, "R^2(Œˆ’èŒW”(Šñ—^—¦))   :%f\n", r2);
-		fprintf(fp, "d‘ŠŠÖŒW”              :%f\n", sqrt(r2));
-		fprintf(fp, "©—R“x’²®ÏŠñ—^—¦(•â³):%f\n", r_2);
-		fprintf(fp, "•s•Î•ªU(•½‹Ï•½•û)       VE:%f VR:%f\n", ve, vr);
-		fprintf(fp, "AIC                     :%f\n\n", AIC);
+		fprintf(fp, "SE(c·)                :%.4f\n", se);
+		fprintf(fp, "SR(•Ï“®•½•û˜a)          :%.4f\n", sr);
+		fprintf(fp, "ST(SE+SR)               :%.4f\n", st);
+		fprintf(fp, "R^2(Œˆ’èŒW”(Šñ—^—¦))   :%.4f\n", r2);
+		fprintf(fp, "d‘ŠŠÖŒW”              :%.4f\n", sqrt(r2));
+		fprintf(fp, "©—R“x’²®ÏŠñ—^—¦(•â³):%.4f\n", r_2);
+		fprintf(fp, "•s•Î•ªU(•½‹Ï•½•û)       VE:%.4f VR:%.4f\n", ve, vr);
+		fprintf(fp, "AIC                     :%.4f\n\n", AIC);
 
 		F_distribution f_distribution(A.n - 1, A.m - A.n);
 		double f_pdf = f_distribution.p_value(ƒ¿);
