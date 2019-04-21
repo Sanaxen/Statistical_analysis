@@ -148,6 +148,7 @@ class NonLinearRegression
 		sprintf(plotName, "test.dat", plot_count);
 		FILE* fp_test = fopen(plotName, "w");
 
+		Diff.clear();
 		float cost = 0.0;
 		float vari_cost = 0.0;
 		float cost_tot = 0.0;
@@ -155,6 +156,7 @@ class NonLinearRegression
 		{
 			for (int i = 0; i < nX.size(); i++)
 			{
+				std::vector<double> diff;
 				tiny_dnn::vec_t x = nX[i];
 				tiny_dnn::vec_t& y_predict = nn_test.predict(x);
 
@@ -172,6 +174,8 @@ class NonLinearRegression
 						yy = y_predict[k] * MaxMin_y[k] + Min_y[k];
 					}
 					fprintf(fp_test, "%f %f ", yy, y[k]);
+					diff.push_back(y[k]);
+					diff.push_back(yy);
 
 					if (test_data_index[i] >= 0)
 					{
@@ -196,6 +200,9 @@ class NonLinearRegression
 				}
 
 				fprintf(fp_test, "%f %f\n", yy, y[y_predict.size() - 1]);
+				diff.push_back(y[y_predict.size() - 1]);
+				diff.push_back(yy);
+				Diff.push_back(diff);
 				if (test_data_index[i] >= 0)
 				{
 					vari_cost += (yy - y[y_predict.size() - 1])*(yy - y[y_predict.size() - 1]);
@@ -250,6 +257,7 @@ class NonLinearRegression
 		}
 		if (cost_min < tolerance)
 		{
+			printf("cost_min:%f\n", cost_min);
 			convergence = true;
 		}
 		if (fp_error_loss)
@@ -311,6 +319,7 @@ class NonLinearRegression
 	int batch = 0;
 	bool early_stopp = false;
 public:
+	std::vector < std::vector<double>> Diff;
 	float_t fluctuation = 0.0;
 	float_t dec_random = 0;	//Decimation of random points
 	size_t freedom = 0;
@@ -665,6 +674,7 @@ public:
 			}
 			if (convergence)
 			{
+				printf("convergence!!\n");
 				nn.stop_ongoing_training();
 				error = 0;
 
@@ -690,6 +700,7 @@ public:
 			}
 			if (convergence)
 			{
+				printf("convergence!!\n");
 				nn.stop_ongoing_training();
 				error = 0;
 			}

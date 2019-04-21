@@ -39,7 +39,7 @@ int main(int argc, char** argv)
 	int x_dim = 0, y_dim = 0;
 	int use_cnn = 1;
 	std::string csvfile("sample.csv");
-	std::string report_file("report.txt");
+	std::string report_file("TimeSeriesRegression.txt");
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -613,6 +613,47 @@ int main(int argc, char** argv)
 
 	timeSeries.fit(sequence_length, n_rnn_layers, n_layers, hidden_size);
 	timeSeries.report(0.05, report_file);
+
+#ifdef USE_GNUPLOT
+	{
+		int win_size[2] = { 640 * 3, 480 * 3 };
+		std::vector<std::string> header_names(2);
+		header_names[0] = "observed";
+		header_names[1] = "predict";
+
+		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 11);
+		plot1.set_capture(win_size, std::string("observed_predict.png"));
+
+		Matrix<dnn_double> T(timeSeries.Diff.size()*timeSeries.Diff[0].size() / 2, 2);
+		for (int i = 0; i < timeSeries.Diff.size(); i++)
+		{
+			for (int j = 0; j < timeSeries.Diff[0].size() / 2; j++)
+			{
+				T(i*timeSeries.Diff[0].size() / 2 + j, 0) = timeSeries.Diff[i][2 * j];
+				T(i*timeSeries.Diff[0].size() / 2 + j, 1) = timeSeries.Diff[i][2 * j + 1];
+			}
+		}
+
+		plot1.scatter(T, 0, 1, 1, 30, header_names, 5);
+		if (10)
+		{
+			double max_x = T.Col(0).Max();
+			double min_x = T.Col(0).Min();
+			double step = (max_x - min_x) / 5.0;
+			Matrix<dnn_double> x(6, 2);
+			Matrix<dnn_double> v(1, 1);
+			for (int i = 0; i < 6; i++)
+			{
+				v(0, 0) = min_x + i * step;
+				x(i, 0) = v(0, 0);
+				x(i, 1) = v(0, 0);
+			}
+			plot1.set_label(0.5, 0.85, 1, "observed=predict");
+			plot1.plot_lines2(x, header_names);
+			plot1.draw();
+		}
+	}
+#endif
 
 	return 0;
 }
