@@ -150,6 +150,7 @@ class TimeSeriesRegression
 		tiny_dnn::vec_t y_pre = nY[0];
 		FILE* fp_test = fopen(plotName, "w");
 
+		Diff.clear();
 		float vari_cost = 0.0;
 		float cost = 0.0;
 		float cost_tot = 0.0;
@@ -316,16 +317,16 @@ class TimeSeriesRegression
 				}
 				else
 				{
-				//Change to the predicted value
-				if (i + sequence_length >= train_images.size())
-				{
-					YY[i + sequence_length] = y_predict;
-					//Add an explanatory variable
-					for (int k = y_dim; k < YY[0].size(); k++)
+					//Change to the predicted value
+					if (i + sequence_length >= train_images.size())
 					{
-						YY[i + sequence_length].push_back(nY[i + sequence_length][k]);
+						YY[i + sequence_length] = y_predict;
+						//Add an explanatory variable
+						for (int k = y_dim; k < YY[0].size(); k++)
+						{
+							YY[i + sequence_length].push_back(nY[i + sequence_length][k]);
+						}
 					}
-				}
 				}
 				y_pre = y_predict;
 
@@ -356,13 +357,19 @@ class TimeSeriesRegression
 						cost_tot += (y_predict[k] - y[k])*(y_predict[k] - y[k]);
 					}
 
+					std::vector<double> diff;
 					fprintf(fp_test, "%f ", timevar(i + sequence_length,0));
 					for (int k = 0; k < y_dim - 1; k++)
 					{
 						fprintf(fp_test, "%f %f ", y_predict[k], y[k]);
+						diff.push_back(y[k]);
+						diff.push_back(y_predict[k]);
 					}
 					fprintf(fp_test, "%f %f\n", y_predict[y_dim - 1], y[y_dim - 1]);
 					x_value = timevar(i + sequence_length,0);
+					diff.push_back(y[y_dim - 1]);
+					diff.push_back(y_predict[y_dim - 1]);
+					Diff.push_back(diff);
 				}
 				else
 				{
@@ -461,6 +468,7 @@ class TimeSeriesRegression
 	bool early_stopp = false;
 
 public:
+	std::vector < std::vector<double>> Diff;
 	Matrix<dnn_double> timevar;
 	size_t x_dim;
 	size_t y_dim;
