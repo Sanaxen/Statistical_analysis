@@ -501,6 +501,178 @@ public:
 		plot_count++;
 	}
 
+	void multi_scatter(Matrix<dnn_double>&X, int x_num, std::vector<std::string>& headers, int grid, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
+	{
+		script_reopen();
+		if (script == NULL) return;
+		/*
+		set term png size 3024,3024
+		set output "figure.png"
+		fprintf(script, "set term png size 3024,3024\n");
+		fprintf(script, "set output \"multi_scatter.png\"\n");
+		*/
+
+		//if (scatter_back_color_dark_mode)
+		//{
+		//	back_color_dark();
+		//}
+
+		multiplot = true;
+		fprintf(script, "set datafile separator \",\"\n");
+		fprintf(script, "set multiplot layout %d,%d\n", X.n, X.n);
+		fprintf(script, "set nokey\n");
+		fprintf(script, "unset xtics\n");
+		fprintf(script, "unset ytics\n");
+		if (palette)
+		{
+			set_palette(palette);
+			fprintf(script, "unset colorbox\n");
+		}
+
+
+		std::string every = "";
+
+		if (maxpoint > 0)
+		{
+			int every_num = X.m / maxpoint;
+			if (every_num != 0)
+			{
+				every = "every " + std::to_string(every_num);
+			}
+		}
+
+		printf("x_num:%d X.n:%d\n", x_num, X.n);
+
+		X.print_csv((char*)data_name.c_str());
+		for (int i = 0; i < x_num; i++)
+		{
+			for (int j = x_num; j < X.n; j++)
+			{
+				std::string x, y;
+
+				if (headers.size())
+				{
+					y = headers[j];
+					if (y.c_str()[0] != '\"')
+					{
+						y = (std::string("\"") + headers[j] + std::string("\""));
+					}
+
+					x = headers[j];
+					if (x.c_str()[0] != '\"')
+					{
+						x = (std::string("\"") + headers[i] + std::string("\""));
+					}
+				}
+
+				fprintf(script, "unset xlabel\n");
+				fprintf(script, "unset ylabel\n");
+#if 0
+				if (j > i)
+				{
+					fprintf(script, "unset border\n");
+					fprintf(script, "plot - 1 notitle lc rgb \"white\"\n");
+					fprintf(script, "set border\n");
+					continue;
+				}
+#else
+				if (j == i)
+				{
+					Matrix<dnn_double> &h = Histogram(X.Col(j), 10);
+					char histogram_name[256];
+					sprintf(histogram_name, "plot_(%d)%d_hist.dat", plot_count, i);
+					h.print_csv(histogram_name);
+
+					fprintf(script, "set xrange[*:*]\n");
+					fprintf(script, "set yrange[*:*]\n");
+					fprintf(script, "set style fill solid border  lc rgb \"dark-gray\"\n");
+
+					if (palette)
+					{
+						//fprintf(script, "plot '%s' using 1:2:2 %s with boxes linewidth %.1f pal\n",
+						//	histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/);
+						fprintf(script, "plot '%s' using 1:2 %s with boxes linewidth %.1f %s\n",
+							histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/, linecolor.c_str());
+					}
+					else
+					{
+						fprintf(script, "plot '%s' using 1:2 %s with boxes linewidth %.1f %s\n",
+							histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/, linecolor.c_str());
+					}
+					continue;
+				}
+#endif
+
+#if 10
+				//fprintf(script, "set style fill  transparent solid 0.85 noborder\n");
+				scatter(X, i, j, pointsize, grid, headers, 5, palette);
+#else
+
+				fprintf(script, "set xlabel %s\n", x.c_str());
+				fprintf(script, "set ylabel %s\n", y.c_str());
+				
+				if (scatter_xyrange_setting)
+				{
+					double max_x = X.Col(j).Max();
+					double min_x = X.Col(j).Min();
+					double max_y = X.Col(i).Max();
+					double min_y = X.Col(i).Min();
+					double rate_x = (max_x - min_x) * 0.1 + 0.001;
+					double rate_y = (max_y - min_y) * 0.1 + 0.001;
+					fprintf(script, "set xrange[%.3f:%.3f]\n", min_x - rate_x, max_x + rate_x);
+					fprintf(script, "set yrange[%.3f:%.3f]\n", min_y - rate_x, max_y + rate_x);
+				}
+				//{
+				//	multiple_regression mreg;
+
+				//	mreg.set(1);
+				//	mreg.fit(X.Col(j), X.Col(i));
+
+
+				//	double max_x = X.Col(j).Max();
+				//	double min_x = X.Col(j).Min();
+				//	double step = (max_x - min_x) / 3.0;
+				//	Matrix<dnn_double> x(4, 2);
+				//	Matrix<dnn_double> v(1, 1);
+				//	for (int i = 0; i < 4; i++)
+				//	{
+				//		v(0, 0) = min_x + i*step;
+				//		x(i, 0) = v(0, 0);
+				//		x(i, 1) = mreg.predict(v);
+				//	}
+				//	std::string line_header_names;
+				//	line_header_names = "t \"linear regression\"";
+
+				//	char buf[256];
+				//	sprintf(buf, "%s_%d_%d.dat", data_name.c_str(), i, j);
+				//	x.print_csv(buf);
+
+				//	fprintf(script, "plot '%s' %s using 1:%d %s with lines linewidth %.1f %s\n",
+				//		buf, every.c_str(), 2, line_header_names.c_str(), linewidth, linecolor.c_str());
+				//}
+				fprintf(script, "set style fill  transparent solid 0.85 noborder\n");
+				if (palette)
+				{
+					//fprintf(script, "plot '%s' %s using %d:%d:%d %s with points pointsize %.1f pt %d lc palette\n",
+					//	data_name.c_str(), every.c_str(), i + 1, j + 1, j+1, title.c_str(), pointsize, pointtype);
+					fprintf(script, "plot '%s' %s using %d:%d:%d %s with circles pal\n",
+						data_name.c_str(), every.c_str(), j + 1, i + 1, j + 1, title.c_str());
+				}
+				else
+				{
+					//fprintf(script, "plot '%s' %s using %d:%d %s with points pointsize %.1f pt %d\n",
+					//	data_name.c_str(), every.c_str(), i + 1, j + 1, title.c_str(), pointsize, pointtype);
+					fprintf(script, "plot '%s' %s using %d:%d:(-1) %s with circles lc rgb \"sea-green\"\n",
+						data_name.c_str(), every.c_str(), j + 1, i + 1, title.c_str());
+				}
+#endif
+				fflush(script);
+			}
+		}
+		fprintf(script, "unset multiplot\n");
+		plot_count++;
+	}
+
 	void multi_scatter(Matrix<dnn_double>&X, std::vector<std::string>& headers, int grid, int pointtype = 6, char* palette = "rgbformulae 34,35,36", int maxpoint = -1)
 	{
 		script_reopen();
@@ -742,6 +914,8 @@ public:
 			"set border lc rgb \"white\"\n"
 		);
 	}
+
+	bool scatter_xyrange_setting = true;
 	double scatter_circle_radius_screen = 0.01;
 	void scatter(Matrix<dnn_double>&X, int col1, int col2, float point_size, int grid, std::vector<std::string>& headers, int pointtype = 6, char* palette = "rgbformulae 22, 13, -31", int maxpoint = -1)
 	{
@@ -873,6 +1047,7 @@ public:
 
 		fprintf(script, "set xlabel %s\n", xx.c_str());
 		fprintf(script, "set ylabel %s\n", yy.c_str());
+		if(scatter_xyrange_setting)
 		{
 			double max_x = x.Col(0).Max();
 			double min_x = x.Col(0).Min();
@@ -883,6 +1058,7 @@ public:
 			fprintf(script, "set xrange[%.3f:%.3f]\n", min_x - rate_x, max_x + rate_x);
 			fprintf(script, "set yrange[%.3f:%.3f]\n", min_y - rate_y, max_y + rate_y);
 		}
+		scatter_xyrange_setting = true;
 		const char* plot = (plot_count) ? "replot" : "plot";
 		if (palette)
 		{

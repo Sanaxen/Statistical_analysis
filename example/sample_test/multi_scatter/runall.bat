@@ -6,3 +6,7 @@ cd test2
 call run
 call run2
 cd ..
+
+cd test3
+call run
+cd ..
