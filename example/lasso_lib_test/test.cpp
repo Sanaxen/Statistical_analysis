@@ -17,6 +17,8 @@ int main(int argc, char** argv)
 	Matrix<dnn_double> y;
 	std::vector<std::string> header_str;
 
+	bool capture = false;
+
 	std::string y_var = "";
 	int start_col = 0;
 	bool header = false;
@@ -68,6 +70,10 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--y_var") {
 			y_var = argv[count + 1];
+			continue;
+		}else
+		if (argname == "--capture") {
+			capture = (atoi(argv[count + 1]) != 0) ? true : false;
 			continue;
 		}
 		else {
@@ -453,7 +459,10 @@ int main(int argc, char** argv)
 					plot1.set_label(0.8, 0.95, 1, text);
 					plot1.scatter_density_mode = false;
 					plot1.set_palette(palette);
-					plot1.set_capture(win_size, std::string("AIC_list.png"));
+					if (capture)
+					{
+						plot1.set_capture(win_size, std::string("AIC_list.png"));
+					}
 					plot1.scatter(T, 1, 0, pointsize, grid, header_names_tmp, 5, palette);
 					plot1.draw();
 				}
@@ -470,7 +479,10 @@ int main(int argc, char** argv)
 					plot1.set_label(0.8, 0.95, 1, text);
 					plot1.scatter_density_mode = false;
 					plot1.set_palette(palette);
-					plot1.set_capture(win_size, std::string("AIC_list2.png"));
+					if (capture)
+					{
+						plot1.set_capture(win_size, std::string("AIC_list2.png"));
+					}
 					plot1.scatter(T, 1, 0, pointsize, grid, header_names_tmp, 5, palette);
 					plot1.draw();
 				}

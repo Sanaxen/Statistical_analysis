@@ -20,6 +20,7 @@ int main(int argc, char** argv)
 
 	std::string csvfile("2-3c.csv");
 
+	bool capture = false;
 	int start_col = 0;
 	bool header = false;
 	for (int count = 1; count + 1 < argc; count += 2) {
@@ -27,13 +28,17 @@ int main(int argc, char** argv)
 		if (argname == "--csv") {
 			csvfile = std::string(argv[count + 1]);
 			continue;
-		}
+		}else
 		if (argname == "--header") {
 			header = (atoi(argv[count + 1]) != 0) ? true : false;
 			continue;
-		}
+		}else
 		if (argname == "--col") {
 			start_col = atoi(argv[count + 1]);
+			continue;
+		}else
+		if (argname == "--capture") {
+			capture = (atoi(argv[count + 1]) != 0) ? true : false;
 			continue;
 		}
 		else if (argname == "--x_var") {
@@ -173,7 +178,10 @@ int main(int argc, char** argv)
 
 	int win_size[2] = { 640 * 2, 480 * 2 };
 	gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6);
-	plot1.set_capture(win_size, std::string("principal_component.png"));
+	if (capture)
+	{
+		plot1.set_capture(win_size, std::string("principal_component.png"));
+	}
 	header_names[0] = "First principal component";
 	header_names[1] = "Second principal component";
 	plot1.scatter(pca2.principal_component(), 0, 1, 1, 30, header_names, 6);

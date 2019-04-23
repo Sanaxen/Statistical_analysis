@@ -24,6 +24,7 @@ int main(int argc, char** argv)
 	std::vector<std::string> x_var;
 	std::string y_var = "";
 
+	bool capture = false;
 	bool heat_map = false;
 	bool normalize = false;
 	int start_col = 0;
@@ -33,29 +34,33 @@ int main(int argc, char** argv)
 		if (argname == "--csv") {
 			csvfile = std::string(argv[count + 1]);
 			continue;
-		}
+		}else
 		if (argname == "--header") {
 			header = (atoi(argv[count + 1]) != 0) ? true : false;
 			continue;
-		}
+		}else
 		if (argname == "--col") {
 			start_col = atoi(argv[count + 1]);
 			continue;
-		}
+		}else
 		if (argname == "--x_var") {
 			x_var.push_back(argv[count + 1]);
 			continue;
-		}
+		}else
 		if (argname == "--y_var") {
 			y_var = argv[count + 1];
 			continue;
-		}
+		}else
 		if (argname == "--normalize") {
 			normalize = (atoi(argv[count + 1]) != 0) ? true : false;
 			continue;
-		}
+		}else
 		if (argname == "--heat_map") {
 			heat_map = (atoi(argv[count + 1]) != 0) ? true : false;
+			continue;
+		}else
+		if (argname == "--capture") {
+			capture = (atoi(argv[count + 1]) != 0) ? true : false;
 			continue;
 		}
 		else {
@@ -317,7 +322,10 @@ int main(int argc, char** argv)
 		line_header_names[0] = "linear regression";
 
 		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6);
-		plot1.set_capture(win_size, std::string("inear_regression.png"));
+		if (capture)
+		{
+			plot1.set_capture(win_size, std::string("inear_regression.png"));
+		}
 		plot1.plot_lines2(x, line_header_names);
 
 		plot1.scatter(T, x_var_idx[0], y_var_idx, 1, 30, header_names, 5);
@@ -339,8 +347,10 @@ int main(int argc, char** argv)
 		header_names[1] = "predict";
 
 		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 7);
-		plot1.set_capture(win_size, std::string("observed_predict.png"));
-
+		if (capture)
+		{
+			plot1.set_capture(win_size, std::string("observed_predict.png"));
+		}
 		plot1.scatter(T, 0, 1, 1, 30, header_names, 5);
 		if (10)
 		{

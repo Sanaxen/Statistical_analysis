@@ -19,6 +19,7 @@ int main(int argc, char** argv)
 	std::vector<std::string> header_str;
 	std::vector<std::string> x_var;
 
+	bool capture = false;
 	int N = 20;
 	float pointsize = 1.0;
 	bool ellipse = false;
@@ -55,7 +56,12 @@ int main(int argc, char** argv)
 		if (argname == "--palette") {
 			palette = argv[count + 1];
 			continue;
-		}else {
+		}else
+		if (argname == "--capture") {
+			capture = (atoi(argv[count + 1]) != 0) ? true : false;
+			continue;
+		}
+		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
 			return -1;
@@ -204,8 +210,11 @@ int main(int argc, char** argv)
 		{
 			plot1.histogram_gradation = false;
 		}
-		plot1.set_capture(win_size, std::string("histogram.png"));
-		plot1.plot_histogram(Histogram(X,N), (char*)header_names[0].c_str(), shapiro_wilk_test[0]);
+		if (capture)
+		{
+			plot1.set_capture(win_size, std::string("histogram.png"));
+		}
+		plot1.plot_histogram(Histogram(X, N), (char*)header_names[0].c_str(), shapiro_wilk_test[0]);
 		plot1.draw();
 	}else
 	{
@@ -220,7 +229,10 @@ int main(int argc, char** argv)
 		{
 			plot1.histogram_gradation = false;
 		}
-		plot1.set_capture(win_size, std::string("multi_histogram.png"));
+		if (capture)
+		{
+			plot1.set_capture(win_size, std::string("multi_histogram.png"));
+		}
 		plot1.multi_histgram(std::string("multi_histogram.png"), X, header_names, shapiro_wilk_test);
 		plot1.draw();
 	}

@@ -460,7 +460,10 @@ int main(int argc, char** argv)
 		}
 #ifdef USE_GNUPLOT
 		gnuPlot plot1(std::string(GNUPLOT_PATH), 3);
-		plot1.set_capture(error_distr_size, std::string("causal_multi_histgram.png"));
+		if (capture)
+		{
+			plot1.set_capture(error_distr_size, std::string("causal_multi_histgram.png"));
+		}
 		plot1.multi_histgram(std::string("causal_multi_histgram.png"), r, header_names, residual_flag);
 		plot1.draw();
 #endif

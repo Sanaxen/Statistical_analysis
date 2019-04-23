@@ -713,7 +713,6 @@ public:
 			}
 		}
 
-
 		X.print_csv((char*)data_name.c_str());
 		for (int i = 0; i < X.n; i++)
 		{
@@ -747,6 +746,8 @@ public:
 				}
 				if (j == i)
 				{
+					fprintf(script, "set style fill  transparent solid 1.0 noborder\n");
+
 					Matrix<dnn_double> &h = Histogram(X.Col(j), 10);
 					char histogram_name[256];
 					sprintf(histogram_name, "plot_(%d)%d_hist.dat", plot_count, i);
@@ -923,7 +924,8 @@ public:
 		if (script == NULL) return;
 		
 
-		fprintf(script, "set style circle radius screen %f\n", scatter_circle_radius_screen);
+		//fprintf(script, "set style circle radius screen %f\n", scatter_circle_radius_screen);
+		fprintf(script, "set style circle radius graph %f\n", scatter_circle_radius_screen);
 		if (scatter_density_mode)
 		{
 			fprintf(script, "set style fill  transparent solid 0.35 noborder\n");

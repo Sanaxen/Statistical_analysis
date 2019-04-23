@@ -297,20 +297,20 @@ class NonLinearRegression
 
 
 #ifdef USE_GNUPLOT
-		if (capture)
-		{
-			printf("capture\n");
-			std::string plot = std::string(GNUPLOT_PATH);
-			plot += " test_plot_capture1.plt";
-			system(plot.c_str());
+		//if (capture)
+		//{
+		//	printf("capture\n");
+		//	std::string plot = std::string(GNUPLOT_PATH);
+		//	plot += " test_plot_capture1.plt";
+		//	system(plot.c_str());
 
-			char buf[256];
-			sprintf(buf, "images\\test_%04d.png", plot_count);
-			std::string cmd = "cmd.exe /c ";
-			cmd += "copy images\\test.png " + std::string(buf);
-			system(cmd.c_str());
-			printf("%s\n", cmd.c_str());
-		}
+		//	char buf[256];
+		//	sprintf(buf, "images\\test_%04d.png", plot_count);
+		//	std::string cmd = "cmd.exe /c ";
+		//	cmd += "copy images\\test.png " + std::string(buf);
+		//	system(cmd.c_str());
+		//	printf("%s\n", cmd.c_str());
+		//}
 		plot_count++;
 #endif
 	}
@@ -959,7 +959,6 @@ public:
 
 	void visualize_observed_predict()
 	{
-		if (!plot) return;
 #ifdef USE_GNUPLOT
 		{
 			int win_size[2] = { 640 * 3, 480 * 3 };
@@ -968,8 +967,10 @@ public:
 			header_names[1] = "predict";
 
 			gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 10);
-			plot1.set_capture(win_size, std::string("observed_predict_NL.png"));
-
+			if (capture)
+			{
+				plot1.set_capture(win_size, std::string("observed_predict_NL.png"));
+			}
 			Matrix<dnn_double> T(Diff.size()*Diff[0].size() / 2, 2);
 			for (int i = 0; i < Diff.size(); i++)
 			{
