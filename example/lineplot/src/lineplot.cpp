@@ -20,6 +20,7 @@ int main(int argc, char *argv[])
 	std::vector<std::string> y_var;
 	int max_lines = 2000;
 
+	bool capture = false;
 	int start_col = 0;
 	bool header = false;
 	for (int count = 1; count + 1 < argc; count += 2) {
@@ -46,6 +47,10 @@ int main(int argc, char *argv[])
 		}
 		else if (argname == "--col") {
 			start_col = atoi(argv[count + 1]);
+			continue;
+		}else
+		if (argname == "--capture") {
+			capture = (atoi(argv[count + 1]) != 0) ? true : false;
 			continue;
 		}
 		else {
@@ -220,11 +225,14 @@ int main(int argc, char *argv[])
 	int win_size[2] = { 640 * 2,480 * 2 };
 	{
 		gnuPlot plot1(std::string(GNUPLOT_PATH));
-		plot1.set_capture(win_size, std::string("lines.png"));
-
+		if (capture)
+		{
+			plot1.set_capture(win_size, std::string("lines.png"));
+		}
 		plot1.linewidth = 1;
 		plot1.set_title("line plot");
 		plot1.set_label_x((char*)x_var.c_str());
+		plot1.linewidth = 2.0;
 		plot1.plot_lines2(A, header_names, max_lines);
 		plot1.draw();
 	}
