@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{210357F6-A95F-4C3A-A2D3-92391761D03D}</ProjectGuid>
+    <ProjectGuid>{81FCA2D1-1186-4D8B-8307-C649A1213763}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>libliner</RootNamespace>
+    <RootNamespace>logistic_regression_predict</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -135,7 +135,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v9.1\include;C:\ProgramData\NVIDIA Corporation\CUDA Samples\v9.1\common\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v9.1\include;C:\ProgramData\NVIDIA Corporation\CUDA Samples\v9.1\common\inc;../../third_party\liblinear;../../third_party\liblinear/blas;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
       <OpenMPSupport>true</OpenMPSupport>
       <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
@@ -149,7 +149,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="libliner.cpp" />
+    <ClCompile Include="..\..\third_party\liblinear\blas\daxpy.c" />
+    <ClCompile Include="..\..\third_party\liblinear\blas\ddot.c" />
+    <ClCompile Include="..\..\third_party\liblinear\blas\dnrm2.c" />
+    <ClCompile Include="..\..\third_party\liblinear\blas\dscal.c" />
+    <ClCompile Include="..\..\third_party\liblinear\linear.cpp" />
+    <ClCompile Include="..\..\third_party\liblinear\tron.cpp" />
+    <ClCompile Include="logistic_regression_predict.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

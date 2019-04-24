@@ -41,12 +41,18 @@ Copyright (c) 2014, Markus Buehren
 [Copyright (c) 2018, mcximing](https://github.com/mcximing/hungarian-algorithm-cpp)  
 MIT License Copyright (c) 2018 Sanaxen(Made a single header) 
 
-## Linear Regression(optional)
+## Linear Regression
 * Lasso 
 * Ridge 
 * Elastic Net  
-[MIT License Copyright (c) 2017 Liu](https://github.com/WiseDoge/liblm)
+[MIT License Copyright (c) 2017 Liu](https://github.com/cjlin1/liblinear)
 MIT License Copyright (c) 2018 Sanaxen
+
+## logistic regression
+* logistic regression 
+
+[BSD 3-Clause License Copyright (c) 2007-2019 The LIBLINEAR Project](https://github.com/WiseDoge/liblm)
+
 
 ## CLAPCK  
 modified BSD license  
