@@ -12,6 +12,11 @@
 #include <ctype.h>
 #include <errno.h>
 #include "linear.h"
+
+#define _cublas_Init_def
+#include "../../include/Matrix.hpp"
+#include "../../include/util/csvreader.h"
+
 #define _USE_MATH_DEFINES
 #include "../../include/util/mathutil.h"
 
@@ -46,6 +51,7 @@ static int max_line_len;
 
 char* cross_validation_file = NULL;
 double Pearson_residuals = 0.0;
+std::vector<double> SEs;
 
 int printf_null(const char *s, ...) { return 0; }
 void print_null(const char *s) {}
@@ -726,25 +732,45 @@ void do_predict(FILE *input, FILE *output)
 		);
 		info("Pearson_residuals = %.3f (regression)\n", Pearson_residuals);
 
+		double α = 0.05;
+		info("Confidence interval=%.3f\n", α);
+
+		double za = 1.96;
+		if (α == 0.1) za = 1.645;
+		if (α == 0.05) za = 1.96;
+		if (α == 0.01) za = 2.576;
+
 		//https://istat.co.jp/ta_commentary/logistic_04
 		//Wald–square
 		Chi_distribution chi_distribution(1);
+		double x = chi_distribution.p_value(α);
+		info("z^2>%.3f\n", x);
+
 		if (model_->bias < 0)
 		{
 			for (int i = 0; i < model_->nr_feature; i++)
 			{
-				double Wald_square = (model_->w[i] / se)*(model_->w[i] / se);
+				int ii = i + 1;
+				double Wald_square = (model_->w[i] / SEs[ii])*(model_->w[i] / SEs[ii]);
 				double chi_pdf = chi_distribution.p_value(Wald_square);
-				info("w=%.3f Wald_square=%.3g p-value=%.4f\n", model_->w[i], Wald_square, chi_pdf);
+				info("w=%.3f SE=%.3f Wald_square=%.3g p-value=%.4f"
+					" down=%.3f up=%.3f\n", 
+					model_->w[i], SEs[ii], Wald_square, chi_pdf,
+					model_->w[i]-za* SEs[ii], model_->w[i] + za * SEs[ii]);
 			}
 		}
 		else
 		{
 			for (int i = 0; i <= model_->nr_feature; i++)
 			{
-				double Wald_square = (model_->w[i] / se)*(model_->w[i] / se);
+				int ii = i + 1;
+				if (i == model_->nr_feature) ii = 0;
+				double Wald_square = (model_->w[i] / SEs[ii])*(model_->w[i] / SEs[ii]);
 				double chi_pdf = chi_distribution.p_value(Wald_square);
-				info("w=%.3f Wald_square=%.3g p-value=%.4f\n", model_->w[i], Wald_square, chi_pdf);
+				info("w=%.3f SE=%.3f Wald_square=%.3g p-value=%.4f"
+					" down=%.3f up=%.3f\n",
+					model_->w[i], SEs[ii], Wald_square, chi_pdf,
+					model_->w[i] - za * SEs[ii], model_->w[i] + za * SEs[ii]);
 			}
 		}
 	}
@@ -801,6 +827,53 @@ int logistic_regression_predict(int argc, char **argv)
 		exit(1);
 	}
 
+
+
+	{
+		char fname[260];
+		strcpy(fname, argv[i]);
+		char* p = strstr(fname, "_libsvm");
+		if (p)
+		{
+			*p = '\0';
+		}
+		else
+		{
+			printf("model file name rule:datafile.csv -> datafile.csv_libsvm****\n");
+		}
+		strcat(fname, ".no_header");
+		printf("%s\n", fname);
+		CSVReader csv1(fname, ',', false);
+		Matrix<dnn_double> T = csv1.toMat();
+
+		std::vector<double> means;
+		std::vector<double> sigmas;
+		for (int i = 0; i < T.n; i++)
+		{
+			double mean = 0.0;
+			for (int j = 0; j < T.m; j++)
+			{
+				mean += T(i, j);
+			}
+			mean /= T.m;
+			means.push_back(mean);
+		}
+		for (int i = 0; i < T.n; i++)
+		{
+			double s = 0.0;
+			for (int j = 0; j < T.m; j++)
+			{
+				s += (T(i, j)-means[i])*(T(i, j) - means[i]);
+			}
+			s /= (T.m - 1);
+			sigmas.push_back(sqrt(s));
+		}
+		for (int i = 0; i < T.n; i++)
+		{
+			double se = sqrt(sigmas[i]) / sqrt(T.m);
+			SEs.push_back(se);
+		}
+	}
 	x = (struct feature_node *) malloc(max_nr_attr * sizeof(struct feature_node));
 	do_predict(input, output);
 

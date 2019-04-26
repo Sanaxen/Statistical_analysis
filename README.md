@@ -45,13 +45,13 @@ MIT License Copyright (c) 2018 Sanaxen(Made a single header)
 * Lasso 
 * Ridge 
 * Elastic Net  
-[MIT License Copyright (c) 2017 Liu](https://github.com/cjlin1/liblinear)
+[MIT License Copyright (c) 2017 Liu](https://github.com/WiseDoge/liblm)
 MIT License Copyright (c) 2018 Sanaxen
 
 ## logistic regression
 * logistic regression 
 
-[BSD 3-Clause License Copyright (c) 2007-2019 The LIBLINEAR Project](https://github.com/WiseDoge/liblm)
+[BSD 3-Clause License Copyright (c) 2007-2019 The LIBLINEAR Project](hhttps://github.com/cjlin1/liblinear)
 
 
 ## CLAPCK  

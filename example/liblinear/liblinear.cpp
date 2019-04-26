@@ -215,7 +215,9 @@ int main(int argc, char** argv)
 		}
 		fclose(fp);
 
-		A.print_csv("A_train.csv");
+		sprintf(fname, "%s.no_header", csvfile.c_str());
+		A.print_csv(fname);
+		A.print_csv("Az_train.csv");
 	}
 	else
 	{
@@ -242,7 +244,9 @@ int main(int argc, char** argv)
 		}
 		fclose(fp);
 
-		A.print_csv("A_train.csv");
+		sprintf(fname, "%s.no_header", csvfile.c_str());
+		A.print_csv(fname);
+		A.print_csv("Aa_train.csv");
 
 		if (test > 1)
 		{
@@ -261,6 +265,8 @@ int main(int argc, char** argv)
 			fclose(fp);
 
 			A.print_csv("A_test.csv");
+			sprintf(fname, "%s.no_header", csvfile.c_str());
+			A.print_csv(fname);
 		}
 	}
 	fflush(stdout);
