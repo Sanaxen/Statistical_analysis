@@ -735,10 +735,14 @@ void do_predict(FILE *input, FILE *output)
 		double α = 0.05;
 		info("Confidence interval=%.3f\n", α);
 
+		Standard_normal_distribution snd;
 		double za = 1.96;
 		if (α == 0.1) za = 1.645;
-		if (α == 0.05) za = 1.96;
-		if (α == 0.01) za = 2.576;
+		else if (α == 0.05) za = 1.96;
+		else if (α == 0.01) za = 2.576;
+		else za = snd.p_value(α / 2);
+		info("Za:%.3f\n", za);
+
 
 		//https://istat.co.jp/ta_commentary/logistic_04
 		//Wald–square
@@ -746,14 +750,16 @@ void do_predict(FILE *input, FILE *output)
 		double x = chi_distribution.p_value(α);
 		info("z^2>%.3f\n", x);
 
+		//printf("0.320354==%f\n", 1.0-chi_distribution.distribution(0.9875, &x));
 		if (model_->bias < 0)
 		{
 			for (int i = 0; i < model_->nr_feature; i++)
 			{
+				double tmp;
 				int ii = i + 1;
 				double Wald_square = (model_->w[i] / SEs[ii])*(model_->w[i] / SEs[ii]);
-				double chi_pdf = chi_distribution.p_value(Wald_square);
-				info("w=%.3f SE=%.3f Wald_square=%.3g p-value=%.4f"
+				double chi_pdf = 1.0 - chi_distribution.distribution(Wald_square, &tmp);
+				info("w=%.3f SE=%.3f Wald=%.3g p-value=%.4f"
 					" down=%.3f up=%.3f\n", 
 					model_->w[i], SEs[ii], Wald_square, chi_pdf,
 					model_->w[i]-za* SEs[ii], model_->w[i] + za * SEs[ii]);
@@ -763,11 +769,12 @@ void do_predict(FILE *input, FILE *output)
 		{
 			for (int i = 0; i <= model_->nr_feature; i++)
 			{
+				double tmp;
 				int ii = i + 1;
 				if (i == model_->nr_feature) ii = 0;
 				double Wald_square = (model_->w[i] / SEs[ii])*(model_->w[i] / SEs[ii]);
-				double chi_pdf = chi_distribution.p_value(Wald_square);
-				info("w=%.3f SE=%.3f Wald_square=%.3g p-value=%.4f"
+				double chi_pdf = 1.0 - chi_distribution.distribution(Wald_square, &tmp);
+				info("w=%.3f SE=%.3f Wald=%.3g p-value=%.4f"
 					" down=%.3f up=%.3f\n",
 					model_->w[i], SEs[ii], Wald_square, chi_pdf,
 					model_->w[i] - za * SEs[ii], model_->w[i] + za * SEs[ii]);
