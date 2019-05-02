@@ -6,6 +6,7 @@
 - [x] Linear regression
 - [x] Multiple regression
 - [x] Sparse regression
+- [x] Logistic regression
 - [x] Nonlinear regression
 - [x] Principal component analysis
 - [x] Independent component analysis
