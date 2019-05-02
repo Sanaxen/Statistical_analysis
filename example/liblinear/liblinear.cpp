@@ -182,6 +182,10 @@ int main(int argc, char** argv)
 			return -1;
 		}
 	}
+	for (int i = 0; i < header_names.size(); i++)
+	{
+		std::replace(header_names[i].begin(), header_names[i].end(), ' ', '_');
+	}
 
 	Matrix<dnn_double> A;
 	
@@ -197,6 +201,17 @@ int main(int argc, char** argv)
 		}
 	}
 
+	{
+		FILE* fp = fopen("select_variables.dat", "w");
+		if (fp)fprintf(fp, "%d,%s\n", y_var_idx, header_names[0].c_str());
+		std::vector<int> var_indexs;
+		int num = 0;
+		for (int i = 0; i < x_var_idx.size(); i++)
+		{
+			if (fp)fprintf(fp, "%d,%s\n", x_var_idx[i], header_names[i + 1].c_str());
+		}
+		fclose(fp);
+	}
 	char fname[640];
 
 	if (fold_cv <= 1)

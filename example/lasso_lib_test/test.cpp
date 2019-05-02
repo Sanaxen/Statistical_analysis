@@ -294,7 +294,7 @@ int main(int argc, char** argv)
 		}
 		solver->y_var_idx = y_var_idx;
 		solver->fit(X, y);
-		solver->report(std::string("regularization.rep"), X, header_names, &y);
+		solver->report(std::string("regularization.txt"), X, header_names, &y);
 
 		double auto_search_aic = 0;
 		double auto_search_l1 = 0;

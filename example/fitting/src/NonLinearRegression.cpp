@@ -115,6 +115,10 @@ int main(int argc, char** argv)
 			header_names[i] = buf;
 		}
 	}
+	for (int i = 0; i < header_names.size(); i++)
+	{
+		std::replace(header_names[i].begin(), header_names[i].end(), ' ', '_');
+	}
 
 	std::vector<int> x_var_idx;
 	std::vector<int> y_var_idx;
@@ -286,6 +290,16 @@ int main(int argc, char** argv)
 	x.print();
 	y.print();
 
+	{
+		FILE* fp = fopen("select_variables.dat", "w");
+		if (fp)fprintf(fp, "%d,%s\n", y_var_idx[0], header_names[y_var_idx[0]].c_str());
+		for (int i = 0; i < x_var_idx.size(); i++)
+		{
+			if (fp)fprintf(fp, "%d,%s\n", x_var_idx[i], header_names[x_var_idx[i]].c_str());
+		}
+		fclose(fp);
+	}
+
 	tiny_dnn::tensor_t X, Y;
 	MatrixToTensor(x, X, read_max);
 	MatrixToTensor(y, Y, read_max);
@@ -387,12 +401,21 @@ int main(int argc, char** argv)
 			regression.early_stopping = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--regression") {
+			regression.regression = argv[count + 1];
+			continue;
+		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
 			return -1;
 		}
 
+	}
+	if (regression.iY.size() < regression.n_minibatch)
+	{
+		printf("data %d < minibatch %d\n", regression.iY.size(), regression.n_minibatch);
+		return -1;
 	}
 	std::cout << "Running with the following parameters:" << std::endl
 		<< "Learning rate   : " << regression.learning_rate << std::endl
@@ -408,6 +431,14 @@ int main(int argc, char** argv)
 		<< "random fluctuation       : " << regression.fluctuation << std::endl
 		<< std::endl;
 
+	{
+		FILE* fp = fopen("debug_commandline.txt", "w");
+		for (int i = 0; i < argc; i++)
+		{
+			fprintf(fp, "%s ", argv[i]);
+		}
+		fclose(fp);
+	}
 	regression.fit(n_layers, input_unit);
 	regression.report(0.05, report_file);
 	regression.visualize_observed_predict();

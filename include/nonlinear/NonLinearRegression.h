@@ -322,6 +322,7 @@ class NonLinearRegression
 	int batch = 0;
 	bool early_stopp = false;
 public:
+	std::string regression = "";
 	std::vector < std::vector<double>> Diff;
 	float_t fluctuation = 0.0;
 	float_t dec_random = 0;	//Decimation of random points
@@ -432,7 +433,7 @@ public:
 		size_t test_Num = dataAll*test;
 		int datasetNum = dataAll - test_Num;
 
-		if (datasetNum == 0)
+		if (datasetNum == 0 || datasetNum < this->n_minibatch)
 		{
 			printf("Too many min_batch or Sequence length\n");
 			error = -1;
@@ -544,6 +545,7 @@ public:
 		}
 		fclose(fp);
 		printf("train:%d test:%d\n", train_images.size(), test_images.size());
+		return 0;
 	}
 
 	void construct_net(int n_layers = 5)
@@ -554,34 +556,38 @@ public:
 		using tanh = tiny_dnn::activation::tanh;
 		using recurrent = tiny_dnn::recurrent_layer;
 
-		int hidden_size = train_images[0].size()  * 50;
+		int hidden_size = train_images[0].size() * 50;
 
 		// clip gradients
 		tiny_dnn::recurrent_layer_parameters params;
 		params.clip = 0;
 		params.bptt_max = 1e9;
 
-		size_t in_w = train_images[0].size() ;
+		size_t in_w = train_images[0].size();
 		size_t in_h = 1;
 		size_t in_map = 1;
 
 		LayerInfo layers(in_w, in_h, in_map);
-		nn << layers.add_fc(input_size);
-		nn << layers.tanh();
-		
-		//nn << layers.add_cnv(in_w, 2, 1, 2, 1, tiny_dnn::padding::same);
-		//nn << layers.add_avepool(2, 1, 2, 1, tiny_dnn::padding::same);
-		//nn << layers.tanh();
-		//nn << layers.add_cnv(in_w, 2, 1, 2, 1, tiny_dnn::padding::same);
-		//nn << layers.add_avepool(2, 1, 2, 1, tiny_dnn::padding::same);
-		//nn << layers.tanh();
-		//nn << layers.add_dropout(0.1);
-
-		for (int i = 0; i < n_layers; i++) {
+		if (regression == "linear" || regression == "logistic")
+		{
+			/**/
+		}
+		else
+		{
 			nn << layers.add_fc(input_size);
 			nn << layers.tanh();
+			
+			for (int i = 0; i < n_layers; i++) {
+				nn << layers.add_fc(input_size);
+				nn << layers.tanh();
+			}
 		}
 		nn << layers.add_fc(train_labels[0].size());
+
+		if (regression == "logistic")
+		{
+			nn << layers.sigmoid();
+		}
 
 		nn.weight_init(tiny_dnn::weight_init::xavier());
 		for (auto n : nn) n->set_parallelize(true);
@@ -798,7 +804,86 @@ public:
 		if (fp_error_vari_loss)fclose(fp_error_vari_loss);
 
 		// save network model & trained weights
+		nn.save(model_file+".json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
 		nn.save(model_file);
+
+
+		if (regression == "linear" || regression == "logistic")
+		{
+			int n = 0;
+			std::vector<double> w;
+			double bias;
+			FILE* fp = fopen((model_file + ".json").c_str(), "r");
+			if (fp)
+			{
+				double ww;
+
+				char buf[256];
+				while (fgets(buf, 256, fp) != NULL)
+				{
+					char* p;
+					if ( p = strstr(buf, "\"in_size\":"))
+					{
+						sscanf(p, "\"in_size\": %d", &n);
+						break;
+					}
+				}
+				while (fgets(buf, 256, fp) != NULL)
+				{
+					if (strstr(buf, "\"value0\": ["))
+					{
+						break;
+					}
+				}
+				for (int i = 0; i < n; i++)
+				{
+					fgets(buf, 256, fp);
+					sscanf(buf, " %lf", &ww);
+					w.push_back(ww);
+				}
+				while (fgets(buf, 256, fp) != NULL)
+				{
+					if (strstr(buf, "\"value1\": ["))
+					{
+						break;
+					}
+				}
+				fgets(buf, 256, fp);
+				sscanf(buf, " %lf", &bias);
+				fclose(fp);
+			}		
+			
+			fp = fopen("dnn_regression_fit.model", "w");
+			if (fp)
+			{
+				fprintf(fp, "n %d\n", n);
+				fprintf(fp, "bias %.16g\n", bias);
+				for (int i = 0; i < n; i++)
+				{
+					fprintf(fp, "%.16g\n", w[i]);
+				}
+				fclose(fp);
+			}
+			if (regression == "logistic")
+			{
+				fp = fopen("dnn_libsvm.model", "w");
+				if (fp)
+				{
+					fprintf(fp, "solver_type L2R_LR\n");
+					fprintf(fp, "nr_class 2\n");
+					fprintf(fp, "label 1 0\n");
+					fprintf(fp, "nr_feature %d\n", n);
+					fprintf(fp, "bias %.16g\n", 0.0);
+					fprintf(fp, "w\n");
+					for (int i = 0; i < n; i++)
+					{
+						fprintf(fp, "%.16g \n", w[i]);
+					}
+					fprintf(fp, "%.16g \n", bias);
+					fclose(fp);
+				}
+			}
+		}
 	}
 
 	tiny_dnn::vec_t predict_next(tiny_dnn::vec_t& x)
@@ -881,8 +966,10 @@ public:
 
 		Maximum_log_likelihood *= -0.5*(train_images.size()*train_labels[0].size());
 
-		double AIC = -2.0*Maximum_log_likelihood + 2.0*freedom;
-		double SE = sqrt(mse / std::max(1, (int)(train_images.size()*train_labels[0].size()) - (int)freedom));
+		//double AIC = -2.0*Maximum_log_likelihood + 2.0*freedom;
+		//double SE = sqrt(mse / std::max(1, (int)(train_images.size()*train_labels[0].size()) - (int)freedom));
+		double AIC = -2.0*Maximum_log_likelihood + 2.0*nX[0].size();
+		double SE = sqrt(mse / std::max(1, (int)(train_images.size()*train_labels[0].size()) - (int)nX[0].size()));
 
 		double d_sum = 0.0;
 		double f_sum = 0.0;

@@ -595,7 +595,7 @@ public:
 		int datasetNum = dataAll - test_Num;
 
 		datasetNum = datasetNum - datasetNum % n_minibatch;
-		if (datasetNum == 0)
+		if (datasetNum == 0 || datasetNum < this->n_minibatch)
 		{
 			printf("Too many min_batch or Sequence length\n");
 			error = -1;
@@ -629,6 +629,7 @@ public:
 			}
 			test_labels.push_back(y);
 		}
+		return 0;
 	}
 
 	void construct_net(int n_rnn_layers = 2, int n_layers = 2, int n_hidden_size = -1)

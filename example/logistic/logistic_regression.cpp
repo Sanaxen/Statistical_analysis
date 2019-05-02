@@ -895,6 +895,7 @@ int logistic_regression_predict(int argc, char **argv)
 
 int main(int argc, char** argv)
 {
+	int stat = -1;
 	printf("logistic_regression START\n");
 
 	int argc2 = 0;
@@ -990,7 +991,7 @@ int main(int argc, char** argv)
 		strcpy(argv2[argc2], file.c_str()); argc2++;
 		strcpy(argv2[argc2], model.c_str()); argc2++;
 
-		logistic_regression_train(argc2, argv2);
+		stat = logistic_regression_train(argc2, argv2);
 	}
 	else
 	{
@@ -1019,7 +1020,7 @@ int main(int argc, char** argv)
 		strcpy(argv2[5], output.c_str());
 		argc2 = 6;
 
-		logistic_regression_predict(argc2, (char**)argv2);
+		stat = logistic_regression_predict(argc2, (char**)argv2);
 	}
 
 	for (int i = 0; i < 32; i++)
@@ -1029,5 +1030,5 @@ int main(int argc, char** argv)
 	delete[] argv2;
 
 	printf("logistic_regression END\n\n");
-	return 0;
+	return stat;
 }

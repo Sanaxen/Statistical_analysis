@@ -7,6 +7,7 @@
 #include "../../include/statistical/LinearRegression.h"
 //#include "../../include/util/mathutil.h"
 #include "../../include/util/csvreader.h"
+#include "../../include/statistical/RegularizationRegression.h"
 
 #ifdef USE_GNUPLOT
 #include "../../include/util/plot.h"
@@ -24,11 +25,19 @@ int main(int argc, char** argv)
 	std::vector<std::string> x_var;
 	std::string y_var = "";
 
+	int test_mode = 0;
 	bool capture = false;
 	bool heat_map = false;
 	bool normalize = false;
 	int start_col = 0;
 	bool header = false;
+
+	int max_iteration = 1000;
+	double tol = 0.001;
+	double lambda1 = 0.001;
+	double lambda2 = 0.001;
+	std::string solver_name = "";
+
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
 		if (argname == "--csv") {
@@ -61,6 +70,30 @@ int main(int argc, char** argv)
 		}else
 		if (argname == "--capture") {
 			capture = (atoi(argv[count + 1]) != 0) ? true : false;
+			continue;
+		}else
+		if (argname == "--test_mode") {
+			test_mode = atoi(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--iter") {
+			max_iteration = atoi(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--tol") {
+			tol = atof(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--L1") {
+			lambda1 = atof(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--L2") {
+			lambda2 = atof(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--solver") {
+			solver_name = argv[count + 1];
 			continue;
 		}
 		else {
@@ -272,6 +305,11 @@ int main(int argc, char** argv)
 		}
 	}
 
+	for (int i = 0; i < header_names.size(); i++)
+	{
+		std::replace(header_names[i].begin(), header_names[i].end(), ' ', '_');
+	}
+
 	A.print("A");
 	B.print("B");
 
@@ -282,15 +320,114 @@ int main(int argc, char** argv)
 
 	mreg.set(A.n);
 	mreg.fit(A, B);
+
+	if (solver_name != "")
+	{
+		printf("³‘¥‰»\n");
+		RegressionBase* solver = NULL;
+
+		if (solver_name == "lasso")
+		{
+			solver = new LassoRegression(lambda1, max_iteration, tol);
+		}
+		if (solver_name == "elasticnet")
+		{
+			solver = new ElasticNetRegression(lambda1, lambda2, max_iteration, tol);
+		}
+		if (solver_name == "ridge")
+		{
+			solver = new RidgeRegression(lambda2, max_iteration, tol);
+		}
+		solver->y_var_idx = y_var_idx;
+		solver->fit(A, B);
+		solver->report(std::string("regularization.txt"), A, header_names, &B);
+
+		mreg.bias = solver->coef(0, A.n - 1);
+		for (int i = 0; i < A.n; i++)
+		{
+			mreg.les.coef(0, i) = solver->coef(0, i);
+		}
+		if (solver) delete solver;
+	}
+	
+	if (test_mode)
+	{
+		FILE* fp = NULL;
+		
+		if (test_mode == 1)
+		{
+			fp = fopen("ln_regression_fit.model", "r");
+		}
+		if (test_mode == 2)
+		{
+			fp = fopen("dnn_regression_fit.model", "r");
+		}
+		if (fp)
+		{
+			double w;
+			int n = 0;
+			char buf[256];
+			fgets(buf, 256, fp);
+			sscanf(buf, "n %d\n", &n);
+			if (n != A.n)
+			{
+				printf("model error or test data dimention error.\n");
+				return -1;
+			}
+			fgets(buf, 256, fp);
+			sscanf(buf, "bias %lf\n", &w); 
+			mreg.bias = w;
+			for (int i = 0; i < A.n; i++)
+			{
+				fgets(buf, 256, fp);
+				sscanf(buf, "%lf\n", &w);
+				mreg.les.coef(0, i) = w;
+			}
+			fclose(fp);
+		}
+		if (fp == NULL)
+		{
+			printf("load model error\n");
+			return -1;
+		}
+	}
+
 	if (A.n == 1)
 	{
-		mreg.report(std::string("regression1.rep"), header_names, 0.05);
+		mreg.report(std::string("regression1.txt"), header_names, 0.05);
 	}
 	else
 	{
-		mreg.report(std::string("regression.rep"), header_names, 0.05);
+		mreg.report(std::string("regression.txt"), header_names, 0.05);
 	}
 	mreg.report(std::string(""), header_names, 0.05);
+
+	{
+		FILE* fp = fopen("select_variables.dat", "w");
+		if (fp)fprintf(fp, "%d,%s\n", y_var_idx, header_names[0].c_str());
+		std::vector<int> var_indexs;
+		int num = 0;
+		for (int i = 0; i < x_var_idx.size(); i++)
+		{
+			if (fp)fprintf(fp, "%d,%s\n", x_var_idx[i], header_names[i + 1].c_str());
+		}
+		fclose(fp);
+	}
+
+	if(!test_mode)
+	{
+		FILE* fp = fopen("ln_regression_fit.model", "w");
+		if (fp)
+		{
+			fprintf(fp, "n %d\n", A.n);
+			fprintf(fp, "bias %.16g\n", mreg.bias);
+			for (int i = 0; i < A.n; i++)
+			{
+				fprintf(fp, "%.16g\n", mreg.les.coef(0, i));
+			}
+			fclose(fp);
+		}
+	}
 
 	Matrix<dnn_double> cor = A.Cor();
 	cor.print_csv("cor.csv");
