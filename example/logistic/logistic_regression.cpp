@@ -855,25 +855,27 @@ int logistic_regression_predict(int argc, char **argv)
 
 		std::vector<double> means;
 		std::vector<double> sigmas;
-		for (int i = 0; i < T.n; i++)
+		for (int j = 0; j < T.n; j++)
 		{
 			double mean = 0.0;
-			for (int j = 0; j < T.m; j++)
+			for (int i = 0; i < T.m; i++)
 			{
 				mean += T(i, j);
 			}
 			mean /= T.m;
 			means.push_back(mean);
+			//printf("mean[%d]:%f\n", j, mean);
 		}
-		for (int i = 0; i < T.n; i++)
+		for (int j = 0; j < T.n; j++)
 		{
 			double s = 0.0;
-			for (int j = 0; j < T.m; j++)
+			for (int i = 0; i < T.m; i++)
 			{
-				s += (T(i, j)-means[i])*(T(i, j) - means[i]);
+				s += (T(i, j)-means[j])*(T(i, j) - means[j]);
 			}
 			s /= (T.m - 1);
 			sigmas.push_back(sqrt(s));
+			//printf("sigmas[%d]:%f\n", j, sqrt(s));
 		}
 		for (int i = 0; i < T.n; i++)
 		{
@@ -991,6 +993,14 @@ int main(int argc, char** argv)
 		strcpy(argv2[argc2], file.c_str()); argc2++;
 		strcpy(argv2[argc2], model.c_str()); argc2++;
 
+		{
+			FILE* fp = fopen("debug_commandline1.txt", "w");
+			for (int i = 0; i < argc; i++)
+			{
+				fprintf(fp, "%s ", argv[i]);
+			}
+			fclose(fp);
+		}
 		stat = logistic_regression_train(argc2, argv2);
 	}
 	else
@@ -1020,6 +1030,14 @@ int main(int argc, char** argv)
 		strcpy(argv2[5], output.c_str());
 		argc2 = 6;
 
+		{
+			FILE* fp = fopen("debug_commandline2.txt", "w");
+			for (int i = 0; i < argc; i++)
+			{
+				fprintf(fp, "%s ", argv[i]);
+			}
+			fclose(fp);
+		}
 		stat = logistic_regression_predict(argc2, (char**)argv2);
 	}
 
