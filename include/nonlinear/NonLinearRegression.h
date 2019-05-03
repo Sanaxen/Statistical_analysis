@@ -964,7 +964,7 @@ public:
 		double Maximum_likelihood_estimator = mse;
 		double Maximum_log_likelihood = log(2.0*M_PI) + log(Maximum_likelihood_estimator) + 1.0;
 
-		Maximum_log_likelihood *= -0.5*(train_images.size()*train_labels[0].size());
+		Maximum_log_likelihood *= -0.5*((nY.size()*nY[0].size()));
 
 		//double AIC = -2.0*Maximum_log_likelihood + 2.0*freedom;
 		//double SE = sqrt(mse / std::max(1, (int)(train_images.size()*train_labels[0].size()) - (int)freedom));
