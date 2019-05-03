@@ -1021,8 +1021,10 @@ public:
 
 		Maximum_log_likelihood *= -0.5*(train_images.size()*train_labels[0].size());
 
-		double AIC = -2.0*Maximum_log_likelihood + 2.0*freedom;
-		double SE = sqrt(mse / std::max(1, (int)(train_images.size()*train_labels[0].size()) - (int)freedom));
+		//double AIC = -2.0*Maximum_log_likelihood + 2.0*freedom;
+		//double SE = sqrt(mse / std::max(1, (int)(train_images.size()*train_labels[0].size()) - (int)freedom));
+		double AIC = -2.0*Maximum_log_likelihood + 2.0*train_images[0].size();
+		double SE = sqrt(mse / std::max(1, (int)(train_images.size()*train_labels[0].size()) - (int)train_images[0].size()));
 
 		double mean_ff = 0.0;
 		double mean_yy = 0.0;
