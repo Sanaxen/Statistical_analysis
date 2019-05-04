@@ -16,6 +16,7 @@ int main(int argc, char** argv)
 	std::vector<std::string> x_var;
 	std::string y_var = "";
 
+	std::string nomalize = "";
 	int fold_cv = 0;
 	bool capture = false;
 	bool heat_map = false;
@@ -48,6 +49,10 @@ int main(int argc, char** argv)
 		if (argname == "--fold_cv") {
 			fold_cv = atoi(argv[count + 1]);
 			continue;
+		}else
+		if (argname == "--nomalize")
+		{
+			nomalize = argv[count + 1];
 		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
@@ -198,6 +203,72 @@ int main(int argc, char** argv)
 		{
 			A = A.appendCol(T.Col(x_var_idx[i]));
 			header_names[i] = header_names_wrk[x_var_idx[i]];
+		}
+	}
+
+	if(nomalize == "zscore")
+	{
+		std::vector<double> mean(A.n, 0.0);
+		std::vector<double> sigma(A.n, 0.0);
+
+		for (int i = 1; i < A.n; i++) 		{
+			mean[i] = 0.0;
+			for (int k = 0; k < A.m; k++)
+			{
+				mean[i] += A(k, i);
+			}
+		}
+		for (int k = 1; k <A.n; k++)
+		{
+			mean[k] /= A.m;
+		}
+		for (int i = 1; i < A.n; i++)
+		{
+			sigma[i] = 0.0;
+			for (int k = 0; k < A.m; k++)
+			{
+				sigma[i] += (A(k, i) - mean[i])*(A(k, i) - mean[i]);
+			}
+		}
+		for (int k = 1; k < A.n; k++)
+		{
+			sigma[k] /= A.m;
+		}
+		for (int i = 1; i < A.n; i++)
+		{
+			for (int k = 0; k < A.m; k++)
+			{
+				A(k, i) = (A(k, i) - mean[i]) / (sigma[i] + 1.0e-10);
+			}
+		}
+	}
+	if (nomalize == "minmax")
+	{
+		std::vector<double> min_(A.n, 0.0);
+		std::vector<double> maxmin_(A.n, 0.0);
+		for (int k = 1; k < A.n; k++)
+		{
+			float max_value = -std::numeric_limits<float>::max();
+			float min_value = std::numeric_limits<float>::max();
+			for (int i = 0; i < A.m; i++)
+			{
+				if (max_value < A(i, k)) max_value = A(i, k);
+				if (min_value > A(i, k)) min_value = A(i, k);
+			}
+			min_[k] = min_value;
+			maxmin_[k] = (max_value - min_value);
+			if (fabs(maxmin_[k]) < 1.0e-14)
+			{
+				min_[k] = 0.0;
+				maxmin_[k] = max_value;
+			}
+		}
+		for (int i = 0; i < A.m; i++)
+		{
+			for (int k = 1; k < A.n; k++)
+			{
+				A(i, k) = (A(i, k) - min_[k]) / maxmin_[k];
+			}
 		}
 	}
 
