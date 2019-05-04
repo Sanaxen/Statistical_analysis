@@ -56,6 +56,229 @@ std::vector<double> SEs;
 int printf_null(const char *s, ...) { return 0; }
 void print_null(const char *s) {}
 
+class basic_statistic_values
+{
+public:
+	int error = -1;
+	std::vector<dnn_double> mean_x;
+	dnn_double mean_y;
+	Matrix<dnn_double> Sa;
+	Matrix<dnn_double> Sb;
+	dnn_double bias;
+	std::vector<dnn_double> y_predict;
+
+	dnn_double se;
+	dnn_double sr;
+	dnn_double st;
+	dnn_double r2;
+	dnn_double r_2;
+	dnn_double ve;
+	dnn_double vr;
+	dnn_double AIC;
+	dnn_double F_value;
+
+	std::vector<dnn_double> se_ii;
+	Matrix<dnn_double> Sa_1;
+
+	std::vector<dnn_double> t_value;
+	std::vector<dnn_double> p_value;
+};
+
+basic_statistic_values statistic_values;
+
+basic_statistic_values test_statistic(Matrix<dnn_double>&A_, Matrix<dnn_double>&B_, std::vector<dnn_double>& coef)
+{
+	Matrix<dnn_double>A = A_;
+	Matrix<dnn_double>B = B_;
+
+	basic_statistic_values v;
+	if (A.m - A.n - 1 <= 0)
+	{
+		return v;
+	}
+
+	//重回帰の正規方程式を生成する
+	v.mean_x.resize(A.n);
+	for (int j = 0; j < A.n; j++)
+	{
+		dnn_double sum = 0.0;
+		for (int i = 0; i < A.m; i++)
+		{
+			sum += A(i, j);
+		}
+		sum /= A.m;
+		v.mean_x[j] = sum;
+	}
+	v.mean_y = 0.0;
+	for (int i = 0; i < B.m; i++)
+	{
+		v.mean_y += B(i, 0);
+	}
+	v.mean_y /= B.m;
+
+	v.Sa = Matrix<dnn_double>(A.n, A.n);
+	for (int ii = 0; ii < A.n; ii++)
+	{
+		for (int jj = 0; jj < A.n; jj++)
+		{
+			dnn_double sum = 0.0;
+			for (int k = 0; k < A.m; k++)
+			{
+				sum += (A(k, ii) - v.mean_x[ii])*(A(k, jj) - v.mean_x[jj]);
+			}
+			v.Sa(ii, jj) = sum;
+		}
+	}
+
+	v.Sb = Matrix<dnn_double>(A.n, 1);
+	for (int ii = 0; ii < A.n; ii++)
+	{
+		for (int jj = 0; jj < B.n; jj++)
+		{
+			dnn_double sum = 0.0;
+			for (int k = 0; k < A.m; k++)
+			{
+				sum += (A(k, ii) - v.mean_x[ii])*(B(k, jj) - v.mean_y);
+			}
+			v.Sb(ii, jj) = sum;
+		}
+	}
+	//Sa.print("Sa");
+	//Sb.print("Sb");
+
+
+	//printf("error=%d\n", les.fit(Sa, Sb));
+	//les.x.print("x");
+
+
+	double bias_mean = log(v.mean_y/(1.0 - v.mean_y));
+	for (int i = 0; i < A.n; i++) bias_mean -= coef[i]*v.mean_x[i];
+	//printf("bias:%f\n", bias);
+
+	v.y_predict.clear();
+	for (int i = 0; i < A.m; i++)
+	{
+		dnn_double y = bias_mean;
+		for (int j = 0; j < A.n; j++)
+		{
+			y += A(i, j)*coef[j];
+		}
+		y = 1.0 + exp(-y);
+		v.y_predict.push_back(1.0/y);
+	}
+
+	v.se = 0.0;
+	for (int i = 0; i < A.m; i++)
+	{
+		v.se += (B(i, 0) - v.y_predict[i])*(B(i, 0) - v.y_predict[i]);
+	}
+
+	v.sr = 0.0;
+	for (int i = 0; i < A.m; i++)
+	{
+		v.sr += (v.y_predict[i] - v.mean_y)*(v.y_predict[i] - v.mean_y);
+	}
+	//printf("SR(変動平方和):%f\n", sr);
+
+	v.st = v.sr + v.se;
+	//printf("ST(SE+SR):%f\n", st);
+
+	v.r2 = v.sr / (v.sr + v.se);
+	//printf("R^2(決定係数(寄与率)):%f\n", r2);
+	//printf("重相関係数:%f\n", sqrt(r2));
+
+	const dnn_double φT = A.m - 1;
+	const dnn_double φR = 2;
+	const dnn_double φe = A.m - A.n - 1;
+
+	dnn_double Syy = 0.0;
+	for (int i = 0; i < A.m; i++)
+	{
+		Syy += (B(i, 0) - v.mean_y)*(B(i, 0) - v.mean_y);
+	}
+	//printf("Syy:%f\n", Syy);
+
+	v.r_2 = 1.0 - (v.se / φe) / (Syy / φT);
+	//printf("自由度調整済寄与率(補正):%f\n", r_2);
+
+	v.ve = v.se / (A.m - A.n - 1);
+	v.vr = v.sr / A.n;
+	//printf("不偏分散 VE:%f VR:%f\n", ve, vr);
+	//printf("F値:%f\n", vr / ve);
+	v.F_value = v.vr / v.ve;	//= (r2/A.n) / ((1.0 - r2)/(A.m-A.n-1)));
+
+
+	v.Sa_1 = v.Sa.inv();
+
+	v.se_ii.clear();
+
+	dnn_double s = 0;
+	for (int i = 0; i < A.n; i++)
+	{
+		s = sqrt(v.Sa_1(i, i)*v.ve);
+		v.se_ii.push_back(s);
+	}
+
+	s = 0.0;
+	for (int i = 0; i < A.n; i++)
+	{
+		for (int j = 0; j < A.n; j++)
+		{
+			s += v.mean_x[i] * v.mean_x[j] * v.Sa_1(i, j);
+		}
+	}
+	v.se_ii.push_back(sqrt((1.0 / A.m + s)*v.ve));
+
+	//printf("標準誤差(bias):%f\n", se_ii[A.n]);
+	//for (int i = 0; i < A.n; i++)
+	//{
+	//	printf("標準誤差:%f\n", se_ii[i]);
+	//}
+
+	v.AIC = A.m*(log(2.0*M_PI*v.se / A.m) + 1) + 2.0*(A.n + 2.0);
+	if (fabs(bias) < 1.0e-16)
+	{
+		v.AIC = A.m*(log(2.0*M_PI*v.se / A.m) + 1) + 2.0*(A.n + 1.0);
+	}
+	v.t_value.clear();
+	for (int i = 0; i < A.n; i++)
+	{
+		v.t_value.push_back(coef[i] / v.se_ii[i]);
+	}
+	v.t_value.push_back(bias / v.se_ii[A.n]);
+
+	//printf("t値(bias):%f\n", t_value[A.n]);
+	//for (int i = 0; i < A.n; i++)
+	//{
+	//	printf("t値:%f\n", t_value[i]);
+	//}
+
+	v.p_value.clear();
+	Student_t_distribution t_distribution(A.m - A.n - 1);
+	for (int i = 0; i < A.n + 1; i++)
+	{
+		double tt;
+		double pvalue;
+
+		if (v.t_value[i] < 0)
+		{
+			pvalue = t_distribution.distribution(v.t_value[i], &tt)*2.0;
+		}
+		else
+		{
+			pvalue = t_distribution.distribution(-v.t_value[i], &tt)*2.0;
+		}
+		v.p_value.push_back(pvalue);
+	}
+	//printf("p値(bias):%f\n", p_value[A.n]);
+	//for (int i = 0; i < A.n; i++)
+	//{
+	//	printf("p値:%f\n", p_value[i]);
+	//}
+	v.error = 0;
+	return v;
+}
+
 void exit_input_error(int line_num)
 {
 	fprintf(stderr, "Wrong input format at line %d\n", line_num);
@@ -757,12 +980,12 @@ void do_predict(FILE *input, FILE *output)
 			{
 				double tmp;
 				int ii = i + 1;
-				double Wald_square = (model_->w[i] / SEs[ii])*(model_->w[i] / SEs[ii]);
+				double Wald_square = (model_->w[i] / SEs[i])*(model_->w[i] / SEs[i]);
 				double chi_pdf = 1.0 - chi_distribution.distribution(Wald_square, &tmp);
 				info("w=%.3f SE=%.3f Wald=%.3g p-value=%.4f"
 					" down=%.3f up=%.3f\n", 
-					model_->w[i], SEs[ii], Wald_square, chi_pdf,
-					model_->w[i]-za* SEs[ii], model_->w[i] + za * SEs[ii]);
+					model_->w[i], SEs[i], Wald_square, chi_pdf,
+					model_->w[i]-za* SEs[i], model_->w[i] + za * SEs[i]);
 			}
 		}
 		else
@@ -853,6 +1076,7 @@ int logistic_regression_predict(int argc, char **argv)
 		CSVReader csv1(fname, ',', false);
 		Matrix<dnn_double> T = csv1.toMat();
 
+#if 0
 		std::vector<double> means;
 		std::vector<double> sigmas;
 		for (int j = 0; j < T.n; j++)
@@ -871,7 +1095,7 @@ int logistic_regression_predict(int argc, char **argv)
 			double s = 0.0;
 			for (int i = 0; i < T.m; i++)
 			{
-				s += (T(i, j)-means[j])*(T(i, j) - means[j]);
+				s += (T(i, j) - means[j])*(T(i, j) - means[j]);
 			}
 			s /= (T.m - 1);
 			sigmas.push_back(sqrt(s));
@@ -882,6 +1106,24 @@ int logistic_regression_predict(int argc, char **argv)
 			double se = sqrt(sigmas[i]) / sqrt(T.m);
 			SEs.push_back(se);
 		}
+#else
+		Matrix<dnn_double> A = T.removeCol(0);
+		Matrix<dnn_double> B = T.Col(0);
+		std::vector<dnn_double> coef;
+		for (int i = 0; i < model_->nr_feature; i++)
+		{
+			coef.push_back(model_->w[i]);
+		}
+		statistic_values = test_statistic(A, B, coef);
+		if (bias >= 0.0)
+		{
+			SEs.push_back(statistic_values.se_ii[model_->nr_feature - 1]);
+		}
+		for (int i = 0; i < model_->nr_feature; i++)
+		{
+			SEs.push_back(statistic_values.se_ii[i]);
+		}
+#endif
 	}
 	x = (struct feature_node *) malloc(max_nr_attr * sizeof(struct feature_node));
 	do_predict(input, output);
