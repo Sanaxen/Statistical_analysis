@@ -164,7 +164,7 @@ class NonLinearRegression
 				fprintf(fp_test, "%d ", i);
 				for (int k = 0; k < y_predict.size()-1; k++)
 				{
-					float_t yy;
+					float_t yy = y_predict[k];
 					if (zscore_normalization)
 					{
 						yy = y_predict[k] * Sigma_y[k] + Mean_y[k];
@@ -189,7 +189,7 @@ class NonLinearRegression
 					cost_tot += (yy - y[k])*(yy - y[k]);
 				}
 
-				float_t yy;
+				float_t yy = y_predict[y_predict.size() - 1];
 				if (zscore_normalization)
 				{
 					yy = y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1];
@@ -385,6 +385,16 @@ public:
 			normalizeZ(dmyX, Mean_x, Sigma_x);
 			normalizeZ(dmyY, Mean_y, Sigma_y);
 
+			if (regression == "logistic")
+			{
+				nY = Yi;
+				for (int k = 0; k < nY[0].size(); k++)
+				{
+					Min_y[k] = 0.0;
+					MaxMin_y[k] = 1.0;
+				}
+			}
+
 		}
 		if (zscore_normalization)
 		{
@@ -396,6 +406,16 @@ public:
 			tiny_dnn::tensor_t dmyY = nY;
 			normalizeMinMax(dmyX, Min_x, MaxMin_x);
 			normalizeMinMax(dmyY, Min_y, MaxMin_y);
+
+			if (regression == "logistic")
+			{
+				nY = Yi;
+				for (int k = 0; k < nY[0].size(); k++)
+				{
+					Mean_y[k] = 0.0;
+					Sigma_y[k] = 1.0;
+				}
+			}
 		}
 	}
 	void visualize_loss(int n)
