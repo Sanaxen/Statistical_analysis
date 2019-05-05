@@ -107,7 +107,7 @@ public:
 		variablesNum = variablesNum_;
 	}
 
-	int fit(Matrix<dnn_double>A_, Matrix<dnn_double>B_)
+	int fit(Matrix<dnn_double>A_, Matrix<dnn_double>B_, bool test = false)
 	{
 		A = A_;
 		B = B_;
@@ -171,8 +171,15 @@ public:
 		//printf("error=%d\n", les.fit(Sa, Sb));
 		//les.x.print("x");
 
-		error = les.fit(Sa, Sb);
-		printf("error=%d\n", error);
+		if (!test)
+		{
+			error = les.fit(Sa, Sb);
+			printf("error=%d\n", error);
+		}
+		else
+		{
+			error = 0;
+		}
 		//les.x.print("x");
 		if (error != 0) return error;
 
