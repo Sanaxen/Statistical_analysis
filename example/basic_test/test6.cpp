@@ -390,6 +390,7 @@ int main(int argc, char** argv)
 			printf("load model error\n");
 			return -1;
 		}
+		mreg.fit(A, B, true);
 	}
 
 	if (A.n == 1)
@@ -401,19 +402,8 @@ int main(int argc, char** argv)
 		mreg.report(std::string("regression.txt"), header_names, 0.05);
 	}
 	mreg.report(std::string(""), header_names, 0.05);
-
-	{
-		FILE* fp = fopen("select_variables.dat", "w");
-		if (fp)fprintf(fp, "%d,%s\n", y_var_idx, header_names[0].c_str());
-		std::vector<int> var_indexs;
-		int num = 0;
-		for (int i = 0; i < x_var_idx.size(); i++)
-		{
-			if (fp)fprintf(fp, "%d,%s\n", x_var_idx[i], header_names[i + 1].c_str());
-		}
-		fclose(fp);
-	}
-
+	
+	std::vector<bool> zero_coef;
 	if(!test_mode)
 	{
 		FILE* fp = fopen("ln_regression_fit.model", "w");
@@ -424,10 +414,44 @@ int main(int argc, char** argv)
 			for (int i = 0; i < A.n; i++)
 			{
 				fprintf(fp, "%.16g\n", mreg.les.coef(0, i));
+				if (fabs(mreg.les.coef(0, i)) < 1.0e-6)
+				{
+					zero_coef.push_back(true);
+				}
+				else
+				{
+					zero_coef.push_back(false);
+				}
 			}
 			fclose(fp);
 		}
 	}
+
+	{
+		FILE* fp = fopen("select_variables.dat", "w");
+		if (fp)fprintf(fp, "%d,%s\n", y_var_idx, header_names[0].c_str());
+		std::vector<int> var_indexs;
+		int num = 0;
+		for (int i = 0; i < x_var_idx.size(); i++)
+		{
+			if (fp)
+			{
+				if (zero_coef.size() == 0)
+				{
+					fprintf(fp, "%d,%s\n", x_var_idx[i], header_names[i + 1].c_str());
+				}
+				else
+				{
+					if (!zero_coef[i])
+					{
+						fprintf(fp, "%d,%s\n", x_var_idx[i], header_names[i + 1].c_str());
+					}
+				}
+			}
+		}
+		fclose(fp);
+	}
+
 
 	Matrix<dnn_double> cor = A.Cor();
 	cor.print_csv("cor.csv");
@@ -461,7 +485,7 @@ int main(int argc, char** argv)
 		gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6);
 		if (capture)
 		{
-			plot1.set_capture(win_size, std::string("inear_regression.png"));
+			plot1.set_capture(win_size, std::string("linear_regression.png"));
 		}
 		plot1.plot_lines2(x, line_header_names);
 
