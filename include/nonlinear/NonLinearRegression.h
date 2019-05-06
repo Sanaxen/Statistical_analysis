@@ -160,6 +160,26 @@ class NonLinearRegression
 				tiny_dnn::vec_t x = nX[i];
 				tiny_dnn::vec_t& y_predict = nn_test.predict(x);
 
+				//if (i == 0)
+				//{
+				//	std::vector<tiny_dnn::vec_t *> w = nn.template at<tiny_dnn::fully_connected_layer>(0).weights();
+				//	FILE* fp = fopen("weights", "w");
+				//	for (int j = 0; j < w.size(); j++)
+				//	{
+				//		for (int k = 0; k < w[j]->size(); k++)
+				//		{
+				//			fprintf(fp, "%d %f\n", j, w[j]->at(k));
+				//		}
+				//	}
+				//	float bias = bias = w[1]->at(0);
+				//	for (int k = 0; k < w[0]->size(); k++)
+				//	{
+				//		bias += w[0]->at(k)*x[k];
+				//	}
+				//	fprintf(fp, "%d %d y_predict:%f %f\n", x.size(), w[0]->size(), y_predict[0], bias);
+				//	fclose(fp);
+				//}
+
 				tiny_dnn::vec_t& y = iY[i];
 				fprintf(fp_test, "%d ", i);
 				for (int k = 0; k < y_predict.size()-1; k++)
@@ -279,6 +299,7 @@ class NonLinearRegression
 		if (cost_tot < cost_min)
 		{
 			nn_test.save("fit_bast.model");
+			nn_test.save("fit_bast.model.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
 			cost_min = cost_tot;
 		}
 		if (cost_min < tolerance)
