@@ -381,7 +381,7 @@ int main(int argc, char** argv)
 			{
 				fgets(buf, 256, fp);
 				sscanf(buf, "%lf\n", &w);
-				mreg.les.coef(0, i) = w;
+				mreg.les.coef(i, 0) = w;
 			}
 			fclose(fp);
 		}
@@ -413,8 +413,8 @@ int main(int argc, char** argv)
 			fprintf(fp, "bias %.16g\n", mreg.bias);
 			for (int i = 0; i < A.n; i++)
 			{
-				fprintf(fp, "%.16g\n", mreg.les.coef(0, i));
-				if (fabs(mreg.les.coef(0, i)) < 1.0e-6)
+				fprintf(fp, "%.16g\n", mreg.les.coef(i, 0));
+				if (fabs(mreg.les.coef(i, 0)) < 1.0e-6)
 				{
 					zero_coef.push_back(true);
 				}
