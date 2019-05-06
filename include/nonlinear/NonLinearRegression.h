@@ -236,13 +236,39 @@ class NonLinearRegression
 				fprintf(fp_test, "%d ", i);
 				for (int k = 0; k < y_predict.size() - 1; k++)
 				{
-					fprintf(fp_test, "%f %f ", y_predict[k] * Sigma_y[k] + Mean_y[k], y[k]);
-					vari_cost += (y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k])*(y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k]);
-					cost_tot += (y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k])*(y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k]);
+					if (zscore_normalization)
+					{
+						fprintf(fp_test, "%f %f ", y_predict[k] * Sigma_y[k] + Mean_y[k], y[k]);
+						vari_cost += (y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k])*(y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k]);
+						cost_tot += (y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k])*(y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k]);
+					}else				
+					if (minmax_normalization)
+					{
+						fprintf(fp_test, "%f %f ", y_predict[k] * MaxMin_y[k] + Min_y[k], y[k]);
+						vari_cost += (y_predict[k] * MaxMin_y[k] + Min_y[k] - y[k])*(y_predict[k] * MaxMin_y[k] + Min_y[k] - y[k]);
+						cost_tot += (y_predict[k] * MaxMin_y[k] + Min_y[k] - y[k])*(y_predict[k] * MaxMin_y[k] + Min_y[k] - y[k]);
+					}
+					else
+					{
+						fprintf(fp_test, "%f %f ", y_predict[k], y[k]);
+					}
 				}
-				fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1], y[y_predict.size() - 1]);
-				vari_cost += (y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
-				cost_tot += (y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
+				if (zscore_normalization)
+				{
+					fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1], y[y_predict.size() - 1]);
+					vari_cost += (y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
+					cost_tot += (y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
+				}else
+				if (minmax_normalization)
+				{
+					fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1] * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1], y[y_predict.size() - 1]);
+					vari_cost += (y_predict[y_predict.size() - 1] * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
+					cost_tot += (y_predict[y_predict.size() - 1] * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
+				}
+				else
+				{
+					fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1], y[y_predict.size() - 1]);
+				}
 			}
 			fclose(fp_test);
 		}
@@ -979,17 +1005,19 @@ public:
 				ff.push_back(nY[i][k]);
 			}
 		}
-		mse /= (nY.size()*nY[0].size());
+		double se = mse;
+		mse /= train_images.size();
 		rmse = sqrt(mse);
 		double Maximum_likelihood_estimator = mse;
 		double Maximum_log_likelihood = log(2.0*M_PI) + log(Maximum_likelihood_estimator) + 1.0;
 
-		Maximum_log_likelihood *= -0.5*((nY.size()*nY[0].size()));
+		Maximum_log_likelihood *= -0.5*((train_images.size()*train_images.size()));
 
-		//double AIC = -2.0*Maximum_log_likelihood + 2.0*freedom;
-		//double SE = sqrt(mse / std::max(1, (int)(train_images.size()*train_labels[0].size()) - (int)freedom));
-		double AIC = -2.0*Maximum_log_likelihood + 2.0*nX[0].size();
-		double SE = sqrt(mse / std::max(1, (int)(train_images.size()*train_labels[0].size()) - (int)nX[0].size()));
+		double AIC = train_images.size()*(log(2.0*M_PI*se / train_images.size()) + 1) + 2.0*(nX[0].size() +2.0);
+		if (true)	//bias use
+		{
+			AIC = train_images.size()*(log(2.0*M_PI*se / train_images.size()) + 1) + 2.0*(nX[0].size() + 1.0);
+		}
 
 		double d_sum = 0.0;
 		double f_sum = 0.0;
@@ -1035,12 +1063,10 @@ public:
 		fprintf(fp, "--------------------------------------------------------------------\n");
 		fprintf(fp, "MSE                                 :%.4f\n", mse);
 		fprintf(fp, "RMSE                                :%.4f\n", rmse);
-		fprintf(fp, "SE(•W€Œë·)                        :%.4f\n", SE);
+		fprintf(fp, "SE(Žc·)                        :%.4f\n", se);
 		fprintf(fp, "r(‘ŠŠÖŒW”)                         :%.4f\n", r);
 		fprintf(fp, "R^2(Œˆ’èŒW”(Šñ—^—¦))               :%.4f\n", R2);
-		fprintf(fp, "Maximum log likelihood(Å‘å‘Î”–Þ“x):%.4f\n",Maximum_log_likelihood);
 		fprintf(fp, "AIC                                 :%.3f\n", AIC);
-		fprintf(fp, "freedom          :%d\n", freedom);
 		//fprintf(fp, "chi square       :%f\n", chi_square);
 		//fprintf(fp, "p value          :%f\n", chi_pdf);
 		fprintf(fp, "--------------------------------------------------------------------\n");
