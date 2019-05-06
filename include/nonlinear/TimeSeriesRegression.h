@@ -1014,17 +1014,19 @@ public:
 				ff.push_back(train_labels[i][k]);
 			}
 		}
-		mse /= (train_images.size()*train_labels[0].size());
+		double se = mse;
+		mse /= (train_images.size());
 		rmse = sqrt(mse);
 		double Maximum_likelihood_estimator = mse;
 		double Maximum_log_likelihood = log(2.0*M_PI) + log(Maximum_likelihood_estimator) + 1.0;
 
 		Maximum_log_likelihood *= -0.5*(train_images.size()*train_labels[0].size());
 
-		//double AIC = -2.0*Maximum_log_likelihood + 2.0*freedom;
-		//double SE = sqrt(mse / std::max(1, (int)(train_images.size()*train_labels[0].size()) - (int)freedom));
-		double AIC = -2.0*Maximum_log_likelihood + 2.0*train_images[0].size();
-		double SE = sqrt(mse / std::max(1, (int)(train_images.size()*train_labels[0].size()) - (int)train_images[0].size()));
+		double AIC = train_images.size()*(log(2.0*M_PI*se / train_images.size()) + 1) + 2.0*(iX[0].size() + 2.0);
+		if (true)	//bias use
+		{
+			AIC = train_images.size()*(log(2.0*M_PI*se / train_images.size()) + 1) + 2.0*(iX[0].size() + 1.0);
+		}
 
 		double mean_ff = 0.0;
 		double mean_yy = 0.0;
@@ -1086,12 +1088,10 @@ public:
 		fprintf(fp, "--------------------------------------------------------------------\n");
 		fprintf(fp, "MSE            :%.4f\n", mse);
 		fprintf(fp, "RMSE           :%.4f\n", rmse);
-		fprintf(fp, "SE(•W€Œë·)            :%.4f\n", SE);
+		fprintf(fp, "SE(c·)            :%.4f\n", se);
 		fprintf(fp, "r(‘ŠŠÖŒW”)             :%.4f\n", r);
 		fprintf(fp, "R^2(Œˆ’èŒW”(Šñ—^—¦))   :%.4f\n", R2);
-		fprintf(fp, "Maximum log likelihood(Å‘å‘Î”–Ş“x):%.4f\n", Maximum_log_likelihood);
 		fprintf(fp, "AIC          :%.3f\n", AIC);
-		fprintf(fp, "freedom          :%d\n", freedom);
 		//fprintf(fp, "chi square       :%f\n", chi_square);
 		//fprintf(fp, "p value          :%f\n", chi_pdf);
 		fprintf(fp, "--------------------------------------------------------------------\n");
