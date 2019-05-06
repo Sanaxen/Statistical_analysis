@@ -183,9 +183,12 @@ public:
 		//les.x.print("x");
 		if (error != 0) return error;
 
-		bias = mean_y;
-		for (int i = 0; i < A.n; i++) bias -= les.coef(i, 0)*mean_x[i];
-		//printf("bias:%f\n", bias);
+		if (!test)
+		{
+			bias = mean_y;
+			for (int i = 0; i < A.n; i++) bias -= les.coef(i, 0)*mean_x[i];
+			//printf("bias:%f\n", bias);
+		}
 
 		y_predict.clear();
 		for (int i = 0; i < A.m; i++)
