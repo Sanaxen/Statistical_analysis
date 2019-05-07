@@ -331,6 +331,16 @@ class NonLinearRegression
 		}
 		cost_pre = cost_tot;
 
+		{
+			FILE* fp = fopen("nonlinear_error_vari_loss.txt", "w");
+			if (fp)
+			{
+				fprintf(fp, "bast.model loss:%f\n", cost_min);
+				fprintf(fp, "total loss:%f\n", cost_tot);
+				fprintf(fp, "validation loss:%f\n", vari_cost);
+				fclose(fp);
+			}
+		}
 		visualize_observed_predict();
 	}
 
@@ -409,7 +419,7 @@ public:
 	{
 		return error;
 	}
-	NonLinearRegression(tiny_dnn::tensor_t& Xi, tiny_dnn::tensor_t& Yi, std::string& normalize_type= std::string("zscore"), double dec_random_=0.0, double fluctuation_=0.0)
+	NonLinearRegression(tiny_dnn::tensor_t& Xi, tiny_dnn::tensor_t& Yi, std::string& normalize_type= std::string("zscore"), double dec_random_=0.0, double fluctuation_=0.0, std::string regression_type = "")
 	{
 		iX = Xi;
 		iY = Yi;
@@ -418,6 +428,7 @@ public:
 		if (normalize_type == "zscore") zscore_normalization = true;
 		if (normalize_type == "minmax") minmax_normalization = true;
 
+		regression = regression_type;
 		dec_random = dec_random_;
 		fluctuation = fluctuation_;
 
@@ -1082,16 +1093,38 @@ public:
 
 		fprintf(fp, "Status:%d\n", getStatus());
 		fprintf(fp, "--------------------------------------------------------------------\n");
+		fprintf(fp, "SE(écç∑)                            :%.4f\n", se);
 		fprintf(fp, "MSE                                 :%.4f\n", mse);
 		fprintf(fp, "RMSE                                :%.4f\n", rmse);
-		fprintf(fp, "SE(écç∑)                        :%.4f\n", se);
 		fprintf(fp, "r(ëää÷åWêî)                         :%.4f\n", r);
-		fprintf(fp, "R^2(åàíËåWêî(äÒó^ó¶))               :%.4f\n", R2);
+		//fprintf(fp, "R^2(åàíËåWêî(äÒó^ó¶))               :%.4f\n", R2);
 		fprintf(fp, "AIC                                 :%.3f\n", AIC);
 		//fprintf(fp, "chi square       :%f\n", chi_square);
 		//fprintf(fp, "p value          :%f\n", chi_pdf);
 		fprintf(fp, "--------------------------------------------------------------------\n");
 
+		if (regression == "logistic")
+		{
+			float tot = 0.0;
+			float accuracy = 0.0;
+			for (int i = 0; i < nY.size(); i++)
+			{
+				tiny_dnn::vec_t& y = nn.predict(nX[i]);
+				for (int k = 0; k < y.size(); k++)
+				{
+					float_t d;
+					if (y[k] < 0.05) d = 0.0;
+					else d = 1.0;
+
+					if (d == nY[i][k])
+					{
+						accuracy++;
+					}
+					tot++;
+				}
+			}
+			fprintf(fp, "accuracy:%.3f%%\n", 100.0*accuracy / tot);
+		}
 
 		//if (chi_distribution.status != 0)
 		//{
