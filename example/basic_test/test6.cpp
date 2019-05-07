@@ -345,7 +345,7 @@ int main(int argc, char** argv)
 		mreg.bias = solver->coef(0, A.n - 1);
 		for (int i = 0; i < A.n; i++)
 		{
-			mreg.les.coef(0, i) = solver->coef(0, i);
+			mreg.les.coef(i, 0) = solver->coef(0, i);
 		}
 		if (solver) delete solver;
 	}
@@ -512,6 +512,7 @@ int main(int argc, char** argv)
 		{
 			plot1.set_capture(win_size, std::string("observed_predict.png"));
 		}
+		plot1.scatter_xyrange_setting = false;
 		plot1.scatter(T, 0, 1, 1, 30, header_names, 5);
 		if (10)
 		{
