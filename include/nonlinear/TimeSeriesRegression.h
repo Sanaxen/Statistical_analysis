@@ -403,6 +403,7 @@ class TimeSeriesRegression
 		if (cost_tot < cost_min)
 		{
 			nn_test.save("fit_bast.model");
+			nn_test.save("fit_bast.model.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
 			printf("!!=========== bast model save ============!!\n");
 			cost_min = cost_tot;
 		}
@@ -431,6 +432,17 @@ class TimeSeriesRegression
 		if (early_stopping && net_test_no_Improvement_count == EARLY_STOPPING_)
 		{
 			early_stopp = true;
+		}
+
+		{
+			FILE* fp = fopen("timeseries_error_vari_loss.txt", "w");
+			if (fp)
+			{
+				fprintf(fp, "bast.model loss:%f\n", cost_min);
+				fprintf(fp, "total loss:%f\n", cost_tot);
+				fprintf(fp, "validation loss:%f\n", vari_cost);
+				fclose(fp);
+			}
 		}
 		cost_pre = cost_tot;
 		visualize_observed_predict();
@@ -956,6 +968,7 @@ public:
 
 		// save network model & trained weights
 		nn.save(model_file);
+		nn.save(model_file+".json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
 	}
 
 	tiny_dnn::vec_t predict_next(tiny_dnn::vec_t& pre)
@@ -1086,12 +1099,12 @@ public:
 
 		fprintf(fp, "Status:%d\n", getStatus());
 		fprintf(fp, "--------------------------------------------------------------------\n");
-		fprintf(fp, "MSE            :%.4f\n", mse);
-		fprintf(fp, "RMSE           :%.4f\n", rmse);
-		fprintf(fp, "SE(Žc·)            :%.4f\n", se);
+		fprintf(fp, "SE(Žc·)                :%.4f\n", se);
+		fprintf(fp, "MSE                     :%.4f\n", mse);
+		fprintf(fp, "RMSE                    :%.4f\n", rmse);
 		fprintf(fp, "r(‘ŠŠÖŒW”)             :%.4f\n", r);
-		fprintf(fp, "R^2(Œˆ’èŒW”(Šñ—^—¦))   :%.4f\n", R2);
-		fprintf(fp, "AIC          :%.3f\n", AIC);
+		//fprintf(fp, "R^2(Œˆ’èŒW”(Šñ—^—¦))   :%.4f\n", R2);
+		fprintf(fp, "AIC                     :%.3f\n", AIC);
 		//fprintf(fp, "chi square       :%f\n", chi_square);
 		//fprintf(fp, "p value          :%f\n", chi_pdf);
 		fprintf(fp, "--------------------------------------------------------------------\n");
