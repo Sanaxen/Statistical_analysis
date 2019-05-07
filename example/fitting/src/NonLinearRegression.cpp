@@ -26,6 +26,7 @@ int main(int argc, char** argv)
 	std::vector<std::string> y_var;
 	std::string normalization_type = "zscore";
 
+	std::string regression_type = "";
 	double dec_random = 0.0;
 	float fluctuation = 0.0;
 	int read_max = -1;
@@ -72,6 +73,10 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--fluctuation") {
 			fluctuation = atof(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--regression") {
+			regression_type = argv[count + 1];
 			continue;
 		}
 	}
@@ -304,7 +309,7 @@ int main(int argc, char** argv)
 	MatrixToTensor(x, X, read_max);
 	MatrixToTensor(y, Y, read_max);
 
-	NonLinearRegression regression(X, Y, normalization_type, dec_random, fluctuation);
+	NonLinearRegression regression(X, Y, normalization_type, dec_random, fluctuation, regression_type);
 
 	regression.tolerance = 1.0e-3;
 	regression.learning_rate = 1;
@@ -347,6 +352,9 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--fluctuation") {
+			continue;
+		}
+		else if (argname == "--regression") {
 			continue;
 		}
 		else if (argname == "--capture") {
@@ -401,10 +409,6 @@ int main(int argc, char** argv)
 			regression.early_stopping = atoi(argv[count + 1]);
 			continue;
 		}
-		else if (argname == "--regression") {
-			regression.regression = argv[count + 1];
-			continue;
-		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
@@ -429,10 +433,12 @@ int main(int argc, char** argv)
 		<< "test_mode       : " << regression.test_mode << std::endl
 		<< "Decimation of random points       : " << regression.dec_random << std::endl
 		<< "random fluctuation       : " << regression.fluctuation << std::endl
+		<< "regression       : " << regression.regression << std::endl
 		<< std::endl;
 
 	{
 		FILE* fp = fopen("debug_commandline.txt", "w");
+		fprintf(fp, ":%s\n", regression.regression.c_str());
 		for (int i = 0; i < argc; i++)
 		{
 			fprintf(fp, "%s ", argv[i]);
