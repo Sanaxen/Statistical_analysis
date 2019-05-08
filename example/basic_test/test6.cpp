@@ -313,8 +313,11 @@ int main(int argc, char** argv)
 	A.print("A");
 	B.print("B");
 
-	A.print_csv("A.csv");
-	fflush(stdout);
+	//A.print_csv("A.csv");
+	//fflush(stdout);
+	//Matrix<dnn_double> tmp = B;
+	//tmp = tmp.appendCol(A);
+	//tmp.print_csv("M.csv");
 
 	multiple_regression mreg;
 
@@ -342,7 +345,7 @@ int main(int argc, char** argv)
 		solver->fit(A, B);
 		solver->report(std::string("regularization.txt"), A, header_names, &B);
 
-		mreg.bias = solver->coef(0, A.n - 1);
+		mreg.bias = solver->coef(0, solver->coef.n-1);
 		for (int i = 0; i < A.n; i++)
 		{
 			mreg.les.coef(i, 0) = solver->coef(0, i);
