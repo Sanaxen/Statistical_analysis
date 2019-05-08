@@ -316,6 +316,7 @@ int main(int argc, char** argv)
 	regression.visualize_loss(10);
 	regression.plot = 10;
 
+	int test_num = 0;
 	int n_layers = -1;
 	int input_unit = -1;
 	for (int count = 1; count + 1 < argc; count += 2) {
@@ -378,7 +379,7 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--test") {
-			regression.data_set(atof(argv[count + 1]));
+			test_num = atof(argv[count + 1]);
 			continue;
 		}
 		else if (argname == "--epochs") {
@@ -409,6 +410,10 @@ int main(int argc, char** argv)
 			regression.early_stopping = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--observed_predict_plot") {
+			regression.visualize_observed_predict_plot = atoi(argv[count + 1]);
+			continue;
+		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
@@ -416,6 +421,8 @@ int main(int argc, char** argv)
 		}
 
 	}
+	regression.data_set(test_num);
+
 	if (regression.iY.size() < regression.n_minibatch)
 	{
 		printf("data %d < minibatch %d\n", regression.iY.size(), regression.n_minibatch);
@@ -447,6 +454,7 @@ int main(int argc, char** argv)
 	}
 	regression.fit(n_layers, input_unit);
 	regression.report(0.05, report_file);
+	regression.visualize_observed_predict_plot = true;
 	regression.visualize_observed_predict();
 
 	return 0;
