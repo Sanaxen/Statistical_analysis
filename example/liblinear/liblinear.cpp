@@ -232,7 +232,8 @@ int main(int argc, char** argv)
 		}
 		for (int k = 1; k < A.n; k++)
 		{
-			sigma[k] /= A.m;
+			sigma[k] /= (A.m - 1);
+			sigma[k] = sqrt(sigma[k]);
 		}
 		for (int i = 1; i < A.n; i++)
 		{

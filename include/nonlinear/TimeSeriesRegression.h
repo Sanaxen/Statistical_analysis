@@ -57,7 +57,8 @@ class TimeSeriesRegression
 		}
 		for (int k = 0; k < X[0].size(); k++)
 		{
-			sigma[k] /= X.size();
+			sigma[k] /= (X.size() - 1);
+			sigma[k] = sqrt(sigma[k]);
 		}
 		for (int i = 0; i < X.size(); i++)
 		{
@@ -482,6 +483,7 @@ class TimeSeriesRegression
 	bool early_stopp = false;
 
 public:
+	bool visualize_observed_predict_plot = false;
 	std::vector < std::vector<double>> Diff;
 	Matrix<dnn_double> timevar;
 	size_t x_dim;
@@ -1035,10 +1037,10 @@ public:
 
 		Maximum_log_likelihood *= -0.5*(train_images.size()*train_labels[0].size());
 
-		double AIC = train_images.size()*(log(2.0*M_PI*se / train_images.size()) + 1) + 2.0*(iX[0].size() + 2.0);
+		double AIC = train_images.size()*(log(2.0*M_PI*se / train_images.size()) + 1) + 2.0*(iX.size() == 0 ? 0 : iX[0].size() + 2.0);
 		if (true)	//bias use
 		{
-			AIC = train_images.size()*(log(2.0*M_PI*se / train_images.size()) + 1) + 2.0*(iX[0].size() + 1.0);
+			AIC = train_images.size()*(log(2.0*M_PI*se / train_images.size()) + 1) + 2.0*(iX.size() == 0 ? 0 : iX[0].size() + 1.0);
 		}
 
 		double mean_ff = 0.0;
@@ -1129,6 +1131,7 @@ public:
 
 	void visualize_observed_predict()
 	{
+		if (!visualize_observed_predict_plot) return;
 #ifdef USE_GNUPLOT
 		{
 			int win_size[2] = { 640 * 3, 480 * 3 };

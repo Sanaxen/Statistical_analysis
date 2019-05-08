@@ -3,6 +3,7 @@
 #define _NonLinearRegression_H
 
 #include "../../include/util/mathutil.h"
+#include "../../include/nonlinear/MatrixToTensor.h"
 #include <signal.h>
 #pragma warning( disable : 4305 ) 
 
@@ -56,7 +57,8 @@ class NonLinearRegression
 		}
 		for (int k = 0; k < X[0].size(); k++)
 		{
-			sigma[k] /= X.size();
+			sigma[k] /= (X.size()-1);
+			sigma[k] = sqrt(sigma[k]);
 		}
 		for (int i = 0; i < X.size(); i++)
 		{
@@ -379,6 +381,7 @@ class NonLinearRegression
 	int batch = 0;
 	bool early_stopp = false;
 public:
+	bool visualize_observed_predict_plot = false;
 	std::string regression = "";
 	std::vector < std::vector<double>> Diff;
 	float_t fluctuation = 0.0;
@@ -474,6 +477,15 @@ public:
 					Sigma_y[k] = 1.0;
 				}
 			}
+
+			//FILE* fp = fopen("aaaaa.txt", "w");
+			//fprintf(fp, "%s\n", regression.c_str());
+			//fclose(fp);
+			//Matrix<dnn_double> tmpx, tmpy;
+			//TensorToMatrix(nX, tmpx);
+			//TensorToMatrix(nY, tmpy);
+			//tmpy = tmpy.appendCol(tmpx);
+			//tmpy.print_csv("Tn.csv");
 		}
 	}
 	void visualize_loss(int n)
@@ -1146,6 +1158,7 @@ public:
 
 	void visualize_observed_predict()
 	{
+		if (!visualize_observed_predict_plot) return;
 #ifdef USE_GNUPLOT
 		{
 			int win_size[2] = { 640 * 3, 480 * 3 };
