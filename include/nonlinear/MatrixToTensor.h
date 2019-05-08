@@ -16,5 +16,16 @@ inline void MatrixToTensor(Matrix<dnn_double>& X, tiny_dnn::tensor_t& T, int rea
 	}
 }
 
+inline void TensorToMatrix(tiny_dnn::tensor_t& T, Matrix<dnn_double>& X)
+{
+	X = Matrix<dnn_double>(T.size(), T[0].size());
+	for (int i = 0; i < T.size(); i++)
+	{
+		for (int j = 0; j < T[i].size(); j++)
+		{
+			X(i, j)= T[i][j];
+		}
+	}
+}
 
 #endif
