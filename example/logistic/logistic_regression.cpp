@@ -928,7 +928,8 @@ void do_predict(FILE *input, FILE *output)
 	{
 		sigma += (target_label_list[i] - mean)*(target_label_list[i] - mean);
 	}
-	sigma /= total;
+	sigma /= (total-1);
+	sigma = sqrt(sigma);
 
 	if (check_regression_model(model_))
 	{
@@ -1110,6 +1111,16 @@ int logistic_regression_predict(int argc, char **argv)
 		Matrix<dnn_double> A = T.removeCol(0);
 		Matrix<dnn_double> B = T.Col(0);
 		std::vector<dnn_double> coef;
+		if (model_->nr_feature != A.n)
+		{
+			FILE* fp = fopen("logistic_model_error.txt", "w");
+			if (fp)
+			{
+				fprintf(fp, "miss match variable number\n");
+				fclose(fp);
+			}
+			return -1;
+		}
 		for (int i = 0; i < model_->nr_feature; i++)
 		{
 			coef.push_back(model_->w[i]);
