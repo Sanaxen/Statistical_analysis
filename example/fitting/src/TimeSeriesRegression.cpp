@@ -593,6 +593,10 @@ int main(int argc, char** argv)
 			timeSeries.use_cnn = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--observed_predict_plot") {
+			timeSeries.visualize_observed_predict_plot = atoi(argv[count + 1]);
+			continue;
+		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
@@ -624,8 +628,17 @@ int main(int argc, char** argv)
 
 		<< std::endl;
 
+	{
+		FILE* fp = fopen("debug_commandline.txt", "w");
+		for (int i = 0; i < argc; i++)
+		{
+			fprintf(fp, "%s ", argv[i]);
+		}
+		fclose(fp);
+	}
 	timeSeries.fit(sequence_length, n_rnn_layers, n_layers, hidden_size);
 	timeSeries.report(0.05, report_file);
+	timeSeries.visualize_observed_predict_plot = true;
 	timeSeries.visualize_observed_predict();
 
 	return 0;
