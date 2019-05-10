@@ -12,6 +12,7 @@
 
 //#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
 #endif
+#include "../../../include/util/cmdline_args.h"
 
 static Matrix<dnn_double> mat_read(FILE *fp, int *rows, int *cols)
 {
@@ -64,6 +65,8 @@ static Matrix<dnn_double> mat_read2(FILE *fp, int *rows)
 // !! [example\sample_data\fastICA\run.bat]
 int main(int argc, char *argv[])
 {
+	int resp = commandline_args(&argc, &argv);
+
 	std::string csvfile("sample.csv");
 	std::vector<std::string> x_var;
 
@@ -319,5 +322,13 @@ int main(int argc, char *argv[])
 	}
 #endif
 
+	if (resp == 0)
+	{
+		for (int i = 0; i < argc; i++)
+		{
+			delete[] argv[i];
+		}
+		delete argv;
+	}
 	return 0;
 }

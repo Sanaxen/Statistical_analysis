@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.572
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "all_build", "all_build.vcxproj", "{7BC57492-B837-4DEC-8986-28CC4325A8A7}"
 EndProject
@@ -58,6 +58,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "logistic_regression_predict", "..\logistic\logistic_regression_predict.vcxproj", "{81FCA2D1-1186-4D8B-8307-C649A1213763}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "logistic_regression", "..\logistic\logistic_regression.vcxproj", "{40DF8499-C347-4C6A-B2C2-2AEB2F23DA0E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test7", "..\basic_test\test7.vcxproj", "{71CD670C-D860-4E0E-A2AA-26C0C52D8B84}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -291,6 +293,14 @@ Global
 		{40DF8499-C347-4C6A-B2C2-2AEB2F23DA0E}.Release|x64.Build.0 = Release|x64
 		{40DF8499-C347-4C6A-B2C2-2AEB2F23DA0E}.Release|x86.ActiveCfg = Release|Win32
 		{40DF8499-C347-4C6A-B2C2-2AEB2F23DA0E}.Release|x86.Build.0 = Release|Win32
+		{71CD670C-D860-4E0E-A2AA-26C0C52D8B84}.Debug|x64.ActiveCfg = Debug|x64
+		{71CD670C-D860-4E0E-A2AA-26C0C52D8B84}.Debug|x64.Build.0 = Debug|x64
+		{71CD670C-D860-4E0E-A2AA-26C0C52D8B84}.Debug|x86.ActiveCfg = Debug|Win32
+		{71CD670C-D860-4E0E-A2AA-26C0C52D8B84}.Debug|x86.Build.0 = Debug|Win32
+		{71CD670C-D860-4E0E-A2AA-26C0C52D8B84}.Release|x64.ActiveCfg = Release|x64
+		{71CD670C-D860-4E0E-A2AA-26C0C52D8B84}.Release|x64.Build.0 = Release|x64
+		{71CD670C-D860-4E0E-A2AA-26C0C52D8B84}.Release|x86.ActiveCfg = Release|Win32
+		{71CD670C-D860-4E0E-A2AA-26C0C52D8B84}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

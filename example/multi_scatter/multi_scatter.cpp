@@ -8,9 +8,12 @@
 #include "../../include/util/plot.h"
 
 #endif
+#include "../../include/util/cmdline_args.h"
 
 int main(int argc, char** argv)
 {
+	int resp = commandline_args(&argc, &argv);
+
 	std::string csvfile("sample.csv");
 
 	Matrix<dnn_double> X;
@@ -383,5 +386,13 @@ int main(int argc, char** argv)
 #endif		
 
 
+	if (resp == 0)
+	{
+		for (int i = 0; i < argc; i++)
+		{
+			delete[] argv[i];
+		}
+		delete argv;
+	}
 	return 0;
 }

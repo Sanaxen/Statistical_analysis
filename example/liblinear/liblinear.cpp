@@ -6,10 +6,13 @@
 #include "../../include/Matrix.hpp"
 #include "../../include/util/csvreader.h"
 
+#include "../../include/util/cmdline_args.h"
 
 
 int main(int argc, char** argv)
 {
+	int resp = commandline_args(&argc, &argv);
+
 	printf("formatting START\n");
 	std::string csvfile("sample.csv");
 	
@@ -359,6 +362,14 @@ int main(int argc, char** argv)
 	fflush(stdout);
 
 
+	if (resp == 0)
+	{
+		for (int i = 0; i < argc; i++)
+		{
+			delete[] argv[i];
+		}
+		delete argv;
+	}
 	printf("END\n\n");
 	return 0;
 }

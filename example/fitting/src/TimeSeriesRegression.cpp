@@ -18,6 +18,7 @@
 #include "../../../include/nonlinear/MatrixToTensor.h"
 
 #include "gen_test_data.h"
+#include "../../include/util/cmdline_args.h"
 
 
 //#define X_DIM	2
@@ -27,6 +28,8 @@
 
 int main(int argc, char** argv)
 {
+	int resp = commandline_args(&argc, &argv);
+
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
 	std::string t_var = "";
@@ -641,5 +644,13 @@ int main(int argc, char** argv)
 	timeSeries.visualize_observed_predict_plot = true;
 	timeSeries.visualize_observed_predict();
 
+	if (resp == 0)
+	{
+		for (int i = 0; i < argc; i++)
+		{
+			delete[] argv[i];
+		}
+		delete argv;
+	}
 	return 0;
 }

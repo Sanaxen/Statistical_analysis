@@ -7,12 +7,15 @@
 #include "../../include/util/plot.h"
 
 #endif
+#include "../../include/util/cmdline_args.h"
 
 
 //https://qiita.com/m__k/items/bd87c063a7496897ba7c
 //LiNGAMƒ‚ƒfƒ‹‚Ì„’è•û–@‚É‚Â‚¢‚Ä
 int main(int argc, char** argv)
 {
+	int resp = commandline_args(&argc, &argv);
+
 	std::string csvfile("sample.csv");
 
 	int start_col = 0;
@@ -509,4 +512,13 @@ int main(int argc, char** argv)
 			fclose(fp);
 		}
 	}
+	if (resp == 0)
+	{
+		for (int i = 0; i < argc; i++)
+		{
+			delete[] argv[i];
+		}
+		delete argv;
+	}
+	return 0;
 }

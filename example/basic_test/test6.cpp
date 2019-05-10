@@ -14,7 +14,7 @@
 
 //#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
 #endif
-
+#include "../../include/util/cmdline_args.h"
 
 
 int main(int argc, char** argv)
@@ -37,6 +37,8 @@ int main(int argc, char** argv)
 	double lambda1 = 0.001;
 	double lambda2 = 0.001;
 	std::string solver_name = "";
+
+	int resp = commandline_args(&argc, &argv);
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -318,11 +320,24 @@ int main(int argc, char** argv)
 	//Matrix<dnn_double> tmp = B;
 	//tmp = tmp.appendCol(A);
 	//tmp.print_csv("M.csv");
+	{
+		FILE* fp = fopen("debug_commandline.txt", "w");
+		for (int i = 0; i < argc; i++)
+		{
+			fprintf(fp, "%s ", argv[i]);
+		}
+		fclose(fp);
+	}
 
 	multiple_regression mreg;
 
 	mreg.set(A.n);
 	mreg.fit(A, B);
+	if (mreg.getStatus() != 0)
+	{
+		printf("error:%d\n", mreg.getStatus());
+		return -1;
+	}
 
 	if (solver_name != "")
 	{
@@ -538,6 +553,14 @@ int main(int argc, char** argv)
 #endif
 
 
+	if (resp == 0)
+	{
+		for (int i = 0; i < argc; i++)
+		{
+			delete[] argv[i];
+		}
+		delete argv;
+	}
 	printf("multiple_regression END\n\n");
 	return 0;
 }

@@ -128,15 +128,66 @@ public:
 				std::string cell = row[j];
 				const char* value = cell.c_str();
 
+				double v = 0.0;
 				if (*value == '+' || *value == '-' || *value == '.' || isdigit(*value))
 				{
+					bool no_number = false;
+					int dot = 0;
+					char* p = (char*)cell.c_str();
+					while (isspace(*p)) p++;
+					if (*p == '+' || *p == '-') p++;
+					if (*p == '.')
+					{
+						p++;
+						dot++;
+					}
+					if (!isdigit(*p)) no_number = true;
+					if (!no_number)
+					{
+						while (isdigit(*p)) p++;
+						if (*p == '.' && dot == 0)
+						{
+							p++;
+							dot++;
+						}
+						if ( dot == 2) no_number = true;
+						if (!no_number)
+						{
+							if (isdigit(*p))
+							{
+								while (isdigit(*p)) p++;
+							}
+							if (*p == 'E' || *p == 'e')
+							{
+								p++;
+								if (*p == '+' || *p == '-')
+								{
+									p++;
+								}
+							}
+							if (isdigit(*p))
+							{
+								while (isdigit(*p)) p++;
+							}
+						}
+						while (isspace(*p)) p++;
+						if (*p != '\0') no_number = true;
+					}
+					if (!no_number)
+					{
+						sscanf(value, "%lf", &v);
+					}
+					else
+					{
+						nan.push_back(i*n + j);
+						v = 0;
+					}
 				}
 				else
 				{
 					nan.push_back(i*n + j);
+					v = 0;
 				}
-				double v;
-				sscanf(value, "%lf", &v);
 				mat(i, j) = v;
 			}
 		}

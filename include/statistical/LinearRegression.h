@@ -114,6 +114,7 @@ public:
 
 		if (A.m - A.n - 1 <= 0)
 		{
+			printf("ƒf[ƒ^”‚æ‚èà–¾•Ï”‚Ì•û‚ª‘½‚·‚¬‚Ü‚·\n");
 			error = -1;
 			return error;
 		}
@@ -372,29 +373,29 @@ public:
 		fprintf(fp, "               ŒW”     •W€Œë·    t’l      p’l    ‰ºŒÀ(%.1f%%)  ãŒÀ(%.1f%%)  ŒW”‚ª0‚Ì‰Â”\«\n", 100 * (1 - ƒ¿), 100 * (1 - ƒ¿));
 		fprintf(fp, "---------------------------------------------------------------------------------------------\n");
 		fprintf(fp, "           %10.4f", bias);
-		fprintf(fp, "%10.4f", se_ii[A.n]);
-		fprintf(fp, "%10.4f", t_value[A.n]);
-		fprintf(fp, "%10.4f", p_value[A.n]);
+		fprintf(fp, " %10.4f", se_ii[A.n]);
+		fprintf(fp, " %10.4f", t_value[A.n]);
+		fprintf(fp, " %10.4f", p_value[A.n]);
 
 		double min_c = bias - t_distribution.p_value(ƒ¿ / 2.0)*se_ii[A.n];
 		double max_c = bias + t_distribution.p_value(ƒ¿ / 2.0)*se_ii[A.n];
-		fprintf(fp, "%10.4f", min_c);
-		fprintf(fp, "%10.4f", max_c);
+		fprintf(fp, " %10.4f", min_c);
+		fprintf(fp, " %10.4f", max_c);
 		if (min_c*max_c < 0.0) fprintf(fp, "          ›\n");
 		else fprintf(fp, "          ~\n");
 
 		for (int i = 0; i < A.n; i++)
 		{
-			fprintf(fp, "%-10.8s %10.4f", header[i + 1].c_str(), les.coef(i, 0));
-			fprintf(fp, "%10.4f", se_ii[i]);
-			fprintf(fp, "%10.4f", t_value[i]);
-			fprintf(fp, "%10.4f", p_value[i]);
+			fprintf(fp, " %-10.8s %10.4f", header[i + 1].c_str(), les.coef(i, 0));
+			fprintf(fp, " %10.4f", se_ii[i]);
+			fprintf(fp, " %10.4f", t_value[i]);
+			fprintf(fp, " %10.4f", p_value[i]);
 
 			double min_c = les.coef(i, 0) - t_distribution.p_value(ƒ¿ / 2.0)*se_ii[i];
 			double max_c = les.coef(i, 0) + t_distribution.p_value(ƒ¿ / 2.0)*se_ii[i];
 
-			fprintf(fp, "%10.4f", min_c);
-			fprintf(fp, "%10.4f", max_c);
+			fprintf(fp, " %10.4f", min_c);
+			fprintf(fp, " %10.4f", max_c);
 			if (min_c*max_c < 0.0) fprintf(fp, "          ›\n");
 			else fprintf(fp, "          ~\n");
 		}
@@ -441,7 +442,7 @@ public:
 				fprintf(fp, "%-10.8s", header[i + 1].c_str());
 				for (int j = 0; j < A.n; j++)
 				{
-					fprintf(fp, "%10.4f", cor(i, j));
+					fprintf(fp, " %10.4f", cor(i, j));
 				}
 				fprintf(fp, "\n");
 			}

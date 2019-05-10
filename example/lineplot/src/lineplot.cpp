@@ -12,9 +12,13 @@
 
 //#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
 #endif
+#include "../../../include/util/cmdline_args.h"
+
 
 int main(int argc, char *argv[])
 {
+	int resp = commandline_args(&argc, &argv);
+
 	std::string csvfile("sample.csv");
 	std::string x_var = "";
 	std::vector<std::string> y_var;
@@ -238,5 +242,13 @@ int main(int argc, char *argv[])
 	}
 #endif
 
+	if (resp == 0)
+	{
+		for (int i = 0; i < argc; i++)
+		{
+			delete[] argv[i];
+		}
+		delete argv;
+	}
 	return 0;
 }

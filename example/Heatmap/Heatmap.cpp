@@ -13,9 +13,12 @@
 
 //#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
 #endif
+#include "../../include/util/cmdline_args.h"
 
 int main(int argc, char** argv)
 {
+	int resp = commandline_args(&argc, &argv);
+
 	std::string csvfile("sample.csv");
 
 	char* palette = "rgbformulae 21,22,23";
@@ -108,5 +111,13 @@ int main(int argc, char** argv)
 	plot1.Heatmap(T, header_names, rows_names, palette);
 	plot1.draw();
 #endif
+	if (resp == 0)
+	{
+		for (int i = 0; i < argc; i++)
+		{
+			delete[] argv[i];
+		}
+		delete argv;
+	}
 	return 0;
 }
