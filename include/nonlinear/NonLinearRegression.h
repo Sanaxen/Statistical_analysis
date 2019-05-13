@@ -24,10 +24,12 @@ inline void SigHandler_nonlinear_regression(int p_signame)
 	return;
 }
 
+
 class NonLinearRegression
 {
 	bool convergence = false;
 	int error = 0;
+	FILE* fp_accuracy = NULL;
 	FILE* fp_error_loss = NULL;
 	FILE* fp_error_vari_loss = NULL;
 	bool visualize_state_flag = true;
@@ -134,6 +136,9 @@ class NonLinearRegression
 
 	float cost_min = std::numeric_limits<float>::max();
 	float cost_pre = 0;
+	float accuracy_max = std::numeric_limits<float>::min();
+	float accuracy_pre = 0;
+
 	size_t net_test_no_Improvement_count = 0;
 	void net_test()
 	{
@@ -144,10 +149,77 @@ class NonLinearRegression
 
 		set_test(nn_test, 1);
 
+		if (classification >= 2)
+		{
+			float loss_train = get_loss(nn_test, train_images, train_labels);
+			if (loss_train < cost_min)
+			{
+				cost_min = loss_train;
+			}
+			if (fp_error_loss)
+			{
+				fprintf(fp_error_loss, "%.10f %.10f %.4f\n", loss_train, cost_min, tolerance);
+				fflush(fp_error_loss);
+			}
+			float loss_test = loss_test = get_loss(nn_test, test_images, test_labels);
+
+
+			tiny_dnn::result train_result;
+			tiny_dnn::result test_result;
+
+			train_result = get_accuracy(nn_test, train_images, train_labels);
+			test_result = get_accuracy(nn_test, test_images, test_labels);
+
+
+			if (fp_accuracy)
+			{
+				fprintf(fp_accuracy, "%.4f %.4f\n", train_result.accuracy(), test_result.accuracy());
+				fflush(fp_accuracy);
+			}
+			{
+				FILE* fp = fopen("nonlinear_error_vari_loss.txt", "w");
+				if (fp)
+				{
+					fprintf(fp, "bast.model loss:%.2f\n", cost_min);
+					fprintf(fp, "total loss:%.2f\n", loss_train);
+					fprintf(fp, "validation loss:%.2f\n", loss_test);
+					fprintf(fp, "accuracy:%.2f%%\n", train_result.accuracy());
+					fprintf(fp, "validation accuracy:%.2f%%\n", test_result.accuracy());
+					fclose(fp);
+				}
+			}
+
+			if (accuracy_max < train_result.accuracy())
+			{
+				nn_test.save("fit_bast.model");
+				nn_test.save("fit_bast.model.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
+				accuracy_max = train_result.accuracy();
+			}
+			if (1.0 - accuracy_max*0.01 < tolerance)
+			{
+				printf("accuracy_max:%f%%\n", accuracy_max);
+				convergence = true;
+			}
+			if (accuracy_pre <= train_result.accuracy() || fabs(accuracy_pre - train_result.accuracy())*0.01 < 1.0e-3)
+			{
+				net_test_no_Improvement_count++;
+			}
+			else
+			{
+				net_test_no_Improvement_count = 0;
+			}
+			if (early_stopping && net_test_no_Improvement_count == EARLY_STOPPING_)
+			{
+				early_stopp = true;
+			}
+			accuracy_pre = train_result.accuracy();
+			return;
+		}
+
 
 		char plotName[256];
 		//sprintf(plotName, "test%04d.dat", plot_count);
-		sprintf(plotName, "test.dat", plot_count);
+		sprintf(plotName, "test.dat");
 		FILE* fp_test = fopen(plotName, "w");
 
 		Diff.clear();
@@ -162,25 +234,6 @@ class NonLinearRegression
 				tiny_dnn::vec_t x = nX[i];
 				tiny_dnn::vec_t& y_predict = nn_test.predict(x);
 
-				//if (i == 0)
-				//{
-				//	std::vector<tiny_dnn::vec_t *> w = nn.template at<tiny_dnn::fully_connected_layer>(0).weights();
-				//	FILE* fp = fopen("weights", "w");
-				//	for (int j = 0; j < w.size(); j++)
-				//	{
-				//		for (int k = 0; k < w[j]->size(); k++)
-				//		{
-				//			fprintf(fp, "%d %f\n", j, w[j]->at(k));
-				//		}
-				//	}
-				//	float bias = bias = w[1]->at(0);
-				//	for (int k = 0; k < w[0]->size(); k++)
-				//	{
-				//		bias += w[0]->at(k)*x[k];
-				//	}
-				//	fprintf(fp, "%d %d y_predict:%f %f\n", x.size(), w[0]->size(), y_predict[0], bias);
-				//	fclose(fp);
-				//}
 
 				tiny_dnn::vec_t& y = iY[i];
 				fprintf(fp_test, "%d ", i);
@@ -238,7 +291,7 @@ class NonLinearRegression
 			fclose(fp_test);
 		}
 
-		sprintf(plotName, "predict.dat", plot_count);
+		sprintf(plotName, "predict.dat");
 		fp_test = fopen(plotName, "w");
 		/**/
 		if (fp_test)
@@ -381,6 +434,9 @@ class NonLinearRegression
 	int batch = 0;
 	bool early_stopp = false;
 public:
+	float class_minmax[2] = { 0,0 };
+	float dropout = 0;
+	int classification = -1;
 	bool visualize_observed_predict_plot = false;
 	std::string regression = "";
 	std::vector < std::vector<double>> Diff;
@@ -422,14 +478,17 @@ public:
 	{
 		return error;
 	}
-	NonLinearRegression(tiny_dnn::tensor_t& Xi, tiny_dnn::tensor_t& Yi, std::string& normalize_type= std::string("zscore"), double dec_random_=0.0, double fluctuation_=0.0, std::string regression_type = "")
-	{
+	NonLinearRegression(tiny_dnn::tensor_t& Xi, tiny_dnn::tensor_t& Yi, std::string& normalize_type= std::string("zscore"), double dec_random_=0.0, double fluctuation_=0.0, std::string regression_type = "", int classification_ = -1)
+	{		
 		iX = Xi;
 		iY = Yi;
 		nX = Xi;
 		nY = Yi;
 		if (normalize_type == "zscore") zscore_normalization = true;
 		if (normalize_type == "minmax") minmax_normalization = true;
+		
+		classification = classification_;
+		printf("classification:%d\n", classification);
 
 		regression = regression_type;
 		dec_random = dec_random_;
@@ -446,7 +505,7 @@ public:
 			normalizeZ(dmyX, Mean_x, Sigma_x);
 			normalizeZ(dmyY, Mean_y, Sigma_y);
 
-			if (regression == "logistic")
+			if (regression == "logistic" || classification >= 2)
 			{
 				nY = Yi;
 				for (int k = 0; k < nY[0].size(); k++)
@@ -468,13 +527,51 @@ public:
 			normalizeMinMax(dmyX, Min_x, MaxMin_x);
 			normalizeMinMax(dmyY, Min_y, MaxMin_y);
 
-			if (regression == "logistic")
+			if (regression == "logistic" || classification >= 2 )
 			{
 				nY = Yi;
 				for (int k = 0; k < nY[0].size(); k++)
 				{
 					Mean_y[k] = 0.0;
 					Sigma_y[k] = 1.0;
+				}
+			}
+			if (classification >= 0)
+			{
+				float class_min = 10000000;
+				float class_max = -1;
+				for (int i = 0; i < nY.size(); i++)
+				{
+					for (int k = 0; k < nY[0].size(); k++)
+					{
+						if (nY[i][k] > class_max)
+						{
+							class_max = nY[i][k];
+						}
+						if (nY[i][k] < class_min)
+						{
+							class_min = nY[i][k];
+						}
+					}
+				}
+				class_minmax[0] = class_min;
+				class_minmax[1] = class_max;
+
+				if (class_max > classification)
+				{
+					printf("ERROR:classification:%d < class_max:%d\n", classification, (int)class_max);
+					fflush(stdout);
+					error = -1;
+				}
+				if (class_min <= 0)
+				{
+					printf("ERROR:class_min:%f\n", class_min);
+					fflush(stdout);
+					error = -1;
+				}
+				if (classification < 2)
+				{
+					error = -1;
 				}
 			}
 
@@ -495,6 +592,7 @@ public:
 		{
 			fp_error_loss = fopen("error_loss.dat", "w");
 			fp_error_vari_loss = fopen("error_var_loss.dat", "w");
+			fp_accuracy = fopen("accuracy.dat", "w");
 		}
 		else
 		{
@@ -507,6 +605,11 @@ public:
 			{
 				fclose(fp_error_vari_loss);
 				fp_error_vari_loss = NULL;
+			}
+			if (fp_accuracy)
+			{
+				fclose(fp_accuracy);
+				fp_accuracy = NULL;
 			}
 		}
 	}
@@ -521,6 +624,7 @@ public:
 		size_t dataAll = iY.size();
 		printf("dataset All:%d->", dataAll);
 		size_t test_Num = dataAll*test;
+		printf("test num(%f%%):%d->", test, test_Num);
 		int datasetNum = dataAll - test_Num;
 
 		if (datasetNum == 0 || datasetNum < this->n_minibatch)
@@ -574,16 +678,34 @@ public:
 				{
 					continue;
 				}
-				test_images.push_back(nX[ii]);
-				test_labels.push_back(nY[ii]);
+
+				if (classification >= 2)
+				{
+					test_images.push_back(nX[ii]);
+					test_labels.push_back(label2tensor(iY[ii][0], classification));
+				}
+				else
+				{
+					test_images.push_back(nX[ii]);
+					test_labels.push_back(nY[ii]);
+				}
 				use_index[ii] = ii;
 
 				if (test_images.size() == test_Num) break;
 				for (int i = 1; i < test_Num*0.05; i++)
 				{
 					if (ii + i >= dataAll) break;
-					test_images.push_back(nX[ii + i]);
-					test_labels.push_back(nY[ii + i]);
+
+					if (classification >= 2)
+					{
+						test_images.push_back(nX[ii + i]);
+						test_labels.push_back(label2tensor(iY[ii + i][0], classification));
+					}
+					else
+					{
+						test_images.push_back(nX[ii + i]);
+						test_labels.push_back(nY[ii + i]);
+					}
 					use_index[ii + i] = ii + i;
 					if (test_images.size() == test_Num) break;
 				}
@@ -599,8 +721,16 @@ public:
 			int ii = rand1(mt);
 			if (test_data_index[ii] != -1) continue;
 			if (index[ii] != -1) continue;
-			train_images.push_back(nX[ii]);
-			train_labels.push_back(nY[ii]);
+			if (classification >= 2)
+			{
+				train_images.push_back(nX[ii]);
+				train_labels.push_back(label2tensor(iY[ii][0], classification));
+			}
+			else
+			{
+				train_images.push_back(nX[ii]);
+				train_labels.push_back(nY[ii]);
+			}
 			index[ii] = ii;
 			++l;
 			if (l > datasetNum * 100 && train_images.size() != datasetNum)
@@ -609,8 +739,16 @@ public:
 				{
 					if (index[k] != -1)
 					{
-			train_images.push_back(nX[ii]);
-			train_labels.push_back(nY[ii]);
+						if (classification >= 2)
+						{
+							train_images.push_back(nX[ii]);
+							train_labels.push_back(label2tensor(iY[ii][0], classification));
+						}
+						else
+						{
+							train_images.push_back(nX[ii]);
+							train_labels.push_back(nY[ii]);
+						}
 						index[ii] = ii;
 					}
 					if (train_images.size() == datasetNum) break;
@@ -642,6 +780,7 @@ public:
 	{
 		SigHandler_nonlinear_regression(0);
 		signal(SIGINT, SigHandler_nonlinear_regression);
+		signal(SIGTERM, SigHandler_nonlinear_regression);
 
 		using tanh = tiny_dnn::activation::tanh;
 		using recurrent = tiny_dnn::recurrent_layer;
@@ -666,17 +805,31 @@ public:
 		{
 			nn << layers.add_fc(input_size);
 			nn << layers.tanh();
-			
+
 			for (int i = 0; i < n_layers; i++) {
 				nn << layers.add_fc(input_size);
 				nn << layers.tanh();
 			}
 		}
-		nn << layers.add_fc(train_labels[0].size());
+		if (classification >= 2)
+		{
+			if (dropout ) nn << layers.add_dropout(dropout);
+			nn << layers.add_fc(std::min((int)input_size, classification*2));
+			nn << layers.tanh();
+			nn << layers.add_fc(classification);
+		}
+		else
+		{
+			nn << layers.add_fc(train_labels[0].size());
+		}
 
 		if (regression == "logistic")
 		{
 			nn << layers.sigmoid();
+		}
+		if (classification >= 2)
+		{
+			nn << layers.softmax(classification);
 		}
 
 		nn.weight_init(tiny_dnn::weight_init::xavier());
@@ -750,6 +903,7 @@ public:
 		if (opt_type == "rmsprop")	optimizer_rmsprop.reset();
 		if (opt_type == "adagrad")optimizer_adagrad.reset();
 		
+		tiny_dnn::timer finish_predict;
 		tiny_dnn::timer t;
 
 		tiny_dnn::progress_display disp(nn.get_input_size());
@@ -789,6 +943,21 @@ public:
 			t.restart();
 			//rnn_state_reset(nn);
 			++epoch;
+
+			if (epoch % 5 == 0)
+			{
+				float one_ephch = finish_predict.elapsed() / 5.0;
+				one_ephch *= (n_train_epochs - epoch);
+				std::ofstream stream("Time_to_finish.txt");
+
+				if (!stream.bad())
+				{
+					stream << "Time to finish:" << one_ephch << "[sec] = " << one_ephch / 60.0 << "[min]" << std::endl;
+					stream.flush();
+				}
+				std::cout << "Time to finish:" << one_ephch << "[sec] = " << one_ephch / 60.0 << "[min]" << std::endl;
+				finish_predict.restart();
+			}
 		};
 		auto on_enumerate_minibatch = [&]() {
 			if (progress) disp += n_minibatch;
@@ -832,42 +1001,90 @@ public:
 				if (opt_type == "adam")
 				{
 					// training
-					nn.fit<tiny_dnn::mse>(optimizer_adam, train_images, train_labels,
-						n_minibatch,
-						n_train_epochs,
-						on_enumerate_minibatch,
-						on_enumerate_epoch
-						);
+					if (classification < 2)
+					{
+						nn.fit<tiny_dnn::mse>(optimizer_adam, train_images, train_labels,
+							n_minibatch,
+							n_train_epochs,
+							on_enumerate_minibatch,
+							on_enumerate_epoch
+							);
+					}
+					else
+					{
+						nn.fit<tiny_dnn::cross_entropy_multiclass>(optimizer_adam, train_images, train_labels,
+							n_minibatch,
+							n_train_epochs,
+							on_enumerate_minibatch,
+							on_enumerate_epoch
+							);
+					}
 				}
 				if (opt_type == "sgd")
 				{
 					// training
-					nn.fit<tiny_dnn::mse>(optimizer_sgd, train_images, train_labels,
-						n_minibatch,
-						n_train_epochs,
-						on_enumerate_minibatch,
-						on_enumerate_epoch
-						);
+					if (classification < 2)
+					{
+						nn.fit<tiny_dnn::mse>(optimizer_sgd, train_images, train_labels,
+							n_minibatch,
+							n_train_epochs,
+							on_enumerate_minibatch,
+							on_enumerate_epoch
+							);
+					}
+					else
+					{
+						nn.fit<tiny_dnn::cross_entropy_multiclass>(optimizer_sgd, train_images, train_labels,
+							n_minibatch,
+							n_train_epochs,
+							on_enumerate_minibatch,
+							on_enumerate_epoch
+							);
+					}
 				}
 				if (opt_type == "rmsprop")
 				{
 					// training
-					nn.fit<tiny_dnn::mse>(optimizer_rmsprop, train_images, train_labels,
-						n_minibatch,
-						n_train_epochs,
-						on_enumerate_minibatch,
-						on_enumerate_epoch
-						);
+					if (classification < 2)
+					{
+						nn.fit<tiny_dnn::mse>(optimizer_rmsprop, train_images, train_labels,
+							n_minibatch,
+							n_train_epochs,
+							on_enumerate_minibatch,
+							on_enumerate_epoch
+							);
+					}
+					else
+					{
+						nn.fit<tiny_dnn::cross_entropy_multiclass>(optimizer_rmsprop, train_images, train_labels,
+							n_minibatch,
+							n_train_epochs,
+							on_enumerate_minibatch,
+							on_enumerate_epoch
+							);
+					}
 				}
 				if (opt_type == "adagrad")
 				{
 					// training
-					nn.fit<tiny_dnn::mse>(optimizer_adagrad, train_images, train_labels,
-						n_minibatch,
-						n_train_epochs,
-						on_enumerate_minibatch,
-						on_enumerate_epoch
-						);
+					if (classification < 2)
+					{
+						nn.fit<tiny_dnn::mse>(optimizer_adagrad, train_images, train_labels,
+							n_minibatch,
+							n_train_epochs,
+							on_enumerate_minibatch,
+							on_enumerate_epoch
+							);
+					}
+					else
+					{
+						nn.fit<tiny_dnn::cross_entropy_multiclass>(optimizer_adagrad, train_images, train_labels,
+							n_minibatch,
+							n_train_epochs,
+							on_enumerate_minibatch,
+							on_enumerate_epoch
+							);
+					}
 				}
 			}
 			catch (tiny_dnn::nn_error &err) {
@@ -892,6 +1109,7 @@ public:
 
 		if (fp_error_loss)fclose(fp_error_loss);
 		if (fp_error_vari_loss)fclose(fp_error_vari_loss);
+		if (fp_accuracy)fclose(fp_accuracy);
 
 		// save network model & trained weights
 		nn.save(model_file+".json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
@@ -1010,12 +1228,191 @@ public:
 		}
 	}
 
+	double get_accuracy(FILE* fp=NULL)
+	{
+		double accuracy = 0;
+		double tot = 0;
+
+		if (fp == NULL) fp = stdout;
+		if (regression == "logistic")
+		{
+			for (int i = 0; i < nY.size(); i++)
+			{
+				tiny_dnn::vec_t& y = nn.predict(nX[i]);
+				for (int k = 0; k < y.size(); k++)
+				{
+					auto z = train_labels[i][k];
+					float_t d;
+					if (y[k] < 0.5) d = 0.0;
+					else d = 1.0;
+
+					if (d == z)
+					{
+						accuracy++;
+					}
+					tot++;
+				}
+			}
+			fprintf(fp, "accuracy:%.3f%%\n", 100.0*accuracy / tot);
+		}
+
+		if (classification > 2)
+		{
+			for (int i = 0; i < nY.size(); i++)
+			{
+				tiny_dnn::vec_t& y = nn.predict(nX[i]);
+				for (int k = 0; k < y.size(); k++)
+				{
+					auto z = train_labels[i][k];
+					//if (zscore_normalization)
+					//{
+					//	y[k] = y[k] * Sigma_y[k] + Mean_y[k];
+					//	z = z * Sigma_y[k] + Mean_y[k];
+					//}
+					//if (minmax_normalization)
+					//{
+					//	y[k] = y[k] * MaxMin_y[k] + Min_y[k];
+					//	z = z * MaxMin_y[k] + Min_y[k];
+					//}
+
+					float_t d;
+					if (classification == 2)
+					{
+						if (y[k] < 0.5) d = 0.0;
+						else d = 1.0;
+
+						if (d == z)
+						{
+							accuracy++;
+						}
+					}
+					tot++;
+				}
+			}
+			fprintf(fp, "accuracy:%.3f%%\n", 100.0*accuracy / tot);
+		}
+		return 100.0*accuracy / tot;
+	}
+
+	float get_loss(tiny_dnn::network2<tiny_dnn::sequential>& model, std::vector<tiny_dnn::vec_t>& images, std::vector<tiny_dnn::vec_t>& labels)
+	{
+		if (images.size() == 0) return 0;
+		float_t loss = model.get_loss<tiny_dnn::cross_entropy_multiclass>(images, labels);
+		std::cout << "loss " << loss << std::endl;
+		return loss;
+	}
+
+	tiny_dnn::result  get_accuracy(tiny_dnn::network2<tiny_dnn::sequential>& model, std::vector<tiny_dnn::vec_t>& images, std::vector<tiny_dnn::vec_t>& labels)
+	{
+		tiny_dnn::result result;
+		float accuracy = 0;
+
+		if (images.size() == 0)
+		{
+			result.num_total = 1;
+			return result;
+		}
+#if 0
+		std::vector<tiny_dnn::label_t> tmp_labels(images.size());
+		std::vector<tiny_dnn::vec_t> tmp_images(images.size());
+
+#pragma omp parallel for
+		for (int i = 0; i < images.size(); i++)
+		{
+			int actual = -1;
+			for (int k = 0; k < labels[i].size(); k++)
+			{
+				if (actual < labels[i][k])
+				{
+					actual = labels[i][k];
+					actual = k;
+				}
+			}
+			tmp_labels[i] = actual;
+			tmp_images[i] = images[i];
+		}
+		result = model.test(tmp_images, tmp_labels);
+		std::cout << result.num_success << "/" << result.num_total << std::endl;
+
+#else
+
+		for (int i = 0; i < images.size(); i++)
+		{
+			auto predict_y = model.predict(images[i]);
+
+			float max_value = 0;
+			int predicted = -1;
+			int actual = -1;
+			for (int k = 0; k < labels[i].size(); k++)
+			{
+				if (actual < labels[i][k])
+				{
+					actual = labels[i][k];
+					actual = k;
+				}
+				if (max_value < predict_y[k])
+				{
+					max_value = predict_y[k];
+					predicted = k;
+				}
+			}
+			if (predicted == actual) result.num_success++;
+			result.num_total++;
+			result.confusion_matrix[predicted][actual]++;
+		}
+		accuracy = 100.0*result.num_success / result.num_total;
+		printf("%.3f%%\n", accuracy);
+#endif
+		//ConfusionMatrix
+		std::cout << "ConfusionMatrix:" << std::endl;
+		result.print_detail(std::cout);
+		std::cout << result.num_success << "/" << result.num_total << std::endl;
+		printf("accuracy:%.3f%%\n", result.accuracy());
+
+		return result;
+	}
+
 	void report(double ƒ¿=0.05, std::string& filename = std::string(""))
 	{
 		FILE* fp = fopen(filename.c_str(), "w");
 		if (fp == NULL)
 		{
 			fp = stdout;
+		}
+		if (classification >= 2)
+		{
+			if (fp != stdout && fp != NULL) fclose(fp);
+			tiny_dnn::network2<tiny_dnn::sequential> nn_test;
+			nn_test.load("fit_bast.model");
+
+			tiny_dnn::result train_result = get_accuracy(nn_test, train_images, train_labels);
+			tiny_dnn::result test_result = get_accuracy(nn_test, test_images, test_labels);
+
+			{
+				std::ofstream stream(filename);
+
+				if (!stream.bad())
+				{
+					stream << "ConfusionMatrix(train):" << std::endl;
+					train_result.print_detail(stream);
+					stream << train_result.num_success << "/" << train_result.num_total << std::endl;
+					stream << "accuracy:" << train_result.accuracy() << std::endl;
+					stream << std::endl;
+					stream << "ConfusionMatrix(test):" << std::endl;
+					if (test_images.size() == 0)
+					{
+						stream << "----" << std::endl;
+					}
+					else
+					{
+						test_result.print_detail(stream);
+						stream << test_result.num_success << "/" << test_result.num_total << std::endl;
+						stream << "accuracy:" << test_result.accuracy() << std::endl;
+					}
+					stream.flush();
+				}
+			}
+			return;
 		}
 
 		std::vector<double> xx;
@@ -1115,28 +1512,7 @@ public:
 		//fprintf(fp, "p value          :%f\n", chi_pdf);
 		fprintf(fp, "--------------------------------------------------------------------\n");
 
-		if (regression == "logistic")
-		{
-			float tot = 0.0;
-			float accuracy = 0.0;
-			for (int i = 0; i < nY.size(); i++)
-			{
-				tiny_dnn::vec_t& y = nn.predict(nX[i]);
-				for (int k = 0; k < y.size(); k++)
-				{
-					float_t d;
-					if (y[k] < 0.05) d = 0.0;
-					else d = 1.0;
-
-					if (d == nY[i][k])
-					{
-						accuracy++;
-					}
-					tot++;
-				}
-			}
-			fprintf(fp, "accuracy:%.3f%%\n", 100.0*accuracy / tot);
-		}
+		get_accuracy(fp);
 
 		//if (chi_distribution.status != 0)
 		//{

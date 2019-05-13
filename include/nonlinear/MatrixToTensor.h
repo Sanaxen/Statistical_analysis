@@ -28,4 +28,19 @@ inline void TensorToMatrix(tiny_dnn::tensor_t& T, Matrix<dnn_double>& X)
 	}
 }
 
+inline tiny_dnn::vec_t label2tensor(size_t lable, int class_max_num)
+{
+	tiny_dnn::vec_t tmp;
+	for (int i = 0; i < lable - 1; i++)
+	{
+		tmp.push_back(0);
+	}
+	tmp.push_back(1);
+	for (int i = lable; i < class_max_num; i++)
+	{
+		tmp.push_back(0);
+	}
+	return tmp;
+}
+
 #endif

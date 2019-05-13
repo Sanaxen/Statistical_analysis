@@ -22,14 +22,23 @@ inline int commandline_args(int* argc_, char*** argv_)
 		std::string lines((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
 		std::cout << lines << std::endl;
 
+		if (strstr(lines.c_str(), "--"))
+		{ 
+			std::string tmp = " " + lines;
+			lines = tmp;
+		}
+		else
+		{
+			return -1;
+		}
 		char* commandline = new char[lines.length() + 1];
 		strcpy(commandline, lines.c_str());
 
 		std::vector<std::string> args;
-		args.push_back("dmy");
+		args.push_back(argv[0]);
 
 		char* p = commandline;
-		while (isspace(*p)) p++;
+		while (isspace(*p) || *p == '\n') p++;
 		p--;
 		while (*p != '\0')
 		{
@@ -40,11 +49,11 @@ inline int commandline_args(int* argc_, char*** argv_)
 			s++;
 			args.push_back(q);
 
-			while (isspace(*s)) s++;
+			while (isspace(*s) ||*s == '\n') s++;
 			q = strstr(s, " --");
 			if (q)
 			{
-				while (isspace(*q)) q--;
+				while (isspace(*q) || *q == '\n') q--;
 				q++;
 				*q = '\0';
 				args.push_back(s);
@@ -54,7 +63,7 @@ inline int commandline_args(int* argc_, char*** argv_)
 			{
 				char* q = strchr(s, '\0');
 				q--;
-				while (isspace(*q))q--;
+				while (isspace(*q) || *q == '\n')q--;
 				q++;
 				*q = '\0';
 				args.push_back(s);

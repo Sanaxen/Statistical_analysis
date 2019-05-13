@@ -13,6 +13,11 @@
 int main(int argc, char** argv)
 {
 	int resp = commandline_args(&argc, &argv);
+	if (resp == -1)
+	{
+		printf("command line error.\n");
+		return -1;
+	}
 
 	std::string csvfile("sample.csv");
 

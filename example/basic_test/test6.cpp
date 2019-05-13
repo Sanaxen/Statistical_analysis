@@ -39,6 +39,11 @@ int main(int argc, char** argv)
 	std::string solver_name = "";
 
 	int resp = commandline_args(&argc, &argv);
+	if (resp == -1)
+	{
+		printf("command line error.\n");
+		return -1;
+	}
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);

@@ -24,11 +24,17 @@
 int main(int argc, char** argv)
 {
 	int resp = commandline_args(&argc, &argv);
+	if (resp == -1)
+	{
+		printf("command line error.\n");
+		return -1;
+	}
 
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
 	std::string normalization_type = "zscore";
 
+	int classification = -1;
 	std::string regression_type = "";
 	double dec_random = 0.0;
 	float fluctuation = 0.0;
@@ -80,6 +86,10 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--regression") {
 			regression_type = argv[count + 1];
+			continue;
+		}
+		else if (argname == "--classification") {
+			classification = atoi(argv[count + 1]);
 			continue;
 		}
 	}
@@ -312,14 +322,21 @@ int main(int argc, char** argv)
 	MatrixToTensor(x, X, read_max);
 	MatrixToTensor(y, Y, read_max);
 
-	NonLinearRegression regression(X, Y, normalization_type, dec_random, fluctuation, regression_type);
-
+	NonLinearRegression regression(X, Y, normalization_type, dec_random, fluctuation, regression_type, classification);
+	if (regression.getStatus() == -1)
+	{
+		if (classification < 2)
+		{
+			printf("class %.3f %.3f\n", regression.class_minmax[0], regression.class_minmax[1]);
+		}
+		return -1;
+	}
 	regression.tolerance = 1.0e-3;
 	regression.learning_rate = 1;
 	regression.visualize_loss(10);
 	regression.plot = 10;
 
-	int test_num = 0;
+	double test_num = 0;
 	int n_layers = -1;
 	int input_unit = -1;
 	for (int count = 1; count + 1 < argc; count += 2) {
@@ -359,6 +376,9 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--regression") {
+			continue;
+		}
+		else if (argname == "--classification") {
 			continue;
 		}
 		else if (argname == "--capture") {
@@ -405,6 +425,10 @@ int main(int argc, char** argv)
 			input_unit = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--dropout") {
+			regression.dropout = atof(argv[count + 1]);
+			continue;
+		}
 		else if (argname == "--opt_type") {
 			regression.opt_type = argv[count + 1];
 			continue;
@@ -444,6 +468,8 @@ int main(int argc, char** argv)
 		<< "Decimation of random points       : " << regression.dec_random << std::endl
 		<< "random fluctuation       : " << regression.fluctuation << std::endl
 		<< "regression       : " << regression.regression << std::endl
+		<< "classification       : " << regression.classification << std::endl
+		<< "dropout       : " << regression.dropout << std::endl
 		<< std::endl;
 
 	{
@@ -457,8 +483,20 @@ int main(int argc, char** argv)
 	}
 	regression.fit(n_layers, input_unit);
 	regression.report(0.05, report_file);
-	regression.visualize_observed_predict_plot = true;
-	regression.visualize_observed_predict();
+	if (classification < 2)
+	{
+		regression.visualize_observed_predict_plot = true;
+		regression.visualize_observed_predict();
+	}
+	
+	{
+		std::ofstream stream("Time_to_finish.txt");
+		if (!stream.bad())
+		{
+			stream << "Time to finish:" << 0 << "[sec] = " << 0 << "[min]" << std::endl;
+			stream.flush();
+		}
+	}
 
 	if (resp == 0)
 	{

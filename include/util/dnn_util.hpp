@@ -383,7 +383,7 @@ public:
 	inline  tiny_dnn::elu_layer elu() { ACTIVATIN_FUNC(elu_layer) }
 	inline  tiny_dnn::tanh_layer tanh() { ACTIVATIN_FUNC(tanh_layer) }
 	inline  tiny_dnn::sigmoid_layer sigmoid() { ACTIVATIN_FUNC(sigmoid_layer) }
-	inline  tiny_dnn::softmax_layer softmax() { ACTIVATIN_FUNC(softmax_layer) }
+	inline  tiny_dnn::softmax_layer softmax(int classnum) { ACTIVATIN_FUNC2(softmax_layer, classnum) }
 	inline  tiny_dnn::softplus_layer softplus() { ACTIVATIN_FUNC(softplus_layer) }
 	inline  tiny_dnn::softsign_layer softsign() { ACTIVATIN_FUNC(softsign_layer) }
 

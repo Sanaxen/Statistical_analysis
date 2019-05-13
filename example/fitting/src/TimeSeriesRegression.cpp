@@ -29,6 +29,11 @@
 int main(int argc, char** argv)
 {
 	int resp = commandline_args(&argc, &argv);
+	if (resp == -1)
+	{
+		printf("command line error.\n");
+		return -1;
+	}
 
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
@@ -36,6 +41,7 @@ int main(int argc, char** argv)
 	int sequence_length = -1;
 	std::string normalization_type = "";
 
+	int classification = -1;
 	int read_max = -1;
 	bool header = false;
 	int start_col = 0;
@@ -77,6 +83,10 @@ int main(int argc, char** argv)
 		{
 			normalization_type = argv[count + 1];
 			printf("--normal %s\n", argv[count + 1]);
+		}
+		else if (argname == "--classification") {
+			classification = atoi(argv[count + 1]);
+			continue;
 		}
 	}
 
@@ -468,7 +478,15 @@ int main(int argc, char** argv)
 	MatrixToTensor(y, Y, read_max);
 
 
-	TimeSeriesRegression timeSeries(X, Y, normalization_type);
+	TimeSeriesRegression timeSeries(X, Y, normalization_type, classification);
+	if (timeSeries.getStatus() == -1)
+	{
+		if (classification < 2)
+		{
+			printf("class %.3f %.3f\n", timeSeries.class_minmax[0], timeSeries.class_minmax[1]);
+		}
+		return -1;
+	}
 
 	timeSeries.timevar = tvar;
 	timeSeries.x_dim = x_dim;
@@ -515,6 +533,9 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--normal") {
+			continue;
+		}
+		else if (argname == "--classification") {
 			continue;
 		}
 		else if (argname == "--bptt_max") {
@@ -596,6 +617,10 @@ int main(int argc, char** argv)
 			timeSeries.use_cnn = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--dropout") {
+			timeSeries.dropout = atof(argv[count + 1]);
+			continue;
+		}
 		else if (argname == "--observed_predict_plot") {
 			timeSeries.visualize_observed_predict_plot = atoi(argv[count + 1]);
 			continue;
@@ -628,7 +653,8 @@ int main(int argc, char** argv)
 		<< "n_layers        :   " << n_layers << std::endl
 		<< "test_mode       :   " << timeSeries.test_mode << std::endl
 		<< "n_bptt_max       :  " << timeSeries.n_bptt_max << std::endl
-
+		<< "classification   : " << timeSeries.classification << std::endl
+		<< "dropout        : " << timeSeries.dropout << std::endl
 		<< std::endl;
 
 	{
@@ -641,9 +667,20 @@ int main(int argc, char** argv)
 	}
 	timeSeries.fit(sequence_length, n_rnn_layers, n_layers, hidden_size);
 	timeSeries.report(0.05, report_file);
-	timeSeries.visualize_observed_predict_plot = true;
-	timeSeries.visualize_observed_predict();
+	if (classification < 2)
+	{
+		timeSeries.visualize_observed_predict_plot = true;
+		timeSeries.visualize_observed_predict();
+	}
 
+	{
+		std::ofstream stream("Time_to_finish.txt");
+		if (!stream.bad())
+		{
+			stream << "Time to finish:" << 0 << "[sec] = " << 0 << "[min]" << std::endl;
+			stream.flush();
+		}
+	}
 	if (resp == 0)
 	{
 		for (int i = 0; i < argc; i++)
