@@ -30,16 +30,18 @@ inline void TensorToMatrix(tiny_dnn::tensor_t& T, Matrix<dnn_double>& X)
 
 inline tiny_dnn::vec_t label2tensor(size_t lable, int class_max_num)
 {
-	tiny_dnn::vec_t tmp;
-	for (int i = 0; i < lable - 1; i++)
+	tiny_dnn::vec_t tmp(class_max_num, 0);
+	if (lable < 0 || lable >= class_max_num)
 	{
-		tmp.push_back(0);
+		return tmp;
 	}
-	tmp.push_back(1);
-	for (int i = lable; i < class_max_num; i++)
-	{
-		tmp.push_back(0);
-	}
+	tmp[lable] = 1;
+	//printf("%d %d:", class_max_num, tmp.size());
+	//for (int i = 0; i < class_max_num; i++)
+	//{
+	//	printf(" %f", tmp[i]);
+	//}
+	//printf("\n");
 	return tmp;
 }
 

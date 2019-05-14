@@ -1,3 +1,5 @@
+//#define USE_MKL
+
 #define _cublas_Init_def
 #define NOMINMAX
 #include "../../../include/Matrix.hpp"
@@ -49,6 +51,14 @@ int main(int argc, char** argv)
 	int use_cnn = 1;
 	std::string csvfile("sample.csv");
 	std::string report_file("TimeSeriesRegression.txt");
+	{
+		std::ofstream tmp_(report_file);
+		if (!tmp_.bad())
+		{
+			tmp_ << "" << std::endl;
+			tmp_.flush();
+		}
+	}
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -478,7 +488,7 @@ int main(int argc, char** argv)
 	MatrixToTensor(y, Y, read_max);
 
 
-	TimeSeriesRegression timeSeries(X, Y, normalization_type, classification);
+	TimeSeriesRegression timeSeries(X, Y, y_dim, normalization_type, classification);
 	if (timeSeries.getStatus() == -1)
 	{
 		if (classification < 2)

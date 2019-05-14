@@ -604,8 +604,9 @@ public:
 	{
 		return error;
 	}
-	TimeSeriesRegression(tiny_dnn::tensor_t& X, tiny_dnn::tensor_t& Y, std::string normalize_type="", int classification_ = -1	)
+	TimeSeriesRegression(tiny_dnn::tensor_t& X, tiny_dnn::tensor_t& Y, int ydim = 1, std::string normalize_type="", int classification_ = -1	)
 	{
+		y_dim = ydim;
 		iX = X;
 		iY = Y;
 		nY = Y;
@@ -646,43 +647,93 @@ public:
 					Mean[k] = 0.0;
 					Sigma[k] = 1.0;
 				}
-				if (classification >= 0)
+			}
+			if (classification >= 0)
+			{
+				bool class_id_number = true;
+				int class_num = classification;
+				float class_min = 10000000;
+				float class_max = -1;
+				for (int i = 0; i < nY.size(); i++)
 				{
-					float class_min = 10000000;
-					float class_max = -1;
-					for (int i = 0; i < y_dim; i++)
+					for (int k = 0; k < y_dim; k++)
 					{
-						for (int k = 0; k < nY[0].size(); k++)
+						if (nY[i][k] > class_max)
 						{
-							if (nY[i][k] > class_max)
-							{
-								class_max = nY[i][k];
-							}
-							if (nY[i][k] < class_min)
-							{
-								class_min = nY[i][k];
-							}
+							class_max = nY[i][k];
+						}
+						if (nY[i][k] < class_min)
+						{
+							class_min = nY[i][k];
+						}
+						if (fabs(nY[i][k] - (int)nY[i][k]) > 1.0e-10)
+						{
+							class_id_number = false;
 						}
 					}
-					class_minmax[0] = class_min;
-					class_minmax[1] = class_max;
+				}
+				class_minmax[0] = class_min;
+				class_minmax[1] = class_max;
 
-					if (class_max > classification)
+				if (class_min > class_max)
+				{
+					error = -1;
+					return;
+				}
+
+				if (class_max >= class_num)
+				{
+					printf("classification:%d <= class_max:%d\n", class_num, (int)class_max);
+					fflush(stdout);
+					error = -1;
+				}
+				if (class_min < 0)
+				{
+					printf("ERROR:class_min:%f\n", class_min);
+					fflush(stdout);
+					error = -1;
+				}
+				if (class_min > class_max)
+				{
+					error = -1;
+					return;
+				}
+				if (class_num < 2)
+				{
+					error = -1;
+				}
+				if (!class_id_number)
+				{
+					error = -1;
+				}
+				if (fabs(class_min) < 1.0 || fabs(class_max) < 1.0)
+				{
+					error = -1;
+				}
+
+				if (class_num >= 2 && error == -1)
+				{
+					for (int i = 0; i < nY.size(); i++)
 					{
-						printf("classification:%d < class_max:%d\n", classification, (int)class_max);
-						fflush(stdout);
-						error = -1;
+						for (int k = 0; k < y_dim; k++)
+						{
+							nY[i][k] = (int)((class_num - 1)*(nY[i][k] - class_min) / (class_max - class_min));
+							nY[i][k] = std::min((float_t)(class_num - 1), std::max(float_t(0.0), float_t(nY[i][k])));
+							iY[i][k] = nY[i][k];
+						}
 					}
-					if (class_min <= 0)
+					std::ofstream stream("classification_warning.txt");
+					if (!stream.bad())
 					{
-						printf("ERROR:class_min:%f\n", class_min);
-						fflush(stdout);
-						error = -1;
+						stream << class_minmax[0] << "---" << class_minmax[1] << std::endl;
+						double dt = class_num / (class_max - class_min);
+						for (int i = 0; i < class_num; i++)
+						{
+							stream << "class " << i << " " << i*dt << " " << (i + 1)*dt << std::endl;
+						}
+						stream.flush();
 					}
-					if (classification < 2)
-					{
-						error = -1;
-					}
+					error = 0;
 				}
 			}
 		}
@@ -806,6 +857,8 @@ public:
 		SigHandler_time_series_regression(0);
 		signal(SIGINT, SigHandler_time_series_regression);
 		signal(SIGTERM, SigHandler_time_series_regression);
+		signal(SIGBREAK, SigHandler_time_series_regression);
+		signal(SIGABRT, SigHandler_time_series_regression);
 
 		using tanh = tiny_dnn::activation::tanh;
 		using recurrent = tiny_dnn::recurrent_layer;
@@ -1387,7 +1440,7 @@ public:
 					{
 						test_result.print_detail(stream);
 						stream << test_result.num_success << "/" << test_result.num_total << std::endl;
-						stream << "accuracy:" << test_result.accuracy() << std::endl;
+						stream << "accuracy:" << test_result.accuracy() << "%" << std::endl;
 					}
 					stream.flush();
 				}

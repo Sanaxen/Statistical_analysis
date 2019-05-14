@@ -161,7 +161,7 @@ class NonLinearRegression
 				fprintf(fp_error_loss, "%.10f %.10f %.4f\n", loss_train, cost_min, tolerance);
 				fflush(fp_error_loss);
 			}
-			float loss_test = loss_test = get_loss(nn_test, test_images, test_labels);
+			float loss_test = get_loss(nn_test, test_images, test_labels);
 
 
 			tiny_dnn::result train_result;
@@ -536,45 +536,6 @@ public:
 					Sigma_y[k] = 1.0;
 				}
 			}
-			if (classification >= 0)
-			{
-				float class_min = 10000000;
-				float class_max = -1;
-				for (int i = 0; i < nY.size(); i++)
-				{
-					for (int k = 0; k < nY[0].size(); k++)
-					{
-						if (nY[i][k] > class_max)
-						{
-							class_max = nY[i][k];
-						}
-						if (nY[i][k] < class_min)
-						{
-							class_min = nY[i][k];
-						}
-					}
-				}
-				class_minmax[0] = class_min;
-				class_minmax[1] = class_max;
-
-				if (class_max > classification)
-				{
-					printf("ERROR:classification:%d < class_max:%d\n", classification, (int)class_max);
-					fflush(stdout);
-					error = -1;
-				}
-				if (class_min <= 0)
-				{
-					printf("ERROR:class_min:%f\n", class_min);
-					fflush(stdout);
-					error = -1;
-				}
-				if (classification < 2)
-				{
-					error = -1;
-				}
-			}
-
 			//FILE* fp = fopen("aaaaa.txt", "w");
 			//fprintf(fp, "%s\n", regression.c_str());
 			//fclose(fp);
@@ -583,6 +544,94 @@ public:
 			//TensorToMatrix(nY, tmpy);
 			//tmpy = tmpy.appendCol(tmpx);
 			//tmpy.print_csv("Tn.csv");
+		}
+		if (regression == "logistic" || classification >= 0)
+		{
+			int class_num = classification;
+			if (regression == "logistic")
+			{
+				class_num = 2;
+			}
+
+			bool class_id_number = true;
+			float class_min = 10000000;
+			float class_max = -1;
+			for (int i = 0; i < nY.size(); i++)
+			{
+				for (int k = 0; k < nY[0].size(); k++)
+				{
+					if (nY[i][k] > class_max)
+					{
+						class_max = nY[i][k];
+					}
+					if (nY[i][k] < class_min)
+					{
+						class_min = nY[i][k];
+					}
+					if (fabs(nY[i][k] - (int)nY[i][k]) > 1.0e-10)
+					{
+						class_id_number = false;
+					}
+				}
+			}
+			class_minmax[0] = class_min;
+			class_minmax[1] = class_max;
+
+			if (class_min > class_max)
+			{
+				error = -1;
+				return;
+			}
+
+			if (class_max >= class_num)
+			{
+				printf("ERROR:classification:%d <= class_max:%d\n", class_num, (int)class_max);
+				fflush(stdout);
+				error = -1;
+			}
+			if (class_min < 0)
+			{
+				printf("ERROR:class_min:%f\n", class_min);
+				fflush(stdout);
+				error = -1;
+			}
+			if (class_num < 2)
+			{
+				error = -1;
+			}
+			if (!class_id_number)
+			{
+				error = -1;
+			}
+			if (fabs(class_min) < 1.0 || fabs(class_max) < 1.0)
+			{
+				error = -1;
+			}
+
+			if (class_num >= 2 && error == -1)
+			{
+				for (int i = 0; i < nY.size(); i++)
+				{
+					for (int k = 0; k < nY[0].size(); k++)
+					{
+						nY[i][k] = (int)((class_num - 1)*(nY[i][k] - class_min) / (class_max - class_min));
+						nY[i][k] = std::min((float_t)(class_num-1), std::max(float_t(0.0), float_t(nY[i][k])));
+						iY[i][k] = nY[i][k];
+					}
+				}
+				std::ofstream stream("classification_warning.txt");
+				if (!stream.bad())
+				{
+					stream << class_minmax[0] << "---" << class_minmax[1] << std::endl;
+					double dt = class_num / (class_max - class_min);
+					for (int i = 0; i < class_num; i++)
+					{
+						stream << "class " << i << " " << i*dt << " " << (i+1)*dt << std::endl;
+					}
+					stream.flush();
+				}
+				error = 0;
+			}
 		}
 	}
 	void visualize_loss(int n)
@@ -781,6 +830,8 @@ public:
 		SigHandler_nonlinear_regression(0);
 		signal(SIGINT, SigHandler_nonlinear_regression);
 		signal(SIGTERM, SigHandler_nonlinear_regression);
+		signal(SIGBREAK, SigHandler_nonlinear_regression);
+		signal(SIGABRT, SigHandler_nonlinear_regression);
 
 		using tanh = tiny_dnn::activation::tanh;
 		using recurrent = tiny_dnn::recurrent_layer;
@@ -1241,7 +1292,7 @@ public:
 				tiny_dnn::vec_t& y = nn.predict(nX[i]);
 				for (int k = 0; k < y.size(); k++)
 				{
-					auto z = train_labels[i][k];
+					auto z = nY[i][k];
 					float_t d;
 					if (y[k] < 0.5) d = 0.0;
 					else d = 1.0;
@@ -1256,41 +1307,41 @@ public:
 			fprintf(fp, "accuracy:%.3f%%\n", 100.0*accuracy / tot);
 		}
 
-		if (classification > 2)
-		{
-			for (int i = 0; i < nY.size(); i++)
-			{
-				tiny_dnn::vec_t& y = nn.predict(nX[i]);
-				for (int k = 0; k < y.size(); k++)
-				{
-					auto z = train_labels[i][k];
-					//if (zscore_normalization)
-					//{
-					//	y[k] = y[k] * Sigma_y[k] + Mean_y[k];
-					//	z = z * Sigma_y[k] + Mean_y[k];
-					//}
-					//if (minmax_normalization)
-					//{
-					//	y[k] = y[k] * MaxMin_y[k] + Min_y[k];
-					//	z = z * MaxMin_y[k] + Min_y[k];
-					//}
+		//if (classification > 2)
+		//{
+		//	for (int i = 0; i < nY.size(); i++)
+		//	{
+		//		tiny_dnn::vec_t& y = nn.predict(nX[i]);
+		//		for (int k = 0; k < y.size(); k++)
+		//		{
+		//			auto z = train_labels[i][k];
+		//			//if (zscore_normalization)
+		//			//{
+		//			//	y[k] = y[k] * Sigma_y[k] + Mean_y[k];
+		//			//	z = z * Sigma_y[k] + Mean_y[k];
+		//			//}
+		//			//if (minmax_normalization)
+		//			//{
+		//			//	y[k] = y[k] * MaxMin_y[k] + Min_y[k];
+		//			//	z = z * MaxMin_y[k] + Min_y[k];
+		//			//}
 
-					float_t d;
-					if (classification == 2)
-					{
-						if (y[k] < 0.5) d = 0.0;
-						else d = 1.0;
+		//			float_t d;
+		//			if (classification == 2)
+		//			{
+		//				if (y[k] < 0.5) d = 0.0;
+		//				else d = 1.0;
 
-						if (d == z)
-						{
-							accuracy++;
-						}
-					}
-					tot++;
-				}
-			}
-			fprintf(fp, "accuracy:%.3f%%\n", 100.0*accuracy / tot);
-		}
+		//				if (d == z)
+		//				{
+		//					accuracy++;
+		//				}
+		//			}
+		//			tot++;
+		//		}
+		//	}
+		//	fprintf(fp, "accuracy:%.3f%%\n", 100.0*accuracy / tot);
+		//}
 		return 100.0*accuracy / tot;
 	}
 
@@ -1407,11 +1458,17 @@ public:
 					{
 						test_result.print_detail(stream);
 						stream << test_result.num_success << "/" << test_result.num_total << std::endl;
-						stream << "accuracy:" << test_result.accuracy() << std::endl;
+						stream << "accuracy:" << test_result.accuracy() << "%" << std::endl;
 					}
 					stream.flush();
 				}
 			}
+			return;
+		}
+
+		if (regression == "logistic")
+		{
+			get_accuracy(fp);
 			return;
 		}
 

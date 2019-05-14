@@ -1,3 +1,5 @@
+//#define USE_MKL
+
 #define _cublas_Init_def
 #define NOMINMAX
 #include "../../../include/Matrix.hpp"
@@ -44,6 +46,16 @@ int main(int argc, char** argv)
 	int x_dim = 0, y_dim = 0;
 	std::string csvfile("sample.csv");
 	std::string report_file("NonLinearRegression.txt");
+	
+	//{
+	//	std::ofstream tmp_(report_file);
+	//	if (!tmp_.bad())
+	//	{
+	//		tmp_ << "" << std::endl;
+	//		tmp_.flush();
+	//	}
+	//}
+
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);

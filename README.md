@@ -8,6 +8,7 @@
 - [x] Sparse regression
 - [x] Logistic regression
 - [x] Nonlinear regression
+- [x] Nonlinear classification
 - [x] Principal component analysis
 - [x] Independent component analysis
 - [x] Eigenvalue analysis
