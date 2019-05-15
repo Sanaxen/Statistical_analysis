@@ -1447,7 +1447,7 @@ public:
 					stream << "ConfusionMatrix(train):" << std::endl;
 					train_result.print_detail(stream);
 					stream << train_result.num_success << "/" << train_result.num_total << std::endl;
-					stream << "accuracy:" << train_result.accuracy() << std::endl;
+					stream << "accuracy:" << train_result.accuracy() << "%" << std::endl;
 					stream << std::endl;
 					stream << "ConfusionMatrix(test):" << std::endl;
 					if (test_images.size() == 0)

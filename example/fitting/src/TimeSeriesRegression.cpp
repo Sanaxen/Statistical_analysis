@@ -1,4 +1,4 @@
-//#define USE_MKL
+#define USE_MKL
 
 #define _cublas_Init_def
 #define NOMINMAX
@@ -12,9 +12,11 @@
 
 #include <iostream>
 #include <string.h>
+
 #ifdef USE_MKL
 #define CNN_USE_INTEL_MKL
 #endif
+
 #include "../../../include/util/dnn_util.hpp"
 #include "../../../include/nonlinear/TimeSeriesRegression.h"
 #include "../../../include/nonlinear/MatrixToTensor.h"
@@ -49,27 +51,36 @@ int main(int argc, char** argv)
 	int start_col = 0;
 	int x_dim = 0, y_dim = 0;
 	int use_cnn = 1;
+	int x_s = 0;
+	int y_s = 0;
+
 	std::string csvfile("sample.csv");
 	std::string report_file("TimeSeriesRegression.txt");
-	{
-		std::ofstream tmp_(report_file);
-		if (!tmp_.bad())
-		{
-			tmp_ << "" << std::endl;
-			tmp_.flush();
-		}
-	}
+	//{
+	//	std::ofstream tmp_(report_file);
+	//	if (!tmp_.bad())
+	//	{
+	//		tmp_ << "" << std::endl;
+	//		tmp_.flush();
+	//	}
+	//}
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
 		if (argname == "--x") {
-			x_dim = atoi(argv[count + 1]);
+			if (sscanf(argv[count + 1], "%d:%d", &x_s, &x_dim) != 2)
+			{
+				x_dim = atoi(argv[count + 1]);
+			}
 		}else
 		if (argname == "--read_max") {
 			read_max = atoi(argv[count + 1]);
 		}
 		else if (argname == "--y") {
-			y_dim = atoi(argv[count + 1]);
+			if (sscanf(argv[count + 1], "%d:%d", &y_s, &y_dim) != 2)
+			{
+				y_dim = atoi(argv[count + 1]);
+			}
 		}
 		else if (argname == "--csv") {
 			csvfile = std::string(argv[count + 1]);
@@ -264,9 +275,9 @@ int main(int argc, char** argv)
 		for (int i = 0; i < x_dim; i++)
 		{
 			char buf[32];
-			sprintf(buf, "\"%d\"", i);
+			sprintf(buf, "\"%d\"", i+x_s);
 			x_var.push_back(buf);
-			x_var_idx.push_back(i);
+			x_var_idx.push_back(i+x_s);
 		}
 	}
 	if (x_var.size() > 0 && x_dim > 0)
@@ -293,7 +304,7 @@ int main(int argc, char** argv)
 			bool dup = false;
 			for (int j = 0; j < x_var.size(); j++)
 			{
-				if (x_var_idx[j] == i)
+				if (x_var_idx[j] == i+y_s)
 				{
 					dup = true;
 					break;
@@ -302,9 +313,9 @@ int main(int argc, char** argv)
 			if (!dup)
 			{
 				char buf[128];
-				sprintf(buf, "\"%d\"", i);
+				sprintf(buf, "\"%d\"", i+y_s);
 				y_var.push_back(buf);
-				y_var_idx.push_back(i);
+				y_var_idx.push_back(i+y_s);
 			}
 		}
 	}
@@ -320,10 +331,29 @@ int main(int argc, char** argv)
 	for (int i = 0; i < x_var.size(); i++)
 	{
 		printf("x_var:%s %d\n", x_var[i].c_str(), x_var_idx[i]);
+		if (x_var.size() > 80 && i == 4) break;
 	}
+	if (x_var.size() > 80)
+	{
+		printf("...\n");
+		for (int i = x_var.size() - 4; i < x_var.size(); i++)
+		{
+			printf("x_var:%s %d\n", x_var[i].c_str(), x_var_idx[i]);
+		}
+	}
+	printf("\n");
 	for (int i = 0; i < y_var.size(); i++)
 	{
 		printf("y_var:%s %d\n", y_var[i].c_str(), y_var_idx[i]);
+		if (y_var.size() > 80 && i == 4) break;
+	}
+	if (y_var.size() > 80)
+	{
+		printf("...\n");
+		for (int i = y_var.size() - 4; i < y_var.size(); i++)
+		{
+			printf("y_var:%s %d\n", y_var[i].c_str(), y_var_idx[i]);
+		}
 	}
 	//for (int i = 0; i < yx_var.size(); i++)
 	//{
