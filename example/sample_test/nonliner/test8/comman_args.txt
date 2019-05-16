@@ -1,0 +1,5 @@
+ --csv example_retail_sales.csv --header 1 --y_var 1 --t_var 0 --col 0 --x 0 --y 1 --tol 0.009 
+ --learning_rate 1 --test 0.1 --epochs 1000 --minibatch_size 20 --seq_len 20 
+ --n_layers 10 --n_rnn_layers 1 --hidden_size 128 --plot 50 --use_cnn 0 
+ --capture 0 --opt_type adam --early_stopping 1 --normal zscore --observed_predict_plot 0 
+ 
