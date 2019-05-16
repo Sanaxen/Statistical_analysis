@@ -34,4 +34,28 @@ inline void make_data_set(std::string&  csvfile, int datanum = 1000)
 	fclose(fp);
 }
 
+inline int filelist_to_csv(std::string& csvfilename, std::string& dir, bool is_train, int class_num = 10)
+{
+	FILE* fp = fopen((dir + "\\train_image_list.txt").c_str(), "r");
+	if (fp == NULL)
+	{
+		return -1;
+	}
+	char buf[640];
+	fgets(buf, 640, fp);
+	fclose(fp);
+
+	if (strstr(buf, ".bmp") || strstr(buf, ".BMP")
+		|| strstr(buf, ".jpg") || strstr(buf, ".JPEG")
+		|| strstr(buf, ".png") || strstr(buf, ".PNG")
+		)
+	{
+		images_labes_to_csv(csvfilename, dir, is_train, class_num);
+		return 0;
+	}
+
+	printf("unsupport file format!\n");
+	return 1;
+}
+
 #endif

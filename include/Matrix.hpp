@@ -1529,32 +1529,43 @@ struct Matrix
 	Matrix<dnn_double> Col(int col)
 	{
 		Matrix<dnn_double> ret(m, 1);
+//#pragma omp parallel for
+//		for (int i = 0; i < m; i++)
+//		{
+//			for (int j = 0; j < n; j++)
+//			{
+//				if (j == col) 
+//				{
+//					ret(i, 0) = (*this)(i, j);
+//				}
+//			}
+//		}
 #pragma omp parallel for
 		for (int i = 0; i < m; i++)
 		{
-			for (int j = 0; j < n; j++)
-			{
-				if (j == col) 
-				{
-					ret(i, 0) = (*this)(i, j);
-				}
-			}
+			ret(i, 0) = (*this)(i, col);
 		}
 		return ret;
 	}
+
 	Matrix<dnn_double> Row(int row)
 	{
 		Matrix<dnn_double> ret(1, n);
+//#pragma omp parallel for
+//		for (int i = 0; i < m; i++)
+//		{
+//			for (int j = 0; j < n; j++)
+//			{
+//				if (i == row)
+//				{
+//					ret(0, j) = (*this)(i, j);
+//				}
+//			}
+//		}
 #pragma omp parallel for
-		for (int i = 0; i < m; i++)
+		for (int j = 0; j < n; j++)
 		{
-			for (int j = 0; j < n; j++)
-			{
-				if (i == row)
-				{
-					ret(0, j) = (*this)(i, j);
-				}
-			}
+			ret(0, j) = (*this)(row, j);
 		}
 		return ret;
 	}
@@ -1562,18 +1573,23 @@ struct Matrix
 	Matrix<dnn_double> appendRow(Matrix<dnn_double>& A)
 	{
 		Matrix<dnn_double> ret(m + A.m, n);
-		for (int i = 0; i < m; i++)
+#pragma omp parallel
 		{
-			for (int j = 0; j < n; j++)
+#pragma omp for
+			for (int i = 0; i < m; i++)
 			{
-				ret(i, j) = (*this)(i, j);
+				for (int j = 0; j < n; j++)
+				{
+					ret(i, j) = (*this)(i, j);
+				}
 			}
-		}
-		for (int i = 0; i < A.m; i++)
-		{
-			for (int j = 0; j < A.n; j++)
+#pragma omp for
+			for (int i = 0; i < A.m; i++)
 			{
-				ret(m+i, j) = A(i, j);
+				for (int j = 0; j < A.n; j++)
+				{
+					ret(m + i, j) = A(i, j);
+				}
 			}
 		}
 		return ret;
@@ -1582,18 +1598,23 @@ struct Matrix
 	Matrix<dnn_double> appendCol(Matrix<dnn_double>& A)
 	{
 		Matrix<dnn_double> ret(m, n+A.n);
-		for (int i = 0; i < m; i++)
+#pragma omp parallel
 		{
-			for (int j = 0; j < n; j++)
+#pragma omp for
+			for (int i = 0; i < m; i++)
 			{
-				ret(i, j) = (*this)(i, j);
+				for (int j = 0; j < n; j++)
+				{
+					ret(i, j) = (*this)(i, j);
+				}
 			}
-		}
-		for (int i = 0; i < A.m; i++)
-		{
-			for (int j = 0; j < A.n; j++)
+#pragma omp for
+			for (int i = 0; i < A.m; i++)
 			{
-				ret(i, n+j) = A(i, j);
+				for (int j = 0; j < A.n; j++)
+				{
+					ret(i, n + j) = A(i, j);
+				}
 			}
 		}
 		return ret;

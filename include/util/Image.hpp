@@ -78,6 +78,24 @@ public:
 	}
 };
 
+inline void ImageWrite(const char* filename, Image* img)
+{
+	std::vector<unsigned char> data(3 * img->height*img->width);
+
+	for (int i = 0; i < img->height; i++)
+	{
+		for (int j = 0; j < img->width; j++)
+		{
+			int pos = (i*img->width + j);
+
+			data[3 * pos + 0] = img->data[pos].r;
+			data[3 * pos + 1] = img->data[pos].g;
+			data[3 * pos + 2] = img->data[pos].b;
+		}
+	}
+	stbi_write_bmp(filename, img->width, img->height, 3, (void*)&data[0]);
+}
+
 template<class T>
 inline Image* ToImage(T* data, int x, int y)
 {
@@ -122,7 +140,7 @@ inline T* ImageTo(Image* img)
 	return data;
 }
 
-inline Image* readImage(char *filename)
+inline Image* readImage(char *filename, int& rgb_channel, int& real_channel)
 {
 	//int i, j;
 	//int real_width;
@@ -132,6 +150,8 @@ inline Image* readImage(char *filename)
 	//unsigned char *bmp_line_data;
 	Image *img;
 
+	int gray_count = 0;
+	rgb_channel = -1;
 	unsigned char *data = 0;
 	int x, y;
 	int nbit;
@@ -141,6 +161,7 @@ inline Image* readImage(char *filename)
 		printf("image file[%s] read error.\n", filename);
 		return NULL;
 	}
+
 	//printf("height %d   width %d \n", y, x);
 
 	img = new Image;
@@ -159,6 +180,7 @@ inline Image* readImage(char *filename)
 				img->data[pos].g = data[pos];
 				img->data[pos].b = data[pos];
 				img->data[pos].alp = 255;
+				rgb_channel = 1;
 			}
 			if (nbit == 2)	//16bit
 			{
@@ -167,6 +189,8 @@ inline Image* readImage(char *filename)
 				img->data[pos].g = data[pos * 2 + 0];
 				img->data[pos].b = data[pos * 2 + 0];
 				img->data[pos].alp = data[pos * 2 + 1];
+				rgb_channel = 2;
+				gray_count++;
 			}
 			if (nbit == 3)	//24
 			{
@@ -175,6 +199,11 @@ inline Image* readImage(char *filename)
 				img->data[pos].g = data[pos * 3 + 1];
 				img->data[pos].b = data[pos * 3 + 2];
 				img->data[pos].alp = 255;
+				rgb_channel = 3;
+				if (data[pos * 3 + 0] == data[pos * 3 + 1] && data[pos * 3 + 0] == data[pos * 3 + 2])
+				{
+					gray_count++;
+				}
 			}
 			if (nbit == 4)	//32
 			{
@@ -183,10 +212,19 @@ inline Image* readImage(char *filename)
 				img->data[pos].g = data[pos * 4 + 1];
 				img->data[pos].b = data[pos * 4 + 2];
 				img->data[pos].alp = data[pos * 4 + 3];
+				rgb_channel = 4;
+				if (data[pos * 4 + 0] == data[pos * 4 + 1] && data[pos * 4 + 0] == data[pos * 4 + 2] && data[pos * 4 + 0] == data[pos * 4 + 3])
+				{
+					gray_count++;
+				}
 			}
 		}
 	}
 	stbi_image_free(data);
+	if (gray_count == x * y)
+	{
+		real_channel = 1;
+	}
 
 	return img;
 }

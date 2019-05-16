@@ -575,6 +575,7 @@ public:
 	int use_cnn = 1;
 
 	tiny_dnn::core::backend_t default_backend_type = tiny_dnn::core::backend_t::internal;
+	//tiny_dnn::core::backend_t default_backend_type = tiny_dnn::core::backend_t::intel_mkl;
 
 	tiny_dnn::tensor_t iX;
 	tiny_dnn::tensor_t iY;
@@ -681,9 +682,9 @@ public:
 					return;
 				}
 
-				if (class_max >= class_num)
+				if (class_max > class_num)
 				{
-					printf("classification:%d <= class_max:%d\n", class_num, (int)class_max);
+					printf("classification:%d < class_max:%d\n", class_num, (int)class_max);
 					fflush(stdout);
 					error = -1;
 				}
@@ -706,7 +707,7 @@ public:
 				{
 					error = -1;
 				}
-				if (fabs(class_min) < 1.0 || fabs(class_max) < 1.0)
+				if (fabs(class_min) < 0.0 || fabs(class_max) < 1.0)
 				{
 					error = -1;
 				}
@@ -729,7 +730,14 @@ public:
 						double dt = class_num / (class_max - class_min);
 						for (int i = 0; i < class_num; i++)
 						{
-							stream << "class " << i << " " << i*dt << " " << (i + 1)*dt << std::endl;
+							stream << "class index:" << i << " (class number:" << i + 1 << ") " << (i*dt + class_min) << " " << (i + 1)*dt + class_min << std::endl;
+						}
+						for (int i = 0; i < nY.size(); i++)
+						{
+							for (int k = 0; k < nY[0].size(); k++)
+							{
+								stream << nY[i][k] << std::endl;
+							}
 						}
 						stream.flush();
 					}

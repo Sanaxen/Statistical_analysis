@@ -1,4 +1,5 @@
 #define USE_MKL
+#define CNN_USE_AVX
 
 #define _cublas_Init_def
 #define NOMINMAX
@@ -21,6 +22,7 @@
 #include "../../../include/nonlinear/TimeSeriesRegression.h"
 #include "../../../include/nonlinear/MatrixToTensor.h"
 
+#include "../../../include/nonlinear/image_util.h"
 #include "gen_test_data.h"
 #include "../../include/util/cmdline_args.h"
 
@@ -53,6 +55,9 @@ int main(int argc, char** argv)
 	int use_cnn = 1;
 	int x_s = 0;
 	int y_s = 0;
+	bool test_mode = false;
+
+	std::string data_path = "";
 
 	std::string csvfile("sample.csv");
 	std::string report_file("TimeSeriesRegression.txt");
@@ -67,6 +72,9 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--dir") {
+			data_path = argv[count + 1];
+		}
 		if (argname == "--x") {
 			if (sscanf(argv[count + 1], "%d:%d", &x_s, &x_dim) != 2)
 			{
@@ -105,9 +113,30 @@ int main(int argc, char** argv)
 			normalization_type = argv[count + 1];
 			printf("--normal %s\n", argv[count + 1]);
 		}
+		else if (argname == "--test_mode") {
+			test_mode = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
 		else if (argname == "--classification") {
 			classification = atoi(argv[count + 1]);
 			continue;
+		}
+	}
+
+	if (data_path != "")
+	{
+		FILE* fp = fopen(csvfile.c_str(), "r");
+		if (fp)
+		{
+			fclose(fp);
+		}
+		else
+		{
+			int stat = filelist_to_csv(csvfile, data_path, test_mode==false, classification);
+			if (stat != 0)
+			{
+				return -1;
+			}
 		}
 	}
 
@@ -425,93 +454,127 @@ int main(int argc, char** argv)
 	}
 
 
-	if(0)
-	{
-		std::random_device rnd;     // 非決定的な乱数生成器を生成
-		std::mt19937 mt(rnd());     //  メルセンヌ・ツイスタ
-		std::uniform_real_distribution<> rand(0.0, 1.0);
-		FILE* fp = fopen("sample.csv", "w");
+	//if(0)
+	//{
+	//	std::random_device rnd;     // 非決定的な乱数生成器を生成
+	//	std::mt19937 mt(rnd());     //  メルセンヌ・ツイスタ
+	//	std::uniform_real_distribution<> rand(0.0, 1.0);
+	//	FILE* fp = fopen("sample.csv", "w");
 
-		float t = 0;
-		float dt = 1;
-		int k = 1;
-		for (int i = 0; i < 10000; i++)
-		{
-			float r = rand(mt);
-			if (r > 0.2)
-			{
-				fprintf(fp, "%f,%f,%f\n", t + dt*k, 0.0, 1.0);
-			}
-			else
-			{
-				fprintf(fp, "%f,%f,%f\n", t + dt*k, 1.0, 0.0);
-			}
-			k++;
-		}
-		fclose(fp);
-	}
+	//	float t = 0;
+	//	float dt = 1;
+	//	int k = 1;
+	//	for (int i = 0; i < 10000; i++)
+	//	{
+	//		float r = rand(mt);
+	//		if (r > 0.2)
+	//		{
+	//			fprintf(fp, "%f,%f,%f\n", t + dt*k, 0.0, 1.0);
+	//		}
+	//		else
+	//		{
+	//			fprintf(fp, "%f,%f,%f\n", t + dt*k, 1.0, 0.0);
+	//		}
+	//		k++;
+	//	}
+	//	fclose(fp);
+	//}
 	printf("sequence_length:%d\n", sequence_length);
 	printf("x_dim:%d y_dim:%d\n", x_dim, y_dim);
+
+	if (data_path != "" && read_max > 0)
+	{
+		std::mt19937 mt(read_max);
+		std::uniform_int_distribution<int> rand_ts(0, x.m - 1);
+		std:vector<int> index(x.m - 1, -1);
+
+		Matrix<dnn_double> xx = x.Row(0);
+		Matrix<dnn_double> yy = y.Row(0);
+		Matrix<dnn_double> tt = tvar.Row(0);
+		index[0] = 1;
+		for (int i = 1; i < read_max-1; i++)
+		{
+#pragma omp parallel sections
+			{
+#pragma omp section
+				{
+					xx = xx.appendRow(x.Row(i));
+				}
+#pragma omp section
+				{
+					yy = yy.appendRow(y.Row(i));
+				}
+#pragma omp section
+				{
+					tt = tt.appendRow(tvar.Row(i));
+				}
+			}
+		}
+		x = xx;
+		y = yy;
+		tvar = tt;
+	}
+
 	x.print();
 	y.print();
 
-	if(0)
-	{
-		int n = 3;
-		std::vector<dnn_double> new_y;
-		std::vector<dnn_double> new_x;
-		std::mt19937 mt(1);
-		std::normal_distribution<> norm(0.0, 1.0);
-		for (int i = 0; i < y.m - 1; i++)
-		{
-			for (int k = 0; k < y.n; k++)
-			{
-				double ys = y(i + 1, k) - y(i, k);
-				double yd = ys / (double)n;
-				for (int j = 0; j < n; j++)
-				{
-					if (j > 0 && j < n - 1)
-					{
-						new_y.push_back(y(i, k) + j*yd + 0.3*fabs(ys)*norm(mt));
-					}
-					else
-					{
-						new_y.push_back(y(i, k) + j*yd);
-					}
-				}
-				if (i == y.m - 1)
-				{
-					new_y.push_back(y(y.m - 1, k));
-				}
-			}
-			for (int k = 0; k < x.n; k++)
-			{
-				double xs = x(i + 1, k) - x(i, k);
-				double xd = xs / (double)n;
-				for (int j = 0; j < n; j++)
-				{
-					new_x.push_back(x(i, k) + j*xd);
-				}
-				if (i == y.m - 1)
-				{
-					new_y.push_back(x(y.m - 1, k));
-				}
-			}
-		}
-		Matrix<dnn_double> yy(new_y.size() / y.n, y.n);
-		Matrix<dnn_double> xx(new_x.size() / x.n, x.n);
-		memcpy(yy.v, &(new_y[0]), sizeof(dnn_double)*new_y.size());
-		memcpy(xx.v, &(new_x[0]), sizeof(dnn_double)*new_x.size());
+	//if(0)
+	//{
+	//	int n = 3;
+	//	std::vector<dnn_double> new_y;
+	//	std::vector<dnn_double> new_x;
+	//	std::mt19937 mt(1);
+	//	std::normal_distribution<> norm(0.0, 1.0);
+	//	for (int i = 0; i < y.m - 1; i++)
+	//	{
+	//		for (int k = 0; k < y.n; k++)
+	//		{
+	//			double ys = y(i + 1, k) - y(i, k);
+	//			double yd = ys / (double)n;
+	//			for (int j = 0; j < n; j++)
+	//			{
+	//				if (j > 0 && j < n - 1)
+	//				{
+	//					new_y.push_back(y(i, k) + j*yd + 0.3*fabs(ys)*norm(mt));
+	//				}
+	//				else
+	//				{
+	//					new_y.push_back(y(i, k) + j*yd);
+	//				}
+	//			}
+	//			if (i == y.m - 1)
+	//			{
+	//				new_y.push_back(y(y.m - 1, k));
+	//			}
+	//		}
+	//		for (int k = 0; k < x.n; k++)
+	//		{
+	//			double xs = x(i + 1, k) - x(i, k);
+	//			double xd = xs / (double)n;
+	//			for (int j = 0; j < n; j++)
+	//			{
+	//				new_x.push_back(x(i, k) + j*xd);
+	//			}
+	//			if (i == y.m - 1)
+	//			{
+	//				new_y.push_back(x(y.m - 1, k));
+	//			}
+	//		}
+	//	}
+	//	Matrix<dnn_double> yy(new_y.size() / y.n, y.n);
+	//	Matrix<dnn_double> xx(new_x.size() / x.n, x.n);
+	//	memcpy(yy.v, &(new_y[0]), sizeof(dnn_double)*new_y.size());
+	//	memcpy(xx.v, &(new_x[0]), sizeof(dnn_double)*new_x.size());
 
-		yy.print_csv("yy.csv");
-		xx.print_csv("xx.csv");
-		
-		y = yy;
-		x = xx;
-		int sequence_length2 = (sequence_length - 1)*(n - 1);
-		sequence_length = sequence_length2 - sequence_length2%sequence_length;
-		//exit(0);
-	}
+	//	yy.print_csv("yy.csv");
+	//	xx.print_csv("xx.csv");
+	//	
+	//	y = yy;
+	//	x = xx;
+	//	int sequence_length2 = (sequence_length - 1)*(n - 1);
+	//	sequence_length = sequence_length2 - sequence_length2%sequence_length;
+	//	//exit(0);
+	//}
 
 	tiny_dnn::tensor_t X, Y;
 	MatrixToTensor(x, X, read_max);
@@ -535,8 +598,8 @@ int main(int argc, char** argv)
 	timeSeries.learning_rate = 1.0;
 	timeSeries.visualize_loss(10);
 	timeSeries.plot = 10;
+	timeSeries.test_mode = test_mode;
 
-	bool test_mode = false;
 	int n_layers = -1;
 	int n_rnn_layers = -1;
 	int hidden_size = -1;
@@ -545,6 +608,9 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--dir") {
+			continue;
+		}
 		if (argname == "--read_max") {
 			continue;
 		}else
@@ -578,6 +644,9 @@ int main(int argc, char** argv)
 		else if (argname == "--classification") {
 			continue;
 		}
+		else if (argname == "--test_mode") {
+			continue;
+		}
 		else if (argname == "--bptt_max") {
 			timeSeries.n_bptt_max = atoi(argv[count + 1]);
 			continue;
@@ -595,10 +664,6 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--learning_rate") {
 			timeSeries.learning_rate = atof(argv[count + 1]);
-			continue;
-		}
-		else if (argname == "--test_mode") {
-			timeSeries.test_mode = (0 < atoi(argv[count + 1])) ? true : false;
 			continue;
 		}
 		else if (argname == "--test") {

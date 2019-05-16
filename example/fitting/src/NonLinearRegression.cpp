@@ -1,4 +1,5 @@
 #define USE_MKL
+#define CNN_USE_AVX
 
 #define _cublas_Init_def
 #define NOMINMAX
@@ -21,9 +22,9 @@
 #include "../../../include/nonlinear/NonLinearRegression.h"
 #include "../../../include/nonlinear/MatrixToTensor.h"
 
+#include "../../../include/nonlinear/image_util.h"
 #include "gen_test_data.h"
 #include "../../include/util/cmdline_args.h"
-#include "../../../include/nonlinear/image_util.h"
 
 
 int main(int argc, char** argv)
@@ -49,9 +50,11 @@ int main(int argc, char** argv)
 	int x_dim = 0, y_dim = 0;
 	int x_s = 0;
 	int y_s = 0;
+	bool test_mode = false;
 	std::string csvfile("sample.csv");
 	std::string report_file("NonLinearRegression.txt");
 
+	std::string data_path = "";
 	//{
 	//	std::ofstream tmp_(report_file);
 	//	if (!tmp_.bad())
@@ -65,6 +68,9 @@ int main(int argc, char** argv)
 		std::string argname(argv[count]);
 		if (argname == "--read_max") {
 			read_max = atoi(argv[count + 1]);
+		}
+		else if (argname == "--dir") {
+			data_path = argv[count + 1];
 		}
 		else if (argname == "--x") {
 			if (sscanf(argv[count + 1], "%d:%d", &x_s, &x_dim) != 2)
@@ -98,6 +104,10 @@ int main(int argc, char** argv)
 			normalization_type = argv[count + 1];
 			printf("--normal %s\n", argv[count + 1]);
 		}
+		else if (argname == "--test_mode") {
+			test_mode = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
 		else if (argname == "--dec_random") {
 			dec_random = atof(argv[count + 1]);
 			continue;
@@ -116,6 +126,23 @@ int main(int argc, char** argv)
 		}
 	}
 
+	if (data_path != "")
+	{
+		FILE* fp = fopen(csvfile.c_str(), "r");
+		if (fp)
+		{
+			fclose(fp);
+		}
+		else
+		{
+			int stat = filelist_to_csv(csvfile, data_path, test_mode == false, classification);
+			if (stat != 0)
+			{
+				return -1;
+			}
+		}
+	}
+
 	FILE* fp = fopen(csvfile.c_str(), "r");
 	if (fp == NULL)
 	{
@@ -125,6 +152,7 @@ int main(int argc, char** argv)
 	{
 		fclose(fp);
 	}
+
 
 	CSVReader csv1(csvfile, ',', header);
 	Matrix<dnn_double> z = csv1.toMat();
@@ -347,6 +375,40 @@ int main(int argc, char** argv)
 		y = y.appendCol(z.Col(y_var_idx[i]));
 	}
 	printf("x_dim:%d y_dim:%d\n", x_dim, y_dim);
+
+	if (data_path != "" && read_max > 0)
+	{
+		std::mt19937 mt(read_max);
+		std::uniform_int_distribution<int> rand_ts(0, x.m - 1);
+		std:vector<int> index(x.m - 1, -1);
+		
+		Matrix<dnn_double> xx = x.Row(0);
+		Matrix<dnn_double> yy = y.Row(0);
+		index[0] = 1;
+		for (int i = 0; i < read_max-1; i++)
+		{
+			int idx = rand_ts(mt);
+			while (index[idx] != -1)
+			{
+				idx = rand_ts(mt);
+			}
+#pragma omp parallel sections
+			{
+				#pragma omp section
+				{
+					xx = xx.appendRow(x.Row(idx));
+				}
+				#pragma omp section
+				{
+					yy = yy.appendRow(y.Row(idx));
+				}
+			}
+			index[idx] = 1;
+		}
+		x = xx;
+		y = yy;
+	}
+
 	x.print();
 	y.print();
 
@@ -377,12 +439,16 @@ int main(int argc, char** argv)
 	regression.learning_rate = 1;
 	regression.visualize_loss(10);
 	regression.plot = 10;
+	regression.test_mode = test_mode;
 
 	double test_num = 0;
 	int n_layers = -1;
 	int input_unit = -1;
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--dir") {
+			continue;
+		}
 		if (argname == "--read_max") {
 			continue;
 		}
@@ -423,6 +489,9 @@ int main(int argc, char** argv)
 		else if (argname == "--classification") {
 			continue;
 		}
+		else if (argname == "--test_mode") {
+			continue;
+		}
 		else if (argname == "--capture") {
 			regression.capture = (0 < atoi(argv[count + 1])) ? true : false;
 			continue;
@@ -437,10 +506,6 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--learning_rate") {
 			regression.learning_rate = atof(argv[count + 1]);
-			continue;
-		}
-		else if (argname == "--test_mode") {
-			regression.test_mode = (0 < atoi(argv[count + 1])) ? true : false;
 			continue;
 		}
 		else if (argname == "--test") {
