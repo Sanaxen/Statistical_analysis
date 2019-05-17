@@ -73,13 +73,19 @@ int main(int argc, char** argv)
 			data_path = argv[count + 1];
 		}
 		else if (argname == "--x") {
-			if (sscanf(argv[count + 1], "%d:%d", &x_s, &x_dim) != 2)
+			if (sscanf(argv[count + 1], "%d:%d", &x_s, &x_dim) == 2)
+			{
+			}
+			else
 			{
 				x_dim = atoi(argv[count + 1]);
 			}
 		}
 		else if (argname == "--y") {
-			if (sscanf(argv[count + 1], "%d:%d", &y_s, &y_dim) != 2)
+			if (sscanf(argv[count + 1], "%d:%d", &y_s, &y_dim) == 2)
+			{
+			}
+			else
 			{
 				y_dim = atoi(argv[count + 1]);
 			}
@@ -135,7 +141,7 @@ int main(int argc, char** argv)
 		}
 		else
 		{
-			int stat = filelist_to_csv(csvfile, data_path, test_mode == false, classification);
+			int stat = filelist_to_csv(csvfile, data_path, test_mode == false, classification, header, normalization_type);
 			if (stat != 0)
 			{
 				return -1;
@@ -187,6 +193,7 @@ int main(int argc, char** argv)
 	{
 		std::replace(header_names[i].begin(), header_names[i].end(), ' ', '_');
 	}
+	csv1.clear();
 
 	std::vector<int> x_var_idx;
 	std::vector<int> y_var_idx;
@@ -425,6 +432,8 @@ int main(int argc, char** argv)
 	tiny_dnn::tensor_t X, Y;
 	MatrixToTensor(x, X, read_max);
 	MatrixToTensor(y, Y, read_max);
+	x = Matrix<dnn_double>(1, 1);
+	y = Matrix<dnn_double>(1, 1);
 
 	NonLinearRegression regression(X, Y, normalization_type, dec_random, fluctuation, regression_type, classification);
 	if (regression.getStatus() == -1)

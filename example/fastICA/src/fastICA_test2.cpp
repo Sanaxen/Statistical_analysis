@@ -177,6 +177,8 @@ int main(int argc, char *argv[])
 	{
 		printf("[%s]\n", header_names[i].c_str());
 	}
+	csv1.clear();
+
 	std::vector<int> x_var_idx;
 
 	if (x_var.size())

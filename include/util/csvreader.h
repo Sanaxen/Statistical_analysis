@@ -31,6 +31,12 @@ public:
 	}
 	~CSVReader()
 	{
+		if (csvfile_ ) delete csvfile_;
+		csvfile_ = NULL;
+	}
+
+	void clear()
+	{
 		delete csvfile_;
 		csvfile_ = NULL;
 	}

@@ -37,7 +37,10 @@ namespace csv
 			Row::Row(const std::vector<std::string> &header)
 				: _header(header) {}
 
-			Row::~Row(void) {}
+			Row::~Row(void) {
+				_values.clear();
+				_values.shrink_to_fit();
+			}
 
     	public:
 			unsigned int Row::size(void) const
@@ -185,6 +188,9 @@ namespace csv
 
 			for (it = _content.begin(); it != _content.end(); it++)
 				delete *it;
+
+			_content.clear();
+			_content.shrink_to_fit();
 		}
 
     public:

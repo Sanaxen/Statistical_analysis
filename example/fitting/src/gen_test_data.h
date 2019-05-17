@@ -34,9 +34,34 @@ inline void make_data_set(std::string&  csvfile, int datanum = 1000)
 	fclose(fp);
 }
 
-inline int filelist_to_csv(std::string& csvfilename, std::string& dir, bool is_train, int class_num = 10)
+inline int filelist_to_csv(std::string& csvfilename, std::string& dir, bool is_train, int class_num = 10, bool header = false, std::string& normalize = std::string("zscore"))
 {
 	FILE* fp = fopen((dir + "\\train_image_list.txt").c_str(), "r");
+	if (fp == NULL)
+	{
+		return -1;
+	}
+	char image_file[640];
+	fgets(image_file, 640, fp);
+	fclose(fp);
+
+	bool isImage = false;
+	bool isCsv = false;
+	bool islabel = false;
+
+	if (strstr(image_file, ".bmp") || strstr(image_file, ".BMP")
+		|| strstr(image_file, ".jpg") || strstr(image_file, ".JPEG")
+		|| strstr(image_file, ".png") || strstr(image_file, ".PNG")
+		)
+	{
+		isImage = true;
+	}
+	if (strstr(image_file, ".csv") || strstr(image_file, ".CSV"))
+	{
+		isCsv = true;
+	}
+
+	fp = fopen((dir + "\\train_label_list.txt").c_str(), "r");
 	if (fp == NULL)
 	{
 		return -1;
@@ -45,12 +70,17 @@ inline int filelist_to_csv(std::string& csvfilename, std::string& dir, bool is_t
 	fgets(buf, 640, fp);
 	fclose(fp);
 
-	if (strstr(buf, ".bmp") || strstr(buf, ".BMP")
-		|| strstr(buf, ".jpg") || strstr(buf, ".JPEG")
-		|| strstr(buf, ".png") || strstr(buf, ".PNG")
-		)
+	int number;
+	islabel = ( 1 == sscanf(buf, "%d\n", &number));
+
+	if (class_num > 2 && isImage && islabel)
 	{
 		images_labes_to_csv(csvfilename, dir, is_train, class_num);
+		return 0;
+	}
+	if (class_num > 2 && isCsv && islabel)
+	{
+		csvs_labes_to_csv(csvfilename, dir, is_train, class_num, header, normalize);
 		return 0;
 	}
 

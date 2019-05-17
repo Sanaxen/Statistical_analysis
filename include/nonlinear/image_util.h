@@ -67,6 +67,55 @@ inline int load_images(std::string& image_filelist, std::string& dir, std::vecto
 	return 0;
 }
 
+inline int load_csvs(std::string& image_filelist, std::string& dir, std::vector<tiny_dnn::vec_t>& images, bool header = false, std::string& normalize = std::string("zscore"))
+{
+	char buf[640];
+	FILE* fp = fopen(image_filelist.c_str(), "r");
+	if (fp == NULL)
+	{
+		return -1;
+	}
+
+	int count = 0;
+	while (fgets(buf, 640, fp) != NULL)
+	{
+		char* p = strchr(buf, '\n');
+		if (p)*p = '\0';
+
+		std::string path = dir + "\\" + buf;
+		printf("\nload[%s]", path.c_str());
+		CSVReader csv1(path, ',', header);
+		Matrix<dnn_double> z = csv1.toMat();
+		z = csv1.toMat_removeEmptyRow();
+
+		if (normalize == "zscore")
+		{
+			Matrix<dnn_double>& means = z.Mean();
+			z = z.whitening(means, z.Std(means));
+		}
+		if (normalize == "minmax")
+		{
+			dnn_double min = z.Min();
+			dnn_double max = z.Max();
+
+			z = (z - min) / (max - min);
+		}
+
+		tiny_dnn::vec_t tmp(z.m*z.n);
+		for (int i = 0; i < z.m*z.n; i++)
+		{
+			tmp[i] = z.v[i];
+		}
+		images.push_back(tmp);
+
+		count++;
+	}
+	fclose(fp);
+	printf("load end.\n");
+	return 0;
+}
+
+
 inline int load_labels(std::string& label_filelist, int class_num, std::vector<tiny_dnn::vec_t>& labels)
 {
 	char buf[640];
@@ -152,6 +201,42 @@ inline void images_labes_to_csv(std::string& csvfilename, std::string& dir, bool
 	else
 	{
 		load_images(dir + "\\test_image_list.txt", dir + "test", images);
+		load_labels(dir + "\\test_label_list.txt", class_num, labels);
+	}
+	printf("%d %d\n", images.size(), labels.size());
+	FILE* fp = fopen(csvfilename.c_str(), "w");
+	for (int i = 0; i < images.size(); i++)
+	{
+		fprintf(fp, "%d,", labels[i]);
+		for (int k = 0; k < images[i].size(); k++)
+		{
+			fprintf(fp, "%.4f", images[i][k]);
+			if (k == images[i].size() - 1)
+			{
+				fprintf(fp, "\n");
+			}
+			else
+			{
+				fprintf(fp, ",");
+			}
+		}
+	}
+	fclose(fp);
+}
+
+inline void csvs_labes_to_csv(std::string& csvfilename, std::string& dir, bool is_train, int class_num = 10, bool header = false, std::string& normalize = std::string("zscore"))
+{
+	std::vector<tiny_dnn::vec_t> images;
+	std::vector<int> labels;
+
+	if (is_train)
+	{
+		load_csvs(dir + "\\train_image_list.txt", dir + "train", images, header, normalize);
+		load_labels(dir + "\\train_label_list.txt", class_num, labels);
+	}
+	else
+	{
+		load_csvs(dir + "\\test_image_list.txt", dir + "test", images, header, normalize);
 		load_labels(dir + "\\test_label_list.txt", class_num, labels);
 	}
 	printf("%d %d\n", images.size(), labels.size());

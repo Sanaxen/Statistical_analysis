@@ -142,6 +142,7 @@ int main(int argc, char** argv)
 			header_names[i] = buf;
 		}
 	}
+	csv1.clear();
 
 	std::vector<int> x_var_idx;
 	std::vector<int> y_var_idx;

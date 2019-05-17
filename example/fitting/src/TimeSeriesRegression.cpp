@@ -75,8 +75,11 @@ int main(int argc, char** argv)
 		if (argname == "--dir") {
 			data_path = argv[count + 1];
 		}
-		if (argname == "--x") {
-			if (sscanf(argv[count + 1], "%d:%d", &x_s, &x_dim) != 2)
+		else if (argname == "--x") {
+			if (sscanf(argv[count + 1], "%d:%d", &x_s, &x_dim) == 2)
+			{
+			}
+			else
 			{
 				x_dim = atoi(argv[count + 1]);
 			}
@@ -85,7 +88,10 @@ int main(int argc, char** argv)
 			read_max = atoi(argv[count + 1]);
 		}
 		else if (argname == "--y") {
-			if (sscanf(argv[count + 1], "%d:%d", &y_s, &y_dim) != 2)
+			if (sscanf(argv[count + 1], "%d:%d", &y_s, &y_dim) == 2)
+			{
+			}
+			else
 			{
 				y_dim = atoi(argv[count + 1]);
 			}
@@ -132,7 +138,7 @@ int main(int argc, char** argv)
 		}
 		else
 		{
-			int stat = filelist_to_csv(csvfile, data_path, test_mode==false, classification);
+			int stat = filelist_to_csv(csvfile, data_path, test_mode==false, classification, header, normalization_type);
 			if (stat != 0)
 			{
 				return -1;
@@ -178,6 +184,7 @@ int main(int argc, char** argv)
 			header_names[i] = buf;
 		}
 	}
+	csv1.clear();
 
 	std::vector<int> x_var_idx;
 	std::vector<int> y_var_idx;

@@ -270,6 +270,8 @@ int main(int argc, char** argv)
 				header_names[i] = buf;
 			}
 		}
+		csv1.clear();
+
 		{
 			int k = 0;
 			std::vector<std::string> header_names_tmp;

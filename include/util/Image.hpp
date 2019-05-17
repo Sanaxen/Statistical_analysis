@@ -150,7 +150,6 @@ inline Image* readImage(char *filename, int& rgb_channel, int& real_channel)
 	//unsigned char *bmp_line_data;
 	Image *img;
 
-	int gray_count = 0;
 	rgb_channel = -1;
 	unsigned char *data = 0;
 	int x, y;
@@ -170,6 +169,7 @@ inline Image* readImage(char *filename, int& rgb_channel, int& real_channel)
 	img->height = y;
 	img->width = x;
 
+	int gray_count = 0;
 //#pragma omp parallel for
 	for (int i = 0; i<y; ++i) {
 		for (int j = 0; j<x; ++j) {
@@ -190,7 +190,6 @@ inline Image* readImage(char *filename, int& rgb_channel, int& real_channel)
 				img->data[pos].b = data[pos * 2 + 0];
 				img->data[pos].alp = data[pos * 2 + 1];
 				rgb_channel = 2;
-				gray_count++;
 			}
 			if (nbit == 3)	//24
 			{
@@ -199,11 +198,12 @@ inline Image* readImage(char *filename, int& rgb_channel, int& real_channel)
 				img->data[pos].g = data[pos * 3 + 1];
 				img->data[pos].b = data[pos * 3 + 2];
 				img->data[pos].alp = 255;
-				rgb_channel = 3;
+
 				if (data[pos * 3 + 0] == data[pos * 3 + 1] && data[pos * 3 + 0] == data[pos * 3 + 2])
 				{
 					gray_count++;
 				}
+				rgb_channel = 3;
 			}
 			if (nbit == 4)	//32
 			{
@@ -212,19 +212,19 @@ inline Image* readImage(char *filename, int& rgb_channel, int& real_channel)
 				img->data[pos].g = data[pos * 4 + 1];
 				img->data[pos].b = data[pos * 4 + 2];
 				img->data[pos].alp = data[pos * 4 + 3];
-				rgb_channel = 4;
-				if (data[pos * 4 + 0] == data[pos * 4 + 1] && data[pos * 4 + 0] == data[pos * 4 + 2] && data[pos * 4 + 0] == data[pos * 4 + 3])
+				if (data[pos * 4 + 0] == data[pos * 4 + 1] && data[pos * 4 + 0] == data[pos * 4 + 2])
 				{
 					gray_count++;
 				}
+				rgb_channel = 3;
 			}
 		}
 	}
-	stbi_image_free(data);
-	if (gray_count == x * y)
+	if (gray_count == x*y)
 	{
 		real_channel = 1;
 	}
+	stbi_image_free(data);
 
 	return img;
 }

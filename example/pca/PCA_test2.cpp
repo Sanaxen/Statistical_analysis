@@ -82,6 +82,7 @@ int main(int argc, char** argv)
 			header_names[i] = buf;
 		}
 	}
+	csv.clear();
 
 	std::vector<int> x_var_idx;
 
