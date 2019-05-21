@@ -1,5 +1,5 @@
-#define USE_MKL
-#define CNN_USE_AVX
+//#define USE_MKL
+//#define CNN_USE_AVX
 
 #define _cublas_Init_def
 #define NOMINMAX
@@ -30,7 +30,7 @@
 //#define X_DIM	2
 //#define Y_DIM	3
 
-#define IN_SEQ_LEN	15
+//#define IN_SEQ_LEN	15
 
 int main(int argc, char** argv)
 {
@@ -45,6 +45,7 @@ int main(int argc, char** argv)
 	std::vector<std::string> y_var;
 	std::string t_var = "";
 	int sequence_length = -1;
+	int out_sequence_length = 1;
 	std::string normalization_type = "";
 
 	int classification = -1;
@@ -113,6 +114,9 @@ int main(int argc, char** argv)
 		}
 		if (argname == "--seq_len") {
 			sequence_length = atoi(argv[count + 1]);
+		}
+		if (argname == "--out_seq_len") {
+			out_sequence_length = atoi(argv[count + 1]);
 		}
 		if (argname == "--normal")
 		{
@@ -487,6 +491,7 @@ int main(int argc, char** argv)
 	//	fclose(fp);
 	//}
 	printf("sequence_length:%d\n", sequence_length);
+	printf("out_sequence_length:%d\n", out_sequence_length);
 	printf("x_dim:%d y_dim:%d\n", x_dim, y_dim);
 
 	if (data_path != "" && read_max > 0)
@@ -588,7 +593,7 @@ int main(int argc, char** argv)
 	MatrixToTensor(y, Y, read_max);
 
 
-	TimeSeriesRegression timeSeries(X, Y, y_dim, normalization_type, classification);
+	TimeSeriesRegression timeSeries(X, Y, y_dim, x_dim, normalization_type, classification);
 	if (timeSeries.getStatus() == -1)
 	{
 		if (classification < 2)
@@ -658,6 +663,10 @@ int main(int argc, char** argv)
 			timeSeries.n_bptt_max = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--clip_grad") {
+			timeSeries.clip_gradients = atof(argv[count + 1]);
+			continue;
+		}
 		else if (argname == "--capture") {
 			timeSeries.capture = (0 < atoi(argv[count + 1])) ? true : false;
 			continue;
@@ -681,10 +690,6 @@ int main(int argc, char** argv)
 			timeSeries.n_train_epochs = atoi(argv[count + 1]);
 			continue;
 		}
-		else if (argname == "--support") {
-			timeSeries.support = atoi(argv[count + 1]);
-			continue;
-		}
 		else if (argname == "--minibatch_size") {
 			timeSeries.n_minibatch = atoi(argv[count + 1]);
 			continue;
@@ -703,6 +708,10 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--seq_len") {
 			sequence_length = atoi(argv[count + 1]);
+			continue;
+		}
+		if (argname == "--out_seq_len") {
+			out_sequence_length = atoi(argv[count + 1]);
 			continue;
 		}
 		else if (argname == "--n_layers") {
@@ -745,7 +754,9 @@ int main(int argc, char** argv)
 
 	}
 
-	timeSeries.data_set(sequence_length, test);
+	timeSeries.sequence_length = sequence_length;
+	timeSeries.out_sequence_length = out_sequence_length;
+	timeSeries.data_set(test);
 
 	if (sequence_length > timeSeries.n_minibatch)
 	{
@@ -758,17 +769,18 @@ int main(int argc, char** argv)
 		<< "plotting cycle  :	" << timeSeries.plot << std::endl
 		<< "tolerance       :	" << timeSeries.tolerance << std::endl
 		<< "hidden_size     :   " << hidden_size << std::endl
-		<< "sequence_length :   " << sequence_length << std::endl
+		<< "sequence_length :   " << timeSeries.sequence_length << std::endl
+		<< "out_sequence_length :   " << timeSeries.out_sequence_length << std::endl
 		<< "optimizer       :   " << timeSeries.opt_type << std::endl
-		<< "support         :   " << timeSeries.support << std::endl
 		<< "n_rnn_layers    :   " << n_rnn_layers << std::endl
 		<< "n_layers        :   " << n_layers << std::endl
 		<< "test_mode       :   " << timeSeries.test_mode << std::endl
-		<< "n_bptt_max       :  " << timeSeries.n_bptt_max << std::endl
-		<< "classification   : " << timeSeries.classification << std::endl
-		<< "dropout        : " << timeSeries.dropout << std::endl
+		<< "n_bptt_max      :  " << timeSeries.n_bptt_max << std::endl
+		<< "classification  : " << timeSeries.classification << std::endl
+		<< "dropout         : " << timeSeries.dropout << std::endl
+		<< "clip_gradients  : " << timeSeries.clip_gradients << std::endl
 		<< std::endl;
-
+//
 	{
 		FILE* fp = fopen("debug_commandline.txt", "w");
 		for (int i = 0; i < argc; i++)
