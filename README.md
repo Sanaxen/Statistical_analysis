@@ -8,11 +8,13 @@
 - [x] Sparse regression
 - [x] Logistic regression
 - [x] Nonlinear regression
+- [x] TimeSeries Regression
 - [x] Nonlinear classification
+- [x] TimeSeries classification
 - [x] Principal component analysis
 - [x] Independent component analysis
 - [x] Eigenvalue analysis
-- [x] Statistical causal search
+- [x] Statistical causal search(**LiNGAM**)
 
 ----
 The current aim is to create a **non-GPL C++ implementation** of a **linear non-Gaussian aperiodic model (LiNGAM)** which is one of the statistical causality search.
