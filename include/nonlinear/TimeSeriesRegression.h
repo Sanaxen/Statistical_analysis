@@ -218,13 +218,18 @@ class TimeSeriesRegression
 
 
 		{
-			std::vector<tiny_dnn::vec_t> train(nY.size() + prophecy);
-			std::vector<tiny_dnn::vec_t> predict(nY.size() + prophecy);
+			std::vector<tiny_dnn::vec_t> train(nY.size() + prophecy + sequence_length + out_sequence_length);
+			std::vector<tiny_dnn::vec_t> predict(nY.size() + prophecy + sequence_length + out_sequence_length);
 			std::vector<tiny_dnn::vec_t> YY = nY;
-			YY.resize(nY.size() + prophecy);
+			YY.resize(nY.size() + prophecy + sequence_length + out_sequence_length);
 			for (int i = nY.size(); i < YY.size(); i++)
 			{
 				YY[i].resize(nY[0].size());
+			}
+			for (int i = 0; i < YY.size(); i++)
+			{
+				train[i].resize(nY[0].size());
+				predict[i].resize(nY[0].size());
 			}
 			std::vector<double> timver_tmp(YY.size());
 
@@ -248,7 +253,7 @@ class TimeSeriesRegression
 				train[j] = predict[j] = y;
 			}
 
-			const int sz = iY.size() + prophecy - sequence_length;
+			const int sz = iY.size() + prophecy;
 			for (int i = 0; i < sz; i++)
 			{
 				//i...i+sequence_length-1 -> 
@@ -258,20 +263,6 @@ class TimeSeriesRegression
 				//output sequence_length 
 				for (int j = 0; j < out_sequence_length; j++)
 				{
-					if (i + sequence_length + j >= YY.size())
-					{
-						YY.resize(i + sequence_length + j + 1);
-						YY[i + sequence_length + j].resize(y_dim + x_dim);
-					}
-					if (i + sequence_length + j >= train.size())
-					{
-						train.resize(i + sequence_length + j + 1);
-						predict.resize(i + sequence_length + j + 1);
-
-						train[i + sequence_length + j].resize(y_dim);
-						predict[i + sequence_length + j].resize(y_dim);
-					}
-
 					tiny_dnn::vec_t yy(y_dim);
 					tiny_dnn::vec_t y(y_dim);
 					for (int k = 0; k < y_dim; k++)
@@ -384,7 +375,7 @@ class TimeSeriesRegression
 			fclose(fp_test);
 
 			fp_test = fopen("prophecy.dat", "w");
-			for (int i = iY.size() - sequence_length-1; i < iY.size() + prophecy- sequence_length; i++)
+			for (int i = iY.size() - sequence_length-1; i < iY.size() + prophecy; i++)
 			{
 				tiny_dnn::vec_t y = train[i];
 				tiny_dnn::vec_t yy = predict[i];
@@ -795,7 +786,7 @@ public:
 		size_t test_Num = dataAll*test;
 		int datasetNum = dataAll - test_Num;
 
-		datasetNum = datasetNum - datasetNum % n_minibatch;
+		//datasetNum = datasetNum - datasetNum % n_minibatch;
 		if (datasetNum == 0 || datasetNum < this->n_minibatch)
 		{
 			printf("Too many min_batch or Sequence length\n");
@@ -950,14 +941,15 @@ public:
 		}
 
 		//printf("n_rnn_layers:%d\n", n_rnn_layers);
-		for (int i = 0; i < n_rnn_layers; i++) {
-			//nn << layers.add_batnorm(0.00001, 0.999);
-			//nn << layers.add_fc(input_size, false);
+		for (int i = 0; i < n_rnn_layers; i++) 
+		{
+			nn << layers.add_fc(input_size/*, false*/);
+			nn << layers.add_batnorm(nn.template at<tiny_dnn::layer>(nn.layer_size() - 1), 0.00001, 0.9);
 			nn << layers.add_rnn(rnn_type, hidden_size, sequence_length, params);
 			input_size = hidden_size;
 			//Scaled Exponential Linear Unit. (Klambauer et al., 2017)
-			//nn << layers.selu_layer();
-			nn << layers.tanh();
+			nn << layers.selu_layer();
+			//nn << layers.tanh();
 			//nn << layers.relu();
 		}
 
@@ -1084,6 +1076,29 @@ public:
 				std::cout << "\nEpoch " << epoch << "/" << n_train_epochs << " finished. "
 					<< t.elapsed() << "s elapsed." << std::endl;
 			}
+
+			{
+				tiny_dnn::tensor_t tmp_train_images = train_images;
+				tiny_dnn::tensor_t tmp_train_labels = train_labels;
+
+				std::vector<int> index(train_images.size());
+				for (int i = 0; i < train_images.size(); i++)
+				{
+					index[i] = i;
+				}
+				std::mt19937 mt(epoch);
+				std::shuffle(index.begin(), index.end(), mt);
+
+#pragma omp parallel for
+				for (int i = 0; i < train_images.size(); i++)
+				{
+					tmp_train_images[i] = train_images[index[i]];
+					tmp_train_labels[i] = train_labels[index[i]];
+				}
+				train_labels = tmp_train_labels;
+				tmp_train_images = tmp_train_labels;
+			}
+
 			if (plot && epoch % plot == 0)
 			{
 				gen_visualize_fit_state();
