@@ -274,137 +274,186 @@ class TimeSeriesRegression
 					predict[i + sequence_length + j] = yy;
 				}
 
-				if (i >= train_images.size() - sequence_length)
+				if (!this->test_mode)
 				{
-					for (int j = 0; j < out_sequence_length; j++)
+					if (i >= train_images.size() - sequence_length)
 					{
-						for (int k = 0; k < y_dim; k++)
+						for (int j = 0; j < out_sequence_length; j++)
 						{
-							YY[i + sequence_length + j][k] = predict[i + sequence_length + j][k];
+							for (int k = 0; k < y_dim; k++)
+							{
+								YY[i + sequence_length + j][k] = predict[i + sequence_length + j][k];
+							}
 						}
 					}
 				}
 			}
 
-			FILE* fp_test = fopen("test.dat", "w");
-			for (int i = 0; i < sequence_length; i++)
+			if (this->test_mode)
 			{
-				tiny_dnn::vec_t y = train[i];
-				for (int k = 0; k < y_dim; k++)
+				FILE* fp_test = fopen("predict1.dat", "w");
+				if (fp_test)
 				{
-					if (zscore_normalization)
+					for (int i = 0; i < iY.size(); i++)
 					{
-						y[k] = y[k] * Sigma[k] + Mean[k];
+						tiny_dnn::vec_t y = train[i];
+						tiny_dnn::vec_t yy = predict[i];
+						for (int k = 0; k < y_dim; k++)
+						{
+							if (zscore_normalization)
+							{
+								y[k] = y[k] * Sigma[k] + Mean[k];
+								yy[k] = yy[k] * Sigma[k] + Mean[k];
+							}
+							if (minmax_normalization)
+							{
+								y[k] = y[k] * MaxMin[k] + Min[k];
+								yy[k] = yy[k] * MaxMin[k] + Min[k];
+							}
+						}
+						fprintf(fp_test, "%f ", timver_tmp[i]);
+						for (int k = 0; k < y_dim - 1; k++)
+						{
+							fprintf(fp_test, "%f %f ", y[k], yy[k]);
+						}
+						fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
 					}
-					if (minmax_normalization)
-					{
-						y[k] = y[k] * MaxMin[k] + Min[k];
-					}
+					fclose(fp_test);
 				}
-				fprintf(fp_test, "%f ", timver_tmp[i]);
-				for (int k = 0; k < y_dim - 1; k++)
-				{
-					fprintf(fp_test, "%f %f ", y[k], y[k]);
-				}
-				fprintf(fp_test, "%f %f\n", y[y_dim - 1], y[y_dim - 1]);
 			}
-			fclose(fp_test);
-
-
-			fp_test = fopen("predict1.dat", "w");
-			for (int i = sequence_length-1; i < train_images.size()- sequence_length; i++)
+			else
 			{
-				tiny_dnn::vec_t y = train[i];
-				tiny_dnn::vec_t yy = predict[i];
+				FILE* fp_test = fopen("test.dat", "w");
+				if (fp_test)
+				{
+					for (int i = 0; i < sequence_length; i++)
+					{
+						tiny_dnn::vec_t y = train[i];
+						for (int k = 0; k < y_dim; k++)
+						{
+							if (zscore_normalization)
+							{
+								y[k] = y[k] * Sigma[k] + Mean[k];
+							}
+							if (minmax_normalization)
+							{
+								y[k] = y[k] * MaxMin[k] + Min[k];
+							}
+						}
+						fprintf(fp_test, "%f ", timver_tmp[i]);
+						for (int k = 0; k < y_dim - 1; k++)
+						{
+							fprintf(fp_test, "%f %f ", y[k], y[k]);
+						}
+						fprintf(fp_test, "%f %f\n", y[y_dim - 1], y[y_dim - 1]);
+					}
+					fclose(fp_test);
+				}
 
-				if (i < iY.size())
+
+				fp_test = fopen("predict1.dat", "w");
+				if (fp_test)
 				{
-					y = nY[i];
-				}
-				for (int k = 0; k < y_dim; k++)
-				{
-					if (zscore_normalization)
+					for (int i = sequence_length - 1; i < train_images.size() - sequence_length; i++)
 					{
-						y[k] = y[k] * Sigma[k] + Mean[k];
-						yy[k] = yy[k] * Sigma[k] + Mean[k];
+						tiny_dnn::vec_t y = train[i];
+						tiny_dnn::vec_t yy = predict[i];
+
+						if (i < iY.size())
+						{
+							y = nY[i];
+						}
+						for (int k = 0; k < y_dim; k++)
+						{
+							if (zscore_normalization)
+							{
+								y[k] = y[k] * Sigma[k] + Mean[k];
+								yy[k] = yy[k] * Sigma[k] + Mean[k];
+							}
+							if (minmax_normalization)
+							{
+								y[k] = y[k] * MaxMin[k] + Min[k];
+								yy[k] = yy[k] * MaxMin[k] + Min[k];
+							}
+						}
+						fprintf(fp_test, "%f ", timver_tmp[i]);
+						for (int k = 0; k < y_dim - 1; k++)
+						{
+							fprintf(fp_test, "%f %f ", y[k], yy[k]);
+						}
+						fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
 					}
-					if (minmax_normalization)
-					{
-						y[k] = y[k] * MaxMin[k] + Min[k];
-						yy[k] = yy[k] * MaxMin[k] + Min[k];
-					}
+					fclose(fp_test);
 				}
-				fprintf(fp_test, "%f ", timver_tmp[i]);
-				for (int k = 0; k < y_dim - 1; k++)
+
+				fp_test = fopen("predict2.dat", "w");
+				if (fp_test)
 				{
-					fprintf(fp_test, "%f %f ", y[k], yy[k]);
+					for (int i = train_images.size() - sequence_length - 1; i < iY.size() - sequence_length; i++)
+					{
+						tiny_dnn::vec_t y = train[i];
+						tiny_dnn::vec_t yy = predict[i];
+						if (i < iY.size())
+						{
+							y = nY[i];
+						}
+						for (int k = 0; k < y_dim; k++)
+						{
+							if (zscore_normalization)
+							{
+								y[k] = y[k] * Sigma[k] + Mean[k];
+								yy[k] = yy[k] * Sigma[k] + Mean[k];
+							}
+							if (minmax_normalization)
+							{
+								y[k] = y[k] * MaxMin[k] + Min[k];
+								yy[k] = yy[k] * MaxMin[k] + Min[k];
+							}
+						}
+						fprintf(fp_test, "%f ", timver_tmp[i]);
+						for (int k = 0; k < y_dim - 1; k++)
+						{
+							fprintf(fp_test, "%f %f ", y[k], yy[k]);
+						}
+						fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
+					}
+					fclose(fp_test);
 				}
-				fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
+
+				fp_test = fopen("prophecy.dat", "w");
+				if (fp_test)
+				{
+					for (int i = iY.size() - sequence_length - 1; i < iY.size() + prophecy; i++)
+					{
+						tiny_dnn::vec_t y = train[i];
+						tiny_dnn::vec_t yy = predict[i];
+						if (i < iY.size())
+						{
+							y = nY[i];
+						}
+						for (int k = 0; k < y_dim; k++)
+						{
+							if (zscore_normalization)
+							{
+								y[k] = y[k] * Sigma[k] + Mean[k];
+								yy[k] = yy[k] * Sigma[k] + Mean[k];
+							}
+							if (minmax_normalization)
+							{
+								y[k] = y[k] * MaxMin[k] + Min[k];
+								yy[k] = yy[k] * MaxMin[k] + Min[k];
+							}
+						}
+						fprintf(fp_test, "%f ", timver_tmp[i]);
+						for (int k = 0; k < y_dim - 1; k++)
+						{
+							fprintf(fp_test, "%f %f ", y[k], yy[k]);
+						}
+						fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
+					}
+					fclose(fp_test);
+				}
 			}
-			fclose(fp_test);
-
-			fp_test = fopen("predict2.dat", "w");
-			for (int i = train_images.size() - sequence_length - 1; i < iY.size() - sequence_length; i++)
-			{
-				tiny_dnn::vec_t y = train[i];
-				tiny_dnn::vec_t yy = predict[i];
-				if (i < iY.size())
-				{
-					y = nY[i];
-				}
-				for (int k = 0; k < y_dim; k++)
-				{
-					if (zscore_normalization)
-					{
-						y[k] = y[k] * Sigma[k] + Mean[k];
-						yy[k] = yy[k] * Sigma[k] + Mean[k];
-					}
-					if (minmax_normalization)
-					{
-						y[k] = y[k] * MaxMin[k] + Min[k];
-						yy[k] = yy[k] * MaxMin[k] + Min[k];
-					}
-				}
-				fprintf(fp_test, "%f ", timver_tmp[i]);
-				for (int k = 0; k < y_dim - 1; k++)
-				{
-					fprintf(fp_test, "%f %f ", y[k], yy[k]);
-				}
-				fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
-			}
-			fclose(fp_test);
-
-			fp_test = fopen("prophecy.dat", "w");
-			for (int i = iY.size() - sequence_length-1; i < iY.size() + prophecy; i++)
-			{
-				tiny_dnn::vec_t y = train[i];
-				tiny_dnn::vec_t yy = predict[i];
-				if (i < iY.size())
-				{
-					y = nY[i];
-				}
-				for (int k = 0; k < y_dim; k++)
-				{
-					if (zscore_normalization)
-					{
-						y[k] = y[k] * Sigma[k] + Mean[k];
-						yy[k] = yy[k] * Sigma[k] + Mean[k];
-					}
-					if (minmax_normalization)
-					{
-						y[k] = y[k] * MaxMin[k] + Min[k];
-						yy[k] = yy[k] * MaxMin[k] + Min[k];
-					}
-				}
-				fprintf(fp_test, "%f ", timver_tmp[i]);
-				for (int k = 0; k < y_dim - 1; k++)
-				{
-					fprintf(fp_test, "%f %f ", y[k], yy[k]);
-				}
-				fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
-			}
-			fclose(fp_test);
-
 			Diff.clear();
 			float vari_cost = 0.0;
 			float cost = 0.0;
