@@ -291,6 +291,7 @@ class TimeSeriesRegression
 
 			if (this->test_mode)
 			{
+
 				FILE* fp_test = fopen("predict1.dat", "w");
 				if (fp_test)
 				{
@@ -454,6 +455,7 @@ class TimeSeriesRegression
 					fclose(fp_test);
 				}
 			}
+
 			Diff.clear();
 			float vari_cost = 0.0;
 			float cost = 0.0;
@@ -488,6 +490,26 @@ class TimeSeriesRegression
 					cost_tot += (yy[k] - y[k])*(yy[k] - y[k]);
 				}
 				Diff.push_back(diff);
+			}
+
+			{
+				Matrix<dnn_double> x;
+				Matrix<dnn_double> y;
+				train.resize(iY.size() - sequence_length);
+				predict.resize(iY.size() - sequence_length);
+				TensorToMatrix(train, x);
+				TensorToMatrix(predict, y);
+				x = MahalanobisDist_Abnormality(x.appendCol(y));
+
+				FILE* fp_test = fopen("mahalanobis_dist.dat", "w");
+				if (fp_test)
+				{
+					for (int i = 0; i < train.size(); i++)
+					{
+						fprintf(fp_test, "%f %f\n", timver_tmp[i], x(i,0));
+					}
+					fclose(fp_test);
+				}
 			}
 
 			cost /= (iY.size() - sequence_length);
