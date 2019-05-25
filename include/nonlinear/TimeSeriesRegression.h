@@ -492,6 +492,7 @@ class TimeSeriesRegression
 				Diff.push_back(diff);
 			}
 
+			if (this->test_mode)
 			{
 				Matrix<dnn_double> x;
 				Matrix<dnn_double> y;
