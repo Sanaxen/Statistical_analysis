@@ -13,4 +13,9 @@ It is a superposition of trained inference and validation data.
 <img src="https://github.com/Sanaxen/Statistical_analysis/blob/master/images/TimeSeriesRegression1.png"/> 
 At around time 4250, it is clear that the anomaly has occurred because the periodicity has collapsed.
 
+From the Mahalanobis distance of the error vector
+Calculate the degree of anomaly (rareness)
+<img src="https://github.com/Sanaxen/Statistical_analysis/blob/master/images/Abnormality1.png"/> 
+<img src="https://github.com/Sanaxen/Statistical_analysis/blob/master/images/Abnormality2.png"/> 
+
 [2]E. Keogh, J. Lin and A. Fu (2005). HOT SAX: Efficiently Finding the Most Unusual Time Series Subsequence. In The Fifth IEEE International Conference on Data Mining.
