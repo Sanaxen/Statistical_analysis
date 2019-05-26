@@ -3462,11 +3462,6 @@ inline Matrix<dnn_double> MahalanobisDist(Matrix<dnn_double>& X)
 	invΣ.print("invΣ");
 
 	Matrix<dnn_double>& y = (X.Col(0) - X.Col(1));
-	Matrix<dnn_double>& μ = y.Mean();
-	for (int i = 0; i < X.m; i++)
-	{
-		y(i, 0) = y(i, 0) - μ(0, 0);
-	}
 
 	//非類似性の指標
 	Matrix<dnn_double> dist(y.m, 1);
@@ -3482,12 +3477,6 @@ inline Matrix<dnn_double> MahalanobisDist_Abnormality(Matrix<dnn_double>& X)
 {
 	//M次元正規分布へのフィッティング
 	Matrix<dnn_double>& errors = (X.Col(0) - X.Col(1));
-	//Matrix<dnn_double>& μ = errors.Mean();
-	//for (int i = 0; i < X.m; i++)
-	//{
-	//	errors(i, 0) = errors(i, 0) - μ(0, 0);
-	//}
-
 	Matrix<dnn_double> means;
 
 	Matrix<dnn_double>& Σ = VarianceCovariance(errors, means);
