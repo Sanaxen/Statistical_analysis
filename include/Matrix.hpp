@@ -1123,6 +1123,12 @@ struct Matrix
 
 	Matrix<T> inv()
 	{
+		if (m == 1 && n == 1)
+		{
+			Matrix<T> M(1, 1);
+			M.v[0] = 1.0 / v[0];
+			return M;
+		}
 		SVDcmp<T> svd(*this);
 
 		return svd.inv();
@@ -3461,14 +3467,13 @@ inline Matrix<dnn_double> MahalanobisDist(Matrix<dnn_double>& X)
 	
 	invΣ.print("invΣ");
 
-	Matrix<dnn_double>& y = (X.Col(0) - X.Col(1));
-
 	//非類似性の指標
-	Matrix<dnn_double> dist(y.m, 1);
-	Matrix<dnn_double>& d = (X.Col(0) - X.Col(1));
-	for (int i = 0; i < y.m; i++)
+	Matrix<dnn_double>& d = (X.Col(1) - X.Col(0));
+	Matrix<dnn_double> dist(d.m, 1);
+#pragma omp parallel for
+	for (int i = 0; i < d.m; i++)
 	{
-		dist(i, 0) = d.Row(i)*(invΣ*d.Row(i).transpose());
+		dist(i, 0) = sqrt(d.Row(i)*(invΣ*d.Row(i).transpose()));
 	}
 	return dist;
 }
@@ -3476,7 +3481,7 @@ inline Matrix<dnn_double> MahalanobisDist(Matrix<dnn_double>& X)
 inline Matrix<dnn_double> MahalanobisDist_Abnormality(Matrix<dnn_double>& X)
 {
 	//M次元正規分布へのフィッティング
-	Matrix<dnn_double>& errors = (X.Col(0) - X.Col(1));
+	Matrix<dnn_double>& errors = (X.Col(1) - X.Col(0));
 	Matrix<dnn_double> means;
 
 	Matrix<dnn_double>& Σ = VarianceCovariance(errors, means);
@@ -3488,18 +3493,12 @@ inline Matrix<dnn_double> MahalanobisDist_Abnormality(Matrix<dnn_double>& X)
 
 	//非類似性の指標
 	Matrix<dnn_double> dist(errors.m, 1);
-#if 10
+
+#pragma omp parallel for
 	for (int i = 0; i < errors.m; i++)
 	{
-		dist(i, 0) = errors.Row(i)*(invΣ*errors.Row(i).transpose());
+		dist(i, 0) = sqrt(errors.Row(i)*(invΣ*errors.Row(i).transpose()));
 	}
-#else
-	Matrix<dnn_double>& d = (X.Col(0) - X.Col(1));
-	for (int i = 0; i < y.m; i++)
-	{
-		dist(i, 0) = d.Row(i)*(invΣ*d.Row(i).transpose());
-	}
-#endif
 	return dist;
 }
 
