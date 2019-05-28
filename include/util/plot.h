@@ -1486,7 +1486,9 @@ public:
 				XYeli(i, 1) = F*stdElc(i, 1) + xmean.v[1];
 			}
 		}
-		plot_lines2d(XYeli, std::string("95% confidence ellipse / probability ellipse"));
+		char s[32];
+		sprintf(s, "%.2f", 100.0*(1.0 - p));
+		plot_lines2d(XYeli, std::string(s)+std::string("% confidence ellipse / probability ellipse"));
 	}
 };
 
