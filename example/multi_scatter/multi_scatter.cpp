@@ -38,6 +38,7 @@ int main(int argc, char** argv)
 	bool header = false;
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
+	bool scatter_use_label = false;
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -90,7 +91,13 @@ int main(int argc, char** argv)
 		else
 		if (argname == "--back_color_dark") {
 			back_color_dark = atoi(argv[count + 1]) == 0 ? false : true;
+			continue;
 		}else
+		if (argname == "--use_label") {
+			scatter_use_label = atoi(argv[count + 1]) == 0 ? false : true;
+			continue;
+		}
+		else
 		if (argname == "--x_var") {
 			x_var.push_back(std::string(argv[count + 1]));
 			continue;
@@ -161,6 +168,10 @@ int main(int argc, char** argv)
 				{
 					x_var_idx.push_back(j);
 				}
+				else if ("\"" + header_names[j] + "\"" == x_var[i])
+				{
+					x_var_idx.push_back(j);
+				}
 				else
 				{
 					char buf[32];
@@ -201,6 +212,10 @@ int main(int argc, char** argv)
 					y_var_idx.push_back(j);
 				}
 				else if ("\"" + y_var[i] + "\"" == header_names[j])
+				{
+					y_var_idx.push_back(j);
+				}
+				else if ("\"" + header_names[j] + "\"" == y_var[i])
 				{
 					y_var_idx.push_back(j);
 				}
@@ -293,6 +308,7 @@ int main(int argc, char** argv)
 		{
 			plot1.set_capture(win_size, std::string("multi_scatter.png"));
 		}
+		plot1.scatter_use_label = scatter_use_label;
 		plot1.scatter_circle_radius_screen = 0.01;
 		plot1.multi_scatter(T, header_names, grid, 2, palette);
 		plot1.draw();
@@ -358,6 +374,8 @@ int main(int argc, char** argv)
 
 			plot1.set_label(0.95, 0.95, 1, text);
 			plot1.plot_lines2(x, line_header_names);
+
+			plot1.scatter_use_label = scatter_use_label;
 			plot1.scatter_back_color_dark_mode = back_color_dark;
 			plot1.scatter(T, col1, col2, pointsize, grid, header_names, 5, palette);
 
@@ -379,6 +397,7 @@ int main(int argc, char** argv)
 				plot1.set_capture(win_size, std::string("scatter.png"));
 			}
 			plot1.set_label(0.95, 0.95, 1, text);
+			plot1.scatter_use_label = scatter_use_label;
 			plot1.scatter_back_color_dark_mode = back_color_dark;
 			plot1.scatter(T, col1, col2, pointsize, grid, header_names, 5, palette);
 			if (ellipse)

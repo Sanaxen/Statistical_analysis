@@ -123,6 +123,10 @@ int main(int argc, char** argv)
 				{
 					x_var_idx.push_back(j);
 				}
+				else if ("\"" + header_names[j] + "\"" == x_var[i])
+				{
+					x_var_idx.push_back(j);
+				}
 				else
 				{
 					char buf[32];

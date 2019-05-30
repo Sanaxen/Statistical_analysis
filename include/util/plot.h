@@ -713,6 +713,7 @@ public:
 			}
 		}
 
+		bool scatter_use_label_ = scatter_use_label;
 		X.print_csv((char*)data_name.c_str());
 		for (int i = 0; i < X.n; i++)
 		{
@@ -773,6 +774,7 @@ public:
 				}
 
 #if 10
+				scatter_use_label = scatter_use_label_;
 				//fprintf(script, "set style fill  transparent solid 0.85 noborder\n");
 				scatter(X, j, i, pointsize, grid, headers, 5, palette);
 #else
@@ -916,6 +918,7 @@ public:
 		);
 	}
 
+	bool scatter_use_label = true;
 	bool scatter_xyrange_setting = true;
 	double scatter_circle_radius_screen = 0.01;
 	void scatter(Matrix<dnn_double>&X, int col1, int col2, float point_size, int grid, std::vector<std::string>& headers, int pointtype = 6, char* palette = "rgbformulae 22, 13, -31", int maxpoint = -1)
@@ -1047,8 +1050,12 @@ public:
 			}
 		}
 
-		fprintf(script, "set xlabel %s\n", xx.c_str());
-		fprintf(script, "set ylabel %s\n", yy.c_str());
+		if (scatter_use_label)
+		{
+			fprintf(script, "set xlabel %s\n", xx.c_str());
+			fprintf(script, "set ylabel %s\n", yy.c_str());
+		}
+		scatter_use_label = true;
 		if(scatter_xyrange_setting)
 		{
 			double max_x = x.Col(0).Max();

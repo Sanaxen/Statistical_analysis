@@ -22,6 +22,21 @@ inline int commandline_args(int* argc_, char*** argv_)
 		std::string lines((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
 		std::cout << lines << std::endl;
 
+		//std::string lines = "";
+		//FILE* fp = fopen(resp.c_str(), "r");
+		//if (fp)
+		//{
+		//	char s[2] = { '\0', '\0' };
+		//	int c;
+		//	while ((c = fgetc(fp)) != EOF)
+		//	{
+		//		s[0] = (unsigned int)c;
+		//		lines += s;
+		//		printf("%s\n", lines.c_str());
+		//	}
+		//	fclose(fp);
+		//}
+
 		if (strstr(lines.c_str(), "--"))
 		{ 
 			std::string tmp = " " + lines;

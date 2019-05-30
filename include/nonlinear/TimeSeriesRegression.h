@@ -518,7 +518,7 @@ class TimeSeriesRegression
 				int win_size[] = { 640,480 };
 				if (capture)
 				{
-					plot1.set_capture(win_size, std::string("scatter.png"));
+					plot1.set_capture(win_size, std::string("timeSeries_scatter.png"));
 				}
 				int grid = 30;
 				float pointsize = 1.0;

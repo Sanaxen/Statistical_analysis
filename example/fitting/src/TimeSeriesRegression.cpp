@@ -1,5 +1,5 @@
-//#define USE_MKL
-//#define CNN_USE_AVX
+#define USE_MKL
+#define CNN_USE_AVX
 
 #define _cublas_Init_def
 #define NOMINMAX
@@ -208,6 +208,10 @@ int main(int argc, char** argv)
 				{
 					x_var_idx.push_back(j);
 				}
+				else if ("\"" + header_names[j] + "\"" == x_var[i])
+				{
+					x_var_idx.push_back(j);
+				}
 				else
 				{
 					char buf[32];
@@ -248,6 +252,10 @@ int main(int argc, char** argv)
 					y_var_idx.push_back(j);
 				}
 				else if ("\"" + y_var[i] + "\"" == header_names[j])
+				{
+					y_var_idx.push_back(j);
+				}
+				else if ("\"" + header_names[j] + "\"" == y_var[i])
 				{
 					y_var_idx.push_back(j);
 				}

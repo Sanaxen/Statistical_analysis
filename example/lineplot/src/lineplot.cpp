@@ -121,6 +121,11 @@ int main(int argc, char *argv[])
 					y_var_idx.push_back(j);
 				}
 				else
+				if ("\"" + header_names[j] + "\"" == y_var[i])
+				{
+					y_var_idx.push_back(j);
+				}
+				else
 				{
 					char buf[32];
 					sprintf(buf, "%d", j);
