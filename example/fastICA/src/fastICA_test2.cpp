@@ -75,6 +75,7 @@ int main(int argc, char *argv[])
 	std::string csvfile("sample.csv");
 	std::vector<std::string> x_var;
 
+	bool capture = false;
 	int max_ica_iteration = MAX_ITERATIONS;
 	double ica_tolerance = TOLERANCE;
 	int start_col = 0;
@@ -87,6 +88,10 @@ int main(int argc, char *argv[])
 		}
 		else if (argname == "--header") {
 			header = (atoi(argv[count + 1]) != 0) ? true : false;
+			continue;
+		}
+		else if (argname == "--capture") {
+			capture = (atoi(argv[count + 1]) != 0) ? true : false;
 			continue;
 		}
 		else if (argname == "--x_var") {
@@ -195,6 +200,10 @@ int main(int argc, char *argv[])
 				{
 					x_var_idx.push_back(j);
 				}
+				else if ("\"" + header_names[j] + "\"" == x_var[i])
+				{
+					x_var_idx.push_back(j);
+				}
 				else
 				{
 					char buf[32];
@@ -262,7 +271,10 @@ int main(int argc, char *argv[])
 	{
 		int win_size[2] = { 640 * 2,480 * 2 };
 		gnuPlot plot1(std::string(GNUPLOT_PATH));
-		plot1.set_capture(win_size, std::string("mixing_signale.png"));
+		if (capture)
+		{
+			plot1.set_capture(win_size, std::string("mixing_signale.png"));
+		}
 		plot1.linewidth = 1;
 		plot1.set_title("mixing signale");
 		plot1.plot_lines(A, header_names, 2000);
@@ -315,8 +327,10 @@ int main(int argc, char *argv[])
 			printf("[%s]\n", header_names[i].c_str());
 		}
 		gnuPlot plot1(std::string(GNUPLOT_PATH));
-		plot1.set_capture(win_size, std::string("source_signale.png"));
-
+		if (capture)
+		{
+			plot1.set_capture(win_size, std::string("source_signale.png"));
+		}
 		plot1.linewidth = 1;
 		plot1.set_title("source signale");
 		for (int c = 0; c < compc; c++)
