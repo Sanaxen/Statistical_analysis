@@ -15,6 +15,13 @@
 int main(int argc, char** argv)
 {
 	int resp = commandline_args(&argc, &argv);
+	if (resp == -1)
+	{
+		printf("command line error.\n");
+		return -1;
+	}
+	//char bu[32];
+	//fgets(bu, 32, stdin);
 
 	Matrix<dnn_double> x, coef;
 	std::vector<dnn_double> component;
@@ -192,6 +199,7 @@ int main(int argc, char** argv)
 	}
 	header_names[0] = "First principal component";
 	header_names[1] = "Second principal component";
+	header_names.resize(2);
 	plot1.scatter(pca2.principal_component(), 0, 1, 1, 30, header_names, 6);
 	plot1.probability_ellipse(pca2.principal_component(), 0, 1);
 	plot1.draw();
