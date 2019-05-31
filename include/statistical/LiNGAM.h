@@ -268,7 +268,7 @@ public:
 				B(i, k) = c.v[k] / lasso.sigma(0, k);
 			}
 #endif
-			if (i == B.m) break;
+			if (i == B.m-1) break;
 			//c.print();
 			X = X.appendCol(Y);
 			Y = xs.Col(replacement[i + 1]);
