@@ -627,7 +627,11 @@ public:
 					double dt = (class_max - class_min) / class_num;
 					for (int i = 0; i < class_num; i++)
 					{
-						stream << "class index:" << i << " (class number:" << i+1 << ") " << (i*dt+ class_min) << " " << (i+1)*dt+ class_min << std::endl;
+						stream << "class index:" << i << " (class number:" << i + 1 << ") " << (i*dt + class_min) << " " << (i + 1)*dt + class_min << std::endl;
+					}
+					for (int i = 0; i < class_num; i++)
+					{
+						stream <<  i+1 << " " << (i*dt+ class_min) << " " << (i+1)*dt+ class_min << std::endl;
 					}
 					for (int i = 0; i < nY.size(); i++)
 					{
