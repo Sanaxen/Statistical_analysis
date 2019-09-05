@@ -423,7 +423,7 @@ int main(int argc, char** argv)
 			printf("load model error\n");
 			return -1;
 		}
-		mreg.fit(A, B, true);
+		mreg.fit(A, B, true, header_names);
 	}
 
 	if (A.n == 1)
