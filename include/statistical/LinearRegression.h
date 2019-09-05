@@ -107,7 +107,7 @@ public:
 		variablesNum = variablesNum_;
 	}
 
-	int fit(Matrix<dnn_double>A_, Matrix<dnn_double>B_, bool test = false)
+	int fit(Matrix<dnn_double>A_, Matrix<dnn_double>B_, bool test = false, const std::vector<std::string>& header = {})
 	{
 		A = A_;
 		B = B_;
@@ -200,6 +200,28 @@ public:
 				y += A(i, j)*les.coef(j, 0);
 			}
 			y_predict.push_back(y);
+		}
+		if (test)
+		{
+			FILE* fp = fopen("predict.csv", "w");
+			if (fp)
+			{
+				for (int j = 0; j < A.n; j++)
+				{
+					fprintf(fp, "%s,", header[j+1].c_str());
+				}
+				fprintf(fp, "predict_value:%s\n", header[0].c_str());
+
+				for (int i = 0; i < A.m; i++)
+				{
+					for (int j = 0; j < A.n; j++)
+					{
+						fprintf(fp, "%.3f,", A(i, j));
+					}
+					fprintf(fp, "%.3f\n", y_predict[i]);
+				}
+			}
+			fclose(fp);
 		}
 
 		se = 0.0;
