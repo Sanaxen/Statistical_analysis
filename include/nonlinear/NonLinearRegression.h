@@ -34,6 +34,12 @@ class NonLinearRegression
 	FILE* fp_error_vari_loss = NULL;
 	bool visualize_state_flag = true;
 
+public:
+	std::vector<std::string> header;
+	std::vector<int> x_idx;
+	std::vector<int> y_idx;
+
+private:
 	void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
 	{
 		mean = std::vector<float_t>(X[0].size(), 0.0);
@@ -149,6 +155,32 @@ class NonLinearRegression
 
 		set_test(nn_test, 1);
 
+		FILE* fp_predict = NULL;
+		if (test_mode)
+		{
+			fp_predict = fopen("predict_dnn.csv", "w");
+			if (fp_predict)
+			{
+				for (int i = 0; i < nX[0].size(); i++)
+				{
+					fprintf(fp_predict, "%s,", header[x_idx[i]].c_str());
+				}
+				if (classification >= 2)
+				{
+					fprintf(fp_predict, "predict[%s],", header[y_idx[0]].c_str());
+					fprintf(fp_predict, "probability\n");
+				}
+				else
+				{
+					for (int i = 0; i < nY[0].size() - 1; i++)
+					{
+						fprintf(fp_predict, "predict[%s],", header[y_idx[i]].c_str());
+					}
+					fprintf(fp_predict, "predict[%s]\n", header[y_idx[nY[0].size() - 1]].c_str());
+				}
+			}
+		}
+
 		if (classification >= 2)
 		{
 			float loss_train = get_loss(nn_test, train_images, train_labels);
@@ -213,6 +245,38 @@ class NonLinearRegression
 				early_stopp = true;
 			}
 			accuracy_pre = train_result.accuracy();
+
+			if (fp_predict)
+			{
+				for (int i = 0; i < nX.size(); i++)
+				{
+					tiny_dnn::vec_t x = nX[i];
+					tiny_dnn::vec_t& y_predict = nn_test.predict(x);
+
+
+					if (fp_predict)
+					{
+						for (int k = 0; k < nX[0].size(); k++)
+						{
+							fprintf(fp_predict, "%.3f,", iX[i][k]);
+						}
+
+						int idx = -1;
+						float_t y = -1;
+						for (int k = 0; k < classification; k++)
+						{
+							if (y < y_predict[k])
+							{
+								y = y_predict[k];
+								idx = k;
+							}
+						}
+						fprintf(fp_predict, "%d,%.3f\n", idx, y);
+					}
+				}
+				fclose(fp_predict);
+			}
+
 			return;
 		}
 
@@ -221,6 +285,7 @@ class NonLinearRegression
 		//sprintf(plotName, "test%04d.dat", plot_count);
 		sprintf(plotName, "test.dat");
 		FILE* fp_test = fopen(plotName, "w");
+
 
 		Diff.clear();
 		float cost = 0.0;
@@ -234,6 +299,14 @@ class NonLinearRegression
 				tiny_dnn::vec_t x = nX[i];
 				tiny_dnn::vec_t& y_predict = nn_test.predict(x);
 
+
+				if (fp_predict)
+				{
+					for (int k = 0; k < nX[0].size(); k++)
+					{
+						fprintf(fp_predict, "%.3f,", iX[i][k]);
+					}
+				}
 
 				tiny_dnn::vec_t& y = iY[i];
 				fprintf(fp_test, "%d ", i);
@@ -251,6 +324,11 @@ class NonLinearRegression
 					fprintf(fp_test, "%f %f ", yy, y[k]);
 					diff.push_back(y[k]);
 					diff.push_back(yy);
+
+					if (fp_predict)
+					{
+						fprintf(fp_predict, "%.3f,", yy);
+					}
 
 					if (test_data_index[i] >= 0)
 					{
@@ -278,6 +356,12 @@ class NonLinearRegression
 				diff.push_back(y[y_predict.size() - 1]);
 				diff.push_back(yy);
 				Diff.push_back(diff);
+
+				if (fp_predict)
+				{
+					fprintf(fp_predict, "%.3f\n", yy);
+				}
+
 				if (test_data_index[i] >= 0)
 				{
 					vari_cost += (yy - y[y_predict.size() - 1])*(yy - y[y_predict.size() - 1]);
@@ -290,6 +374,7 @@ class NonLinearRegression
 			}
 			fclose(fp_test);
 		}
+		if (fp_predict) fclose(fp_predict);
 
 		sprintf(plotName, "predict.dat");
 		fp_test = fopen(plotName, "w");

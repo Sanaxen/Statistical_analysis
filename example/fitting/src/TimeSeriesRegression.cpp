@@ -766,6 +766,10 @@ int main(int argc, char** argv)
 	timeSeries.out_sequence_length = out_sequence_length;
 	timeSeries.data_set(test);
 
+	timeSeries.header = header_names;
+	timeSeries.x_idx = x_var_idx;
+	timeSeries.y_idx = y_var_idx;
+
 	if (sequence_length > timeSeries.n_minibatch)
 	{
 		printf("!!Warning!! sequence_length:%d > Minibatch:%d\n", sequence_length, timeSeries.n_minibatch);

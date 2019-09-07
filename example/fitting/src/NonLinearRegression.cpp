@@ -458,6 +458,11 @@ int main(int argc, char** argv)
 	regression.plot = 10;
 	regression.test_mode = test_mode;
 
+	regression.header = header_names;
+	regression.x_idx = x_var_idx;
+	regression.y_idx = y_var_idx;
+
+
 	double test_num = 0;
 	int n_layers = -1;
 	int input_unit = -1;

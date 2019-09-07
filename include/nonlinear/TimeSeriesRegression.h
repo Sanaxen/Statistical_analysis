@@ -33,6 +33,12 @@ class TimeSeriesRegression
 	FILE* fp_error_vari_loss = NULL;
 	bool visualize_state_flag = true;
 
+public:
+	std::vector<std::string> header;
+	std::vector<int> x_idx;
+	std::vector<int> y_idx;
+private:
+
 	void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
 	{
 		mean = std::vector<float_t>(X[0].size(), 0.0);
@@ -148,6 +154,35 @@ class TimeSeriesRegression
 
 		set_test(nn_test, 1);
 
+		FILE* fp_predict = NULL;
+		if (test_mode)
+		{
+			fp_predict = fopen("predict_dnn.csv", "w");
+			if (fp_predict)
+			{
+				if (iX.size())
+				{
+					for (int i = 0; i < iX[0].size(); i++)
+					{
+						fprintf(fp_predict, "%s,", header[x_idx[i]].c_str());
+					}
+				}
+				if (classification >= 2)
+				{
+					fprintf(fp_predict, "predict[%s],", header[y_idx[0]].c_str());
+					fprintf(fp_predict, "probability\n");
+				}
+				else
+				{
+					for (int i = 0; i < nY[0].size() - 1; i++)
+					{
+						fprintf(fp_predict, "predict[%s],", header[y_idx[i]].c_str());
+					}
+					fprintf(fp_predict, "predict[%s]\n", header[y_idx[nY[0].size() - 1]].c_str());
+				}
+			}
+		}
+
 		if (classification >= 2)
 		{
 			float loss_train = get_loss(nn_test, train_images, train_labels);
@@ -212,6 +247,44 @@ class TimeSeriesRegression
 				early_stopp = true;
 			}
 			accuracy_pre = train_result.accuracy();
+
+			if (fp_predict)
+			{
+				std::vector<tiny_dnn::vec_t> YY = nY;
+				YY.resize(nY.size() + prophecy + sequence_length + out_sequence_length);
+				for (int i = nY.size(); i < YY.size(); i++)
+				{
+					YY[i].resize(nY[0].size());
+				}
+
+				for (int i = 0; i < iX.size(); i++)
+				{
+					tiny_dnn::vec_t& y_predict = nn_test.predict(seq_vec(YY, i));
+
+
+					if (fp_predict)
+					{
+						for (int k = 0; k < iX[0].size(); k++)
+						{
+							fprintf(fp_predict, "%.3f,", iX[i][k]);
+						}
+
+						int idx = -1;
+						float_t y = -1;
+						for (int k = 0; k < classification; k++)
+						{
+							if (y < y_predict[k])
+							{
+								y = y_predict[k];
+								idx = k;
+							}
+						}
+						fprintf(fp_predict, "%d,%.3f%\n", idx, y);
+					}
+				}
+				fclose(fp_predict);
+			}
+
 			set_train(nn, sequence_length, n_bptt_max, default_backend_type);
 			return;
 		}
@@ -291,6 +364,65 @@ class TimeSeriesRegression
 
 			if (this->test_mode)
 			{
+				if (fp_predict)
+				{
+					for (int i = 0; i < iY.size(); i++)
+					{
+						if (iX.size())
+						{
+							for (int k = 0; k < iX[0].size(); k++)
+							{
+								fprintf(fp_predict, "%.3f,", iX[i][k]);
+							}
+						}
+
+						tiny_dnn::vec_t yy = YY[i];
+						for (int k = 0; k < y_dim; k++)
+						{
+							if (zscore_normalization)
+							{
+								yy[k] = yy[k] * Sigma[k] + Mean[k];
+							}
+							if (minmax_normalization)
+							{
+								yy[k] = yy[k] * MaxMin[k] + Min[k];
+							}
+						}
+						for (int k = 0; k < y_dim-1; k++)
+						{
+							fprintf(fp_predict, "%.3f,", yy[k]);
+						}
+						fprintf(fp_predict, "%.3f\n", yy[y_dim-1]);
+					}
+
+					for (int i = iY.size(); i < iY.size() + prophecy; i++)
+					{
+						for (int k = 0; k < iX[0].size(); k++)
+						{
+							fprintf(fp_predict, "0,");
+						}
+						tiny_dnn::vec_t yy = YY[i];
+						for (int k = 0; k < y_dim; k++)
+						{
+							if (zscore_normalization)
+							{
+								yy[k] = yy[k] * Sigma[k] + Mean[k];
+							}
+							if (minmax_normalization)
+							{
+								yy[k] = yy[k] * MaxMin[k] + Min[k];
+							}
+						}
+						for (int k = 0; k < y_dim - 1; k++)
+						{
+							fprintf(fp_predict, "%.3f,", yy[k]);
+						}
+						fprintf(fp_predict, "%.3f\n", yy[y_dim - 1]);
+					}
+				}
+				if(fp_predict) fclose(fp_predict);
+
+
 
 				FILE* fp_test = fopen("predict1.dat", "w");
 				if (fp_test)
@@ -316,8 +448,16 @@ class TimeSeriesRegression
 						for (int k = 0; k < y_dim - 1; k++)
 						{
 							fprintf(fp_test, "%f %f ", y[k], yy[k]);
+							if (fp_predict)
+							{
+								fprintf(fp_test, "%f,", yy[k]);
+							}
 						}
 						fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
+						if (fp_predict)
+						{
+							fprintf(fp_test, "%f\n", yy[y_dim - 1]);
+						}
 					}
 					fclose(fp_test);
 				}
