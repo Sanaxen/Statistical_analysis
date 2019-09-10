@@ -174,11 +174,11 @@ private:
 				}
 				else
 				{
-					for (int i = 0; i < nY[0].size() - 1; i++)
+					for (int i = 0; i < y_dim - 1; i++)
 					{
 						fprintf(fp_predict, "predict[%s],", header[y_idx[i]].c_str());
 					}
-					fprintf(fp_predict, "predict[%s]\n", header[y_idx[nY[0].size() - 1]].c_str());
+					fprintf(fp_predict, "predict[%s]\n", header[y_idx[y_dim-1]].c_str());
 				}
 			}
 		}
@@ -644,12 +644,12 @@ private:
 
 				x = MahalanobisDist_Abnormality(x.appendCol(y));
 
-				FILE* fp_test = fopen("mahalanobis_dist.dat", "w");
+				FILE* fp_test = fopen("mahalanobis_dist.csv", "w");
 				if (fp_test)
 				{
 					for (int i = 0; i < train.size(); i++)
 					{
-						fprintf(fp_test, "%f %f\n", timver_tmp[i], x(i,0));
+						fprintf(fp_test, "%f,%f,%f\n", timver_tmp[i], y(i,0), x(i,0));
 					}
 					fclose(fp_test);
 				}
