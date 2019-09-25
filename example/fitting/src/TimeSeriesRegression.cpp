@@ -57,6 +57,7 @@ int main(int argc, char** argv)
 	int x_s = 0;
 	int y_s = 0;
 	bool test_mode = false;
+	int ts_decomp_frequency = 0;
 
 	std::string data_path = "";
 
@@ -73,6 +74,10 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--ts_decomp_frequency") {
+			ts_decomp_frequency = atoi(argv[count + 1]);
+		}
+		else
 		if (argname == "--dir") {
 			data_path = argv[count + 1];
 		}
@@ -595,6 +600,46 @@ int main(int argc, char** argv)
 	//	sequence_length = sequence_length2 - sequence_length2%sequence_length;
 	//	//exit(0);
 	//}
+
+	if (ts_decomp_frequency)
+	{
+		y.print_csv("ts_decomp.csv");
+		FILE* fp = fopen("ts_decomp.R", "w");
+		if (fp)
+		{
+			for (int i = 0; i < y.n; i++)
+			{
+				fprintf(fp,
+					"df <- read.csv( \"ts_decomp.csv\", header=F, stringsAsFactors = F, na.strings=\"NULL\")\n");
+				fprintf(fp,
+					"xt<-ts(as.numeric(df[, %d]), frequency = %d)\n"
+					"xt.stl<-stl(xt, s.window = \"periodic\")\n"
+					"season <-xt.stl$time.series[, 1]\n"
+					"trend <-xt.stl$time.series[, 2]\n"
+					"remainder <-xt.stl$time.series[, 3]\n"
+					"write.csv(season, \"_season.csv\", row.names = FALSE)\n"
+					"write.csv(trend, \"_trend.csv\", row.names = FALSE)\n"
+					"write.csv(remainder, \"_remainder.csv\", row.names = FALSE)\n"
+					"png(\"ts_decomp%d.png\", height = 960, width = 960)\n"
+					"plot(decompose(xt))\n"
+					"dev.off()\n"
+					"plot(decompose(xt))\n"
+					"z <-cbind(trend, season)\n"
+					"z <-cbind(z, remainder)\n"
+					"write.csv(z, \"ts_decomp%d.csv\", row.names = FALSE)\n"
+					"\n"
+					"library(tseries)\n"
+					"test <-adf.test(xt)\n"
+					"sink('Augmented-Dickey-Fuller-Test.txt')\n"
+					"print(test)\n"
+					"sink()\n"
+					"\n\n",
+					i + 1, ts_decomp_frequency, i + 1, i + 1);
+			}
+		}
+		fclose(fp);
+		return 0;
+	}
 
 	tiny_dnn::tensor_t X, Y;
 	MatrixToTensor(x, X, read_max);
