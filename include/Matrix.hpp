@@ -3407,6 +3407,10 @@ inline Matrix<dnn_double> Histogram(Matrix<dnn_double>& X, int num)
 	dnn_double max_ = X.Max();
 	dnn_double min_ = X.Min();
 
+	if (num <= 0)
+	{
+		num = 1 + log2(X.m);
+	}
 	dnn_double num_bins = ((max_ - min_) / (double)num);
 
 	Matrix<dnn_double>& h = Matrix<dnn_double>(num, 2);
