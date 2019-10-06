@@ -82,6 +82,7 @@ int main(int argc, char** argv)
 	double ica_tolerance = TOLERANCE;
 	double lasso = 0.0;
 
+	double cor_range[2] = { 0,0 };
 	double min_cor_delete = -1;
 	double min_delete = -1;
 	bool error_distr = false;
@@ -144,6 +145,12 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--min_delete") {
 					min_delete = atof(argv[count + 1]);
+				}
+				else if (argname == "--cor_range_d") {
+					cor_range[0] = atof(argv[count + 1]);
+				}
+				else if (argname == "--cor_range_u") {
+					cor_range[1] = atof(argv[count + 1]);
 				}
 
 				else {
@@ -416,6 +423,25 @@ int main(int argc, char** argv)
 			for (int j = 0; j < LiNGAM.B.n; j++)
 			{
 				if (fabs(LiNGAM.B(i, j)) < min_delete)
+				{
+					LiNGAM.B(i, j) = 0.0;
+				}
+			}
+		}
+	}
+
+	if (cor_range[0] != 0 && cor_range[1] != 0 && cor_range[0] < cor_range[1])
+	{
+		Matrix<dnn_double> XCor = xs.Cor();
+		for (int i = 0; i < LiNGAM.B.m; i++)
+		{
+			for (int j = 0; j < LiNGAM.B.n; j++)
+			{
+				if (fabs(XCor(i, j)) < cor_range[0])
+				{
+					LiNGAM.B(i, j) = 0.0;
+				}
+				if (fabs(XCor(i, j)) > cor_range[1])
 				{
 					LiNGAM.B(i, j) = 0.0;
 				}
