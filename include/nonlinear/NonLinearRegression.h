@@ -34,6 +34,20 @@ class NonLinearRegression
 	FILE* fp_error_vari_loss = NULL;
 	bool visualize_state_flag = true;
 
+	class writing
+	{
+	public:
+		writing()
+		{
+			FILE* fp = fopen("Writing_NonLinearRegression_", "w");
+			fclose(fp);
+		}
+		~writing()
+		{
+			unlink("Writing_NonLinearRegression_");
+		}
+	};
+
 public:
 	std::vector<std::string> header;
 	std::vector<int> x_idx;
@@ -148,6 +162,8 @@ private:
 	size_t net_test_no_Improvement_count = 0;
 	void net_test()
 	{
+		writing lock;
+
 		tiny_dnn::network2<tiny_dnn::sequential> nn_test;
 
 		nn_test.load("tmp.model");
@@ -276,7 +292,6 @@ private:
 				}
 				fclose(fp_predict);
 			}
-
 			return;
 		}
 
