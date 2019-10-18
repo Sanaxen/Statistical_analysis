@@ -175,6 +175,7 @@ int main(int argc, char** argv)
 			z = z.removeCol(0);
 		}
 	}
+
 	std::vector<std::string> header_names;
 	header_names.resize(z.n);
 	if (header && csv1.getHeader().size() > 0)
@@ -452,7 +453,7 @@ int main(int argc, char** argv)
 	{
 		y = y.appendCol(z.Col(y_var_idx[i]));
 	}
-	y = y.removeRow(y.m - 1);
+	//y = y.removeRow(y.m - 1);
 
 	y.print("y");
 
@@ -607,12 +608,19 @@ int main(int argc, char** argv)
 		FILE* fp = fopen("ts_decomp.R", "w");
 		if (fp)
 		{
+			printf("時系列数:%d\n", y.n);
+			fprintf(fp, "library(tseries)\n");
+
+			fprintf(fp,
+				"tmp_ <- read.csv( \"ts_decomp.csv\", header=F, stringsAsFactors = F, na.strings=\"NULL\")\n");
+			fprintf(fp, "tmp_out_ <- df[,1]\n");
+			fprintf(fp, "names(tmp_)[1]<-\"入力データ\"\n");
+			fprintf(fp, "tmp_out_ <- cbind(tmp_out_, tmp_)\n");
+
 			for (int i = 0; i < y.n; i++)
 			{
 				fprintf(fp,
-					"df <- read.csv( \"ts_decomp.csv\", header=F, stringsAsFactors = F, na.strings=\"NULL\")\n");
-				fprintf(fp,
-					"xt<-ts(as.numeric(df[, %d]), frequency = %d)\n"
+					"xt<-ts(as.numeric(tmp_[, %d]), frequency = %d)\n"
 					"xt.stl<-stl(xt, s.window = \"periodic\")\n"
 					"season <-xt.stl$time.series[, 1]\n"
 					"trend <-xt.stl$time.series[, 2]\n"
@@ -623,21 +631,34 @@ int main(int argc, char** argv)
 					"png(\"ts_decomp%d.png\", height = 960, width = 960)\n"
 					"plot(decompose(xt))\n"
 					"dev.off()\n"
-					"plot(decompose(xt))\n"
-					"z <-cbind(trend, season)\n"
-					"z <-cbind(z, remainder)\n"
-					"write.csv(z, \"ts_decomp%d.csv\", row.names = FALSE)\n"
+					"#plot(decompose(xt))\n"
+					"season <-read.csv(\"_season.csv\", header = T)\n"
+					"trend <-read.csv(\"_trend.csv\", header = T)\n"
+					"remainder <-read.csv(\"_remainder.csv\", header = T)\n"
+					"x_ <-trend + remainder\n"
+					"names(season)[1]<-\"周期的季節パターン\"\n"
+					"names(trend)[1]<-\"長期の変化傾向\"\n"
+					"names(remainder)[1]<-\"残りの不規則成分\"\n"
+					"names(x_)[1]<-\"季節変動除去済\"\n"
+					"tmp_out_ <-cbind(tmp_out_, season)\n"
+					"tmp_out_ <-cbind(tmp_out_, trend)\n"
+					"tmp_out_ <-cbind(tmp_out_, remainder)\n"
+					"tmp_out_ <-cbind(tmp_out_, x_)\n"
 					"\n"
-					"library(tseries)\n"
 					"test <-adf.test(xt)\n"
 					"sink('Augmented-Dickey-Fuller-Test.txt')\n"
 					"print(test)\n"
 					"sink()\n"
 					"\n\n",
-					i + 1, ts_decomp_frequency, i + 1, i + 1);
+					i + 1, ts_decomp_frequency, i + 1);
 			}
+			fprintf(fp, "ts_decomp <- tmp_out_\n");
 		}
-		fclose(fp);
+		else
+		{
+			printf("[ts_decomp.R] write Error.\n");
+		}
+		if ( fp )fclose(fp);
 		return 0;
 	}
 
@@ -799,6 +820,10 @@ int main(int argc, char** argv)
 			timeSeries.visualize_observed_predict_plot = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--timeformat") {
+			timeSeries.timeformat = std::string(argv[count + 1]);
+			continue;
+		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
@@ -836,6 +861,7 @@ int main(int argc, char** argv)
 		<< "classification  : " << timeSeries.classification << std::endl
 		<< "dropout         : " << timeSeries.dropout << std::endl
 		<< "clip_gradients  : " << timeSeries.clip_gradients << std::endl
+		<< "timeformat      : " << timeSeries.timeformat << std::endl
 		<< std::endl;
 //
 	{
