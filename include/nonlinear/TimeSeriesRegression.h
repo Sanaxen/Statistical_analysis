@@ -24,6 +24,25 @@ inline void SigHandler_time_series_regression(int p_signame)
 	return;
 }
 
+inline char* timeToStr(dnn_double t, const std::string& format, char* str, size_t sz)
+{
+	if (format == "")
+	{
+		sprintf(str, "%.2f", t); return str;
+	}
+
+	memset(str, '\0', sizeof(char)*sz);
+	time_t timer;
+	struct tm *timeptr;
+
+	//timer = time(NULL);
+	timer =(time_t)t;
+	timeptr = localtime(&timer);
+	strftime(str, sz, format.c_str(), timeptr);
+	//strftime(str, sz, "%Y/%m/%d[%H:%M:%S]", timeptr);
+	return str;
+}
+
 class TimeSeriesRegression
 {
 	bool convergence = false;
@@ -33,10 +52,26 @@ class TimeSeriesRegression
 	FILE* fp_error_vari_loss = NULL;
 	bool visualize_state_flag = true;
 
+	class writing
+	{
+	public:
+		writing()
+		{
+			FILE* fp = fopen("Writing_TimeSeriesRegression_", "w");
+			fclose(fp);
+			fp = NULL;
+		}
+		~writing()
+		{
+			unlink("Writing_TimeSeriesRegression_");
+		}
+	};
+
 public:
 	std::vector<std::string> header;
 	std::vector<int> x_idx;
 	std::vector<int> y_idx;
+	std::string timeformat = "";
 private:
 
 	void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
@@ -147,6 +182,8 @@ private:
 	size_t net_test_no_Improvement_count = 0;
 	void net_test()
 	{
+		writing lock;
+
 		tiny_dnn::network2<tiny_dnn::sequential> nn_test;
 
 		nn_test.load("tmp.model");
@@ -291,6 +328,8 @@ private:
 
 
 		{
+			const size_t time_str_sz = 80;
+			char time_str[time_str_sz];
 			std::vector<tiny_dnn::vec_t> train(nY.size() + prophecy + sequence_length + out_sequence_length);
 			std::vector<tiny_dnn::vec_t> predict(nY.size() + prophecy + sequence_length + out_sequence_length);
 			std::vector<tiny_dnn::vec_t> YY = nY;
@@ -423,7 +462,6 @@ private:
 				if(fp_predict) fclose(fp_predict);
 
 
-
 				FILE* fp_test = fopen("predict1.dat", "w");
 				if (fp_test)
 				{
@@ -444,7 +482,10 @@ private:
 								yy[k] = yy[k] * MaxMin[k] + Min[k];
 							}
 						}
-						fprintf(fp_test, "%f ", timver_tmp[i]);
+
+						//fprintf(fp_test, "%f ", timver_tmp[i]);
+						fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
+
 						for (int k = 0; k < y_dim - 1; k++)
 						{
 							fprintf(fp_test, "%f %f ", y[k], yy[k]);
@@ -481,7 +522,8 @@ private:
 								y[k] = y[k] * MaxMin[k] + Min[k];
 							}
 						}
-						fprintf(fp_test, "%f ", timver_tmp[i]);
+						//fprintf(fp_test, "%f ", timver_tmp[i]);
+						fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
 						for (int k = 0; k < y_dim - 1; k++)
 						{
 							fprintf(fp_test, "%f %f ", y[k], y[k]);
@@ -517,7 +559,8 @@ private:
 								yy[k] = yy[k] * MaxMin[k] + Min[k];
 							}
 						}
-						fprintf(fp_test, "%f ", timver_tmp[i]);
+						//fprintf(fp_test, "%f ", timver_tmp[i]);
+						fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
 						for (int k = 0; k < y_dim - 1; k++)
 						{
 							fprintf(fp_test, "%f %f ", y[k], yy[k]);
@@ -551,7 +594,8 @@ private:
 								yy[k] = yy[k] * MaxMin[k] + Min[k];
 							}
 						}
-						fprintf(fp_test, "%f ", timver_tmp[i]);
+						//fprintf(fp_test, "%f ", timver_tmp[i]);
+						fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
 						for (int k = 0; k < y_dim - 1; k++)
 						{
 							fprintf(fp_test, "%f %f ", y[k], yy[k]);
@@ -585,7 +629,8 @@ private:
 								yy[k] = yy[k] * MaxMin[k] + Min[k];
 							}
 						}
-						fprintf(fp_test, "%f ", timver_tmp[i]);
+						//fprintf(fp_test, "%f ", timver_tmp[i]);
+						fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
 						for (int k = 0; k < y_dim - 1; k++)
 						{
 							fprintf(fp_test, "%f %f ", y[k], yy[k]);
@@ -642,6 +687,9 @@ private:
 				TensorToMatrix(predict, y);
 				Matrix<dnn_double> xx = x;
 
+				const size_t time_str_sz = 80;
+				char time_str[time_str_sz];
+
 				x = MahalanobisDist_Abnormality(x.appendCol(y));
 
 				FILE* fp_test = fopen("mahalanobis_dist.csv", "w");
@@ -649,7 +697,8 @@ private:
 				{
 					for (int i = 0; i < train.size(); i++)
 					{
-						fprintf(fp_test, "%f,%f,%f\n", timver_tmp[i], y(i,0), x(i,0));
+						//fprintf(fp_test, "%f,%f,%f\n", timver_tmp[i], y(i,0), x(i,0));
+						fprintf(fp_test, "%s,%f,%f\n", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz), y(i, 0), x(i, 0));
 					}
 					fclose(fp_test);
 				}
