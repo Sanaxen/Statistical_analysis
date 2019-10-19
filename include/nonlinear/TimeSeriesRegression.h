@@ -415,23 +415,26 @@ private:
 							}
 						}
 
-						tiny_dnn::vec_t yy = YY[i];
+						tiny_dnn::vec_t yy = predict[i];
+						tiny_dnn::vec_t y = predict[i];
 						for (int k = 0; k < y_dim; k++)
 						{
 							if (zscore_normalization)
 							{
 								yy[k] = yy[k] * Sigma[k] + Mean[k];
+								y[k] = y[k] * Sigma[k] + Mean[k];
 							}
 							if (minmax_normalization)
 							{
 								yy[k] = yy[k] * MaxMin[k] + Min[k];
+								y[k] = y[k] * MaxMin[k] + Min[k];
 							}
 						}
 						for (int k = 0; k < y_dim-1; k++)
 						{
-							fprintf(fp_predict, "%.3f,%.3f,", yy[k], iY[i][k]);
+							fprintf(fp_predict, "%.3f,%.3f,", yy[k], y[k]);
 						}
-						fprintf(fp_predict, "%.3f\n", yy[y_dim-1], iY[i][y_dim - 1]);
+						fprintf(fp_predict, "%.3f,%.3f\n", yy[y_dim-1], y[y_dim - 1]);
 					}
 
 					for (int i = iY.size(); i < iY.size() + prophecy; i++)
@@ -440,7 +443,7 @@ private:
 						{
 							fprintf(fp_predict, "0,");
 						}
-						tiny_dnn::vec_t yy = YY[i];
+						tiny_dnn::vec_t yy = predict[i];
 						for (int k = 0; k < y_dim; k++)
 						{
 							if (zscore_normalization)
