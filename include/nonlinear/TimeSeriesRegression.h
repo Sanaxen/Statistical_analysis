@@ -213,9 +213,9 @@ private:
 				{
 					for (int i = 0; i < y_dim - 1; i++)
 					{
-						fprintf(fp_predict, "predict[%s],", header[y_idx[i]].c_str());
+						fprintf(fp_predict, "predict[%s],%s,", header[y_idx[i]].c_str(), header[y_idx[i]].c_str());
 					}
-					fprintf(fp_predict, "predict[%s]\n", header[y_idx[y_dim-1]].c_str());
+					fprintf(fp_predict, "predict[%s],%s\n", header[y_idx[y_dim-1]].c_str(), header[y_idx[y_dim - 1]].c_str());
 				}
 			}
 		}
@@ -429,9 +429,9 @@ private:
 						}
 						for (int k = 0; k < y_dim-1; k++)
 						{
-							fprintf(fp_predict, "%.3f,", yy[k]);
+							fprintf(fp_predict, "%.3f,%.3f,", yy[k], iY[i][k]);
 						}
-						fprintf(fp_predict, "%.3f\n", yy[y_dim-1]);
+						fprintf(fp_predict, "%.3f\n", yy[y_dim-1], iY[i][y_dim - 1]);
 					}
 
 					for (int i = iY.size(); i < iY.size() + prophecy; i++)
@@ -454,9 +454,9 @@ private:
 						}
 						for (int k = 0; k < y_dim - 1; k++)
 						{
-							fprintf(fp_predict, "%.3f,", yy[k]);
+							fprintf(fp_predict, "%.3f,%.3f,", yy[k], 0.0);
 						}
-						fprintf(fp_predict, "%.3f\n", yy[y_dim - 1]);
+						fprintf(fp_predict, "%.3f, %.3f\n", yy[y_dim - 1], 0.0);
 					}
 				}
 				if(fp_predict) fclose(fp_predict);
@@ -1086,6 +1086,12 @@ public:
 			return error;
 		}
 		size_t train_num_max = datasetNum;
+		if (datasetNum < 0)
+		{
+			printf("Insufficient data length\n");
+			error = -1;
+			return error;
+		}
 		printf("train:%d test:%d\n", datasetNum, test_Num);
 
 		for (int i = 0; i < train_num_max; i++)
