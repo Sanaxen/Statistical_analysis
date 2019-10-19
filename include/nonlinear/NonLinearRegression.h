@@ -190,9 +190,9 @@ private:
 				{
 					for (int i = 0; i < nY[0].size() - 1; i++)
 					{
-						fprintf(fp_predict, "predict[%s],", header[y_idx[i]].c_str());
+						fprintf(fp_predict, "predict[%s], %s,", header[y_idx[i]].c_str(), header[y_idx[i]].c_str());
 					}
-					fprintf(fp_predict, "predict[%s]\n", header[y_idx[nY[0].size() - 1]].c_str());
+					fprintf(fp_predict, "predict[%s], %s\n", header[y_idx[nY[0].size() - 1]].c_str(), header[y_idx[nY[0].size() - 1]].c_str());
 				}
 			}
 		}
@@ -342,7 +342,7 @@ private:
 
 					if (fp_predict)
 					{
-						fprintf(fp_predict, "%.3f,", yy);
+						fprintf(fp_predict, "%.3f,%.3f,", yy, y[k]);
 					}
 
 					if (test_data_index[i] >= 0)
@@ -374,7 +374,7 @@ private:
 
 				if (fp_predict)
 				{
-					fprintf(fp_predict, "%.3f\n", yy);
+					fprintf(fp_predict, "%.3f, %.3f\n", yy, y[y_predict.size() - 1]);
 				}
 
 				if (test_data_index[i] >= 0)
