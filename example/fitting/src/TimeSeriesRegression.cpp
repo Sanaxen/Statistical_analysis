@@ -613,7 +613,14 @@ int main(int argc, char** argv)
 
 			fprintf(fp,
 				"tmp_ <- read.csv( \"ts_decomp.csv\", header=F, stringsAsFactors = F, na.strings=\"NULL\")\n");
-			fprintf(fp, "tmp_out_ <- df[,1]\n");
+			if (!test_mode)
+			{
+				fprintf(fp, "tmp_out_ <- train[,1]\n");
+			}
+			else
+			{
+				fprintf(fp, "tmp_out_ <- test[,1]\n");
+			}
 			fprintf(fp, "names(tmp_)[1]<-\"“ü—Íƒf[ƒ^\"\n");
 			fprintf(fp, "tmp_out_ <- cbind(tmp_out_, tmp_)\n");
 
