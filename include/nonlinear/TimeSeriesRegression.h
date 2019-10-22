@@ -386,7 +386,7 @@ private:
 					predict[i + sequence_length + j] = yy;
 				}
 
-				if (!this->test_mode)
+				//if (!this->test_mode)
 				{
 					if (i >= train_images.size() - sequence_length)
 					{
@@ -416,7 +416,7 @@ private:
 						}
 
 						tiny_dnn::vec_t yy = predict[i];
-						tiny_dnn::vec_t y = predict[i];
+						tiny_dnn::vec_t y = train[i];
 						for (int k = 0; k < y_dim; k++)
 						{
 							if (zscore_normalization)
@@ -444,22 +444,25 @@ private:
 							fprintf(fp_predict, "0,");
 						}
 						tiny_dnn::vec_t yy = predict[i];
+						tiny_dnn::vec_t y = train[iY.size()-1];
 						for (int k = 0; k < y_dim; k++)
 						{
 							if (zscore_normalization)
 							{
 								yy[k] = yy[k] * Sigma[k] + Mean[k];
+								y[k] = y[k] * Sigma[k] + Mean[k];
 							}
 							if (minmax_normalization)
 							{
 								yy[k] = yy[k] * MaxMin[k] + Min[k];
+								y[k] = y[k] * MaxMin[k] + Min[k];
 							}
 						}
 						for (int k = 0; k < y_dim - 1; k++)
 						{
-							fprintf(fp_predict, "%.3f,%.3f,", yy[k], 0.0);
+							fprintf(fp_predict, "%.3f,%.3f,", yy[k], yy[k]);
 						}
-						fprintf(fp_predict, "%.3f, %.3f\n", yy[y_dim - 1], 0.0);
+						fprintf(fp_predict, "%.3f, %.3f\n", yy[y_dim - 1], yy[y_dim - 1]);
 					}
 				}
 				if(fp_predict) fclose(fp_predict);
