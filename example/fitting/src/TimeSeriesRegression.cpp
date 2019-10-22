@@ -453,7 +453,11 @@ int main(int argc, char** argv)
 	{
 		y = y.appendCol(z.Col(y_var_idx[i]));
 	}
-	//y = y.removeRow(y.m - 1);
+	//Because the explanatory variable is shifted by one unit, 
+	//it is shortened by one unit.
+	y = y.removeRow(y.m - 1);
+	printf("Because the explanatory variable is shifted by 1 unit,\n");
+	printf("it is shortened by 1 unit.\n");
 
 	y.print("y");
 
@@ -615,12 +619,13 @@ int main(int argc, char** argv)
 				"tmp_ <- read.csv( \"ts_decomp.csv\", header=F, stringsAsFactors = F, na.strings=\"NULL\")\n");
 			if (!test_mode)
 			{
-				fprintf(fp, "tmp_out_ <- train[,1]\n");
+				fprintf(fp, "tmp_out_ <- train[1]\n");
 			}
 			else
 			{
-				fprintf(fp, "tmp_out_ <- test[,1]\n");
+				fprintf(fp, "tmp_out_ <- test[1]\n");
 			}
+			fprintf(fp, "tmp_out_ <- data.frame(tmp_out_[c(1:nrow(tmp_)),])\n");
 			fprintf(fp, "names(tmp_)[1]<-\"“ü—Íƒf[ƒ^\"\n");
 			fprintf(fp, "tmp_out_ <- cbind(tmp_out_, tmp_)\n");
 
