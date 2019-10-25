@@ -439,9 +439,12 @@ private:
 
 					for (int i = iY.size(); i < iY.size() + prophecy; i++)
 					{
-						for (int k = 0; k < iX[0].size(); k++)
+						if (iX.size())
 						{
-							fprintf(fp_predict, "0,");
+							for (int k = 0; k < iX[0].size(); k++)
+							{
+								fprintf(fp_predict, "%.3f,", 0.0);
+							}
 						}
 						tiny_dnn::vec_t yy = predict[i];
 						tiny_dnn::vec_t y = train[iY.size()-1];
@@ -1085,11 +1088,23 @@ public:
 		int datasetNum = dataAll - test_Num;
 
 		//datasetNum = datasetNum - datasetNum % n_minibatch;
-		if (datasetNum == 0 || datasetNum < this->n_minibatch)
+		if (!test_mode)
 		{
-			printf("Too many min_batch or Sequence length\n");
-			error = -1;
-			return error;
+			if (datasetNum == 0 || datasetNum < this->n_minibatch)
+			{
+				printf("Too many min_batch or Sequence length\n");
+				error = -1;
+				return error;
+			}
+		}
+		else
+		{
+			if (datasetNum == 0)
+			{
+				printf("Too many Sequence length\n");
+				error = -1;
+				return error;
+			}
 		}
 		size_t train_num_max = datasetNum;
 		if (datasetNum < 0)
