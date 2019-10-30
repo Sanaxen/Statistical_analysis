@@ -232,6 +232,15 @@ int main(int argc, char** argv)
 				if (y_var == header_names[j])
 				{
 					y_var_idx = j;
+				}else
+				if ("\"" + y_var + "\"" == header_names[j])
+				{
+					y_var_idx = j;
+				}
+				else
+				if ("\"" + header_names[j] + "\"" == y_var )
+				{
+					y_var_idx = j;
 				}
 				else
 				{

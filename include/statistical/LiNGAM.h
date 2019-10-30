@@ -407,7 +407,16 @@ public:
 		fclose(fp);
 #ifdef USE_GRAPHVIZ_DOT
 		char cmd[512];
-		sprintf(cmd, "dot.exe -T%s %s -o Digraph.%s", outformat, filename, outformat);
+		graphviz_path_::getGraphvizPath();
+		std::string path = graphviz_path_::path_;
+		if (path != "")
+		{
+			sprintf(cmd, "\"%s\\dot.exe\" -T%s %s -o Digraph.%s", path.c_str(), outformat, filename, outformat);
+		}
+		else
+		{
+			sprintf(cmd, "dot.exe -T%s %s -o Digraph.%s", outformat, filename, outformat);
+		}
 		system(cmd);
 #endif
 	}

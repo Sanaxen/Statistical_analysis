@@ -17,6 +17,9 @@
 #include "../../include/util/cmdline_args.h"
 
 
+using graphviz_path_::getGraphvizPath;
+using graphviz_path_::path_;
+
 int main(int argc, char** argv)
 {
 	printf("multiple_regression START\n");

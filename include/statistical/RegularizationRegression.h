@@ -6,6 +6,7 @@
 #include "../../include/Matrix.hpp"
 #include "../../include/util/mathutil.h"
 #include "../../include/util/utf8_printf.hpp"
+#include "../../include/util/plot.h"
 
 
 inline double _soft_thresholding_operator(const double x, const double lambda)
@@ -266,7 +267,16 @@ public:
 			fclose(fp);
 
 			char cmd[512];
-			sprintf(cmd, "dot.exe -T%s %s -o multicollinearity2.%s", outformat, filename, outformat);
+			graphviz_path_::getGraphvizPath();
+			std::string path = graphviz_path_::path_;
+			if (path != "")
+			{
+				sprintf(cmd, "\"%s\\dot.exe\" -T%s %s -o multicollinearity2.%s", path.c_str(), outformat, filename, outformat);
+			}
+			else
+			{
+				sprintf(cmd, "dot.exe -T%s %s -o multicollinearity2.%s", outformat, filename, outformat);
+			}
 			system(cmd);
 		}
 #endif

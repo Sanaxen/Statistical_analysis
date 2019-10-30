@@ -134,6 +134,27 @@ public:
 	}
 };
 
+namespace gnuplot_path_
+{
+	std::string path_ = "";
+	inline void getGnuplotPath()
+	{
+		if (gnuplot_path_::path_ != "") return;
+		FILE* fp = fopen("gnuplot_path.txt", "r");
+		if (fp)
+		{
+			char buf[640];
+			fgets(buf, 640, fp);
+			char* p = strstr(buf, "\n");
+			if (p) *p = '\0';
+			gnuplot_path_::path_ = std::string(buf);
+
+			fclose(fp);
+		}
+	}
+}
+
+
 class gnuPlot
 {
 	bool multiplot = false;
@@ -173,6 +194,12 @@ public:
 	gnuPlot(std::string& gnuplot_exe_path_, const int script_id=-1)
 	{
 		gnuplot_exe_path = gnuplot_exe_path_;
+		gnuplot_path_::getGnuplotPath();
+		if (gnuplot_path_::path_ != "")
+		{
+			gnuplot_exe_path = gnuplot_path_::path_;
+			gnuplot_exe_path = "\"" + gnuplot_exe_path + "\\gnuplot.exe\"";
+		}
 
 		id = script_id;
 		if (script_id < 0) id = rand();

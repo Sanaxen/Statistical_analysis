@@ -7,7 +7,7 @@
 #include "../../include/Matrix.hpp"
 #include "../../include/util/mathutil.h"
 #include "../../include/util/utf8_printf.hpp"
-
+#include "../../include/util/graphviz_util.h"
 
 class linear_model
 {
@@ -562,7 +562,12 @@ public:
 				fclose(fp);
 
 				char cmd[512];
-				sprintf(cmd, "dot.exe -T%s %s -o multicollinearity.%s", outformat, filename, outformat);
+				graphviz_path_::getGraphvizPath();
+				std::string path = graphviz_path_::path_;
+				if (path != "")
+					sprintf(cmd, "\"%s\\dot.exe\" -T%s %s -o multicollinearity.%s", path.c_str(), outformat, filename, outformat);
+				else
+					sprintf(cmd, "dot.exe -T%s %s -o multicollinearity.%s", outformat, filename, outformat);
 				system(cmd);
 			}
 #endif
