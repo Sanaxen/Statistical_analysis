@@ -1006,7 +1006,13 @@ public:
 		std::ofstream ofs("graph_net.txt");
 		tiny_dnn::graph_visualizer viz(nn, "graph");
 		viz.generate(ofs);
-		printf("dot -Tgif graph_net.txt -o graph.gif\n");
+		
+		graphviz_path_::getGraphvizPath();
+		std::string path = graphviz_path_::path_;
+		if (path != "")
+			printf("\"%s\\dot.exe\" -Tgif graph_net.txt -o graph.gif\n", path.c_str());
+		else
+			printf("dot -Tgif graph_net.txt -o graph.gif\n");
 #endif
 	}
 
