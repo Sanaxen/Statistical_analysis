@@ -1662,7 +1662,7 @@ public:
 		}
 
 		double r = y_yy_f_yy / sqrt(syy*sff);
-		double R2 = 1.0 - mse / syy;
+		double R2 = 1.0 - mse / sff;
 
 		double chi_square = 0.0;
 		for (int i = 0; i < yy.size(); i++)
@@ -1681,7 +1681,7 @@ public:
 		fprintf(fp, "MSE                                 :%.4f\n", mse);
 		fprintf(fp, "RMSE                                :%.4f\n", rmse);
 		fprintf(fp, "r(‘ŠŠÖŒW”)                         :%.4f\n", r);
-		//fprintf(fp, "R^2(Œˆ’èŒW”(Šñ—^—¦))               :%.4f\n", R2);
+		fprintf(fp, "R^2(Œˆ’èŒW”(Šñ—^—¦))               :%.4f\n", R2);
 		fprintf(fp, "AIC                                 :%.3f\n", AIC);
 		//fprintf(fp, "chi square       :%f\n", chi_square);
 		//fprintf(fp, "p value          :%f\n", chi_pdf);
