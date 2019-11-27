@@ -249,7 +249,7 @@ private:
 				FILE* fp = fopen("timeseries_error_vari_loss.txt", "w");
 				if (fp)
 				{
-					fprintf(fp, "bast.model loss:%.2f\n", cost_min);
+					fprintf(fp, "best.model loss:%.2f\n", cost_min);
 					fprintf(fp, "total loss:%.2f\n", loss_train);
 					fprintf(fp, "validation loss:%.2f\n", loss_test);
 					fprintf(fp, "accuracy:%.2f%%\n", train_result.accuracy());
@@ -262,8 +262,8 @@ private:
 
 			if (accuracy_max < train_result.accuracy())
 			{
-				nn_test.save("fit_bast.model");
-				nn_test.save("fit_bast.model.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
+				nn_test.save("fit_best.model");
+				nn_test.save("fit_best.model.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
 				accuracy_max = train_result.accuracy();
 			}
 			if (1.0 - accuracy_max*0.01 < tolerance)
@@ -744,9 +744,9 @@ private:
 			printf("%f %f\n", cost_min, cost_tot);
 			if (cost_tot < cost_min)
 			{
-				nn_test.save("fit_bast.model");
-				nn_test.save("fit_bast.model.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
-				printf("!!=========== bast model save ============!!\n");
+				nn_test.save("fit_best.model");
+				nn_test.save("fit_best.model.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
+				printf("!!=========== best model save ============!!\n");
 				cost_min = cost_tot;
 			}
 			if (cost_min < tolerance)
@@ -780,7 +780,7 @@ private:
 				FILE* fp = fopen("timeseries_error_vari_loss.txt", "w");
 				if (fp)
 				{
-					fprintf(fp, "bast.model loss:%f\n", cost_min);
+					fprintf(fp, "best.model loss:%f\n", cost_min);
 					fprintf(fp, "total loss:%f\n", cost_tot);
 					fprintf(fp, "validation loss:%f\n", vari_cost);
 					fclose(fp);
@@ -1583,13 +1583,13 @@ public:
 
 		try
 		{
-			nn.load("fit_bast.model");
+			nn.load("fit_best.model");
 			gen_visualize_fit_state();
 		}
 		catch (tiny_dnn::nn_error& msg)
 		{
 			printf("%s\n", msg.what());
-			printf("fit_bast.model open error.\n");
+			printf("fit_best.model open error.\n");
 		}
 		std::cout << "end training." << std::endl;
 
@@ -1757,7 +1757,7 @@ public:
 		{
 			if (fp != stdout && fp != NULL) fclose(fp);
 			tiny_dnn::network2<tiny_dnn::sequential> nn_test;
-			nn_test.load("fit_bast.model");
+			nn_test.load("fit_best.model");
 
 			tiny_dnn::result train_result = get_accuracy(nn_test, train_images, train_labels);
 			tiny_dnn::result test_result = get_accuracy(nn_test, test_images, test_labels);
