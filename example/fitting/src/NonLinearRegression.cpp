@@ -51,6 +51,8 @@ int main(int argc, char** argv)
 	int x_s = 0;
 	int y_s = 0;
 	bool test_mode = false;
+	bool dump_input = false;
+
 	std::string csvfile("sample.csv");
 	std::string report_file("NonLinearRegression.txt");
 
@@ -128,6 +130,10 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--classification") {
 			classification = atoi(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--dump_input") {
+			dump_input = (0 < atoi(argv[count + 1])) ? true : false;
 			continue;
 		}
 	}
@@ -391,6 +397,17 @@ int main(int argc, char** argv)
 	}
 	printf("x_dim:%d y_dim:%d\n", x_dim, y_dim);
 
+	if (dump_input)
+	{
+		Matrix<dnn_double> tmp_mat;
+		//Matrix<dnn_double>& tvar = Matrix<dnn_double>(y.m, 1);
+		//for (int i = 0; i < y.m; i++) tvar(i, 0) = i;
+		tmp_mat = y;
+		tmp_mat = tmp_mat.appendCol(x);
+		tmp_mat.print_csv("fit_input.csv");
+		exit(0);
+	}
+
 	if (data_path != "" && read_max > 0)
 	{
 		std::mt19937 mt(read_max);
@@ -599,6 +616,7 @@ int main(int argc, char** argv)
 		<< "regression       : " << regression.regression << std::endl
 		<< "classification       : " << regression.classification << std::endl
 		<< "dropout       : " << regression.dropout << std::endl
+		<< "dump_input      : " << dump_input << std::endl
 		<< std::endl;
 
 	{

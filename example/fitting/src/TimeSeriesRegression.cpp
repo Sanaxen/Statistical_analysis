@@ -58,6 +58,7 @@ int main(int argc, char** argv)
 	int y_s = 0;
 	bool test_mode = false;
 	int ts_decomp_frequency = 0;
+	bool dump_input = false;
 
 	std::string data_path = "";
 
@@ -134,6 +135,10 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--classification") {
 			classification = atoi(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--dump_input") {
+			dump_input = (0 < atoi(argv[count + 1])) ? true : false;
 			continue;
 		}
 	}
@@ -482,6 +487,16 @@ int main(int argc, char** argv)
 		for (int i = 0; i < y.m; i++) tvar(i, 0) = i;
 	}
 
+	if(dump_input)
+	{
+		Matrix<dnn_double> tmp_mat;
+		//Matrix<dnn_double>& tvar = Matrix<dnn_double>(y.m, 1);
+		//for (int i = 0; i < y.m; i++) tvar(i, 0) = i;
+		tmp_mat = tvar;
+		tmp_mat = tmp_mat.appendCol(y);
+		tmp_mat.print_csv("ts_input.csv");
+		exit(0);
+	}
 
 	//if(0)
 	//{
@@ -874,6 +889,7 @@ int main(int argc, char** argv)
 		<< "dropout         : " << timeSeries.dropout << std::endl
 		<< "clip_gradients  : " << timeSeries.clip_gradients << std::endl
 		<< "timeformat      : " << timeSeries.timeformat << std::endl
+		<< "dump_input      : " << dump_input << std::endl
 		<< std::endl;
 //
 	{
