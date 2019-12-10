@@ -7,7 +7,7 @@
 
 #pragma warning( disable : 4305 ) 
 
-#define EARLY_STOPPING_	60
+#define EARLY_STOPPING_	10
 
 /* シグナル受信/処理 */
 bool ctr_c_stopping_time_series_regression = false;
@@ -174,7 +174,71 @@ private:
 #endif
 	}
 
+	void normalize1_1(tiny_dnn::tensor_t& X, std::vector<float_t>& min_, std::vector<float_t>& maxmin_)
+	{
+		min_ = std::vector<float_t>(X[0].size(), 0.0);
+		maxmin_ = std::vector<float_t>(X[0].size(), 1.0);
+
+#if 0
+		float max_value = -std::numeric_limits<float>::max();
+		float min_value = std::numeric_limits<float>::max();
+		for (int i = 0; i < X.size(); i++)
+		{
+			for (int k = 0; k < X[0].size(); k++)
+			{
+				if (max_value < X[i][k]) max_value = X[i][k];
+				if (min_value > X[i][k]) min_value = X[i][k];
+			}
+		}
+		for (int k = 0; k < X[0].size(); k++)
+		{
+			min_[k] = min_value;
+			maxmin_[k] = (max_value - min_value);
+
+			if (fabs(maxmin_[k]) < 1.0e-14)
+			{
+				min_[k] = 0.0;
+				maxmin_[k] = max_value;
+			}
+		}
+
+		for (int i = 0; i < X.size(); i++)
+		{
+			for (int k = 0; k < X[0].size(); k++)
+			{
+				X[i][k] = (X[i][k] - min_[k]) / maxmin_[k];
+			}
+		}
+#else
+		for (int k = 0; k < X[0].size(); k++)
+		{
+			float max_value = -std::numeric_limits<float>::max();
+			float min_value = std::numeric_limits<float>::max();
+			for (int i = 0; i < X.size(); i++)
+			{
+				if (max_value < X[i][k]) max_value = X[i][k];
+				if (min_value > X[i][k]) min_value = X[i][k];
+			}
+			min_[k] = min_value;
+			maxmin_[k] = (max_value - min_value);
+			if (fabs(maxmin_[k]) < 1.0e-14)
+			{
+				min_[k] = 0.0;
+				maxmin_[k] = max_value;
+			}
+		}
+		for (int i = 0; i < X.size(); i++)
+		{
+			for (int k = 0; k < X[0].size(); k++)
+			{
+				X[i][k] = (X[i][k] - min_[k])*2 / maxmin_[k]-1;
+			}
+		}
+#endif
+	}
+
 	float cost_min = std::numeric_limits<float>::max();
+	float cost_min0 = std::numeric_limits<float>::max();
 	float cost_pre = 0;
 	float accuracy_max = std::numeric_limits<float>::min();
 	float accuracy_pre = 0;
@@ -213,9 +277,9 @@ private:
 				{
 					for (int i = 0; i < y_dim - 1; i++)
 					{
-						fprintf(fp_predict, "predict[%s],%s,", header[y_idx[i]].c_str(), header[y_idx[i]].c_str());
+						fprintf(fp_predict, "predict[%s],%s,dy,", header[y_idx[i]].c_str(), header[y_idx[i]].c_str());
 					}
-					fprintf(fp_predict, "predict[%s],%s\n", header[y_idx[y_dim-1]].c_str(), header[y_idx[y_dim - 1]].c_str());
+					fprintf(fp_predict, "predict[%s],%s,dy\n", header[y_idx[y_dim-1]].c_str(), header[y_idx[y_dim - 1]].c_str());
 				}
 			}
 		}
@@ -227,10 +291,17 @@ private:
 			{
 				cost_min = loss_train;
 			}
-			if (fp_error_loss)
+			if (cost_min < std::numeric_limits<float>::max())
 			{
-				fprintf(fp_error_loss, "%.10f %.10f %.4f\n", loss_train, cost_min, tolerance);
-				fflush(fp_error_loss);
+				if (cost_min0 == std::numeric_limits<float>::max())
+				{
+					cost_min0 = cost_min;
+				}
+				if (fp_error_loss)
+				{
+					fprintf(fp_error_loss, "%.10f %.10f %.4f\n", loss_train, cost_min, tolerance);
+					fflush(fp_error_loss);
+				}
 			}
 			float loss_test = get_loss(nn_test, test_images, test_labels);
 
@@ -429,12 +500,17 @@ private:
 								yy[k] = yy[k] * MaxMin[k] + Min[k];
 								y[k] = y[k] * MaxMin[k] + Min[k];
 							}
+							if (_11_normalization)
+							{
+								yy[k] = 0.5*(yy[k]+1) * MaxMin[k] + Min[k];
+								y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
+							}
 						}
 						for (int k = 0; k < y_dim-1; k++)
 						{
-							fprintf(fp_predict, "%.3f,%.3f,", yy[k], y[k]);
+							fprintf(fp_predict, "%.3f,%.3f,%.3f,", yy[k], y[k], yy[k]-y[k]);
 						}
-						fprintf(fp_predict, "%.3f,%.3f\n", yy[y_dim-1], y[y_dim - 1]);
+						fprintf(fp_predict, "%.3f,%.3f,%.3f\n", yy[y_dim-1], y[y_dim - 1], yy[y_dim - 1]- y[y_dim - 1]);
 					}
 
 					for (int i = iY.size(); i < iY.size() + prophecy; i++)
@@ -460,12 +536,17 @@ private:
 								yy[k] = yy[k] * MaxMin[k] + Min[k];
 								y[k] = y[k] * MaxMin[k] + Min[k];
 							}
+							if (_11_normalization)
+							{
+								yy[k] = 0.5*(yy[k] + 1) * MaxMin[k] + Min[k];
+								y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
+							}
 						}
 						for (int k = 0; k < y_dim - 1; k++)
 						{
-							fprintf(fp_predict, "%.3f,%.3f,", yy[k], yy[k]);
+							fprintf(fp_predict, "%.3f,%.3f,%.3f,", yy[k], yy[k], 0);
 						}
-						fprintf(fp_predict, "%.3f, %.3f\n", yy[y_dim - 1], yy[y_dim - 1]);
+						fprintf(fp_predict, "%.3f, %.3f, %.3f\n", yy[y_dim - 1], yy[y_dim - 1], 0);
 					}
 				}
 				if(fp_predict) fclose(fp_predict);
@@ -489,6 +570,11 @@ private:
 							{
 								y[k] = y[k] * MaxMin[k] + Min[k];
 								yy[k] = yy[k] * MaxMin[k] + Min[k];
+							}
+							if (_11_normalization)
+							{
+								yy[k] = 0.5*(yy[k] + 1) * MaxMin[k] + Min[k];
+								y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
 							}
 						}
 
@@ -530,6 +616,10 @@ private:
 							{
 								y[k] = y[k] * MaxMin[k] + Min[k];
 							}
+							if (_11_normalization)
+							{
+								y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
+							}
 						}
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
 						fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
@@ -567,6 +657,11 @@ private:
 								y[k] = y[k] * MaxMin[k] + Min[k];
 								yy[k] = yy[k] * MaxMin[k] + Min[k];
 							}
+							if (_11_normalization)
+							{
+								yy[k] = 0.5*(yy[k] + 1) * MaxMin[k] + Min[k];
+								y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
+							}
 						}
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
 						fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
@@ -601,6 +696,11 @@ private:
 							{
 								y[k] = y[k] * MaxMin[k] + Min[k];
 								yy[k] = yy[k] * MaxMin[k] + Min[k];
+							}
+							if (_11_normalization)
+							{
+								yy[k] = 0.5*(yy[k] + 1) * MaxMin[k] + Min[k];
+								y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
 							}
 						}
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
@@ -637,6 +737,11 @@ private:
 								y[k] = y[k] * MaxMin[k] + Min[k];
 								yy[k] = yy[k] * MaxMin[k] + Min[k];
 							}
+							if (_11_normalization)
+							{
+								yy[k] = 0.5*(yy[k] + 1) * MaxMin[k] + Min[k];
+								y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
+							}
 						}
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
 						fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
@@ -670,6 +775,11 @@ private:
 					{
 						y[k] = y[k] * MaxMin[k] + Min[k];
 						yy[k] = yy[k] * MaxMin[k] + Min[k];
+					}
+					if (_11_normalization)
+					{
+						yy[k] = 0.5*(yy[k] + 1) * MaxMin[k] + Min[k];
+						y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
 					}
 					if (i < train_images.size())
 					{
@@ -753,15 +863,23 @@ private:
 			{
 				convergence = true;
 			}
-			if (fp_error_loss)
+
+			if (cost_min < std::numeric_limits<float>::max())
 			{
-				fprintf(fp_error_loss, "%.10f %.10f %.4f\n", cost, cost_min, tolerance);
-				fflush(fp_error_loss);
-			}
-			if (fp_error_vari_loss)
-			{
-				fprintf(fp_error_vari_loss, "%.10f\n", vari_cost);
-				fflush(fp_error_vari_loss);
+				if (cost_min0 == std::numeric_limits<float>::max())
+				{
+					cost_min0 = cost_min;
+				}
+				if (fp_error_loss)
+				{
+					fprintf(fp_error_loss, "%.10f %.10f %.4f\n", cost, cost_min, tolerance);
+					fflush(fp_error_loss);
+				}
+				if (fp_error_vari_loss)
+				{
+					fprintf(fp_error_vari_loss, "%.10f\n", vari_cost);
+					fflush(fp_error_vari_loss);
+				}
 			}
 			if (cost_pre <= cost_tot || fabs(cost_pre - cost_tot) < 1.0e-3)
 			{
@@ -839,12 +957,14 @@ public:
 	size_t freedom = 0;
 	bool minmax_normalization = false;
 	bool zscore_normalization = false;
+	bool _11_normalization = false;
 	bool early_stopping = true;
 	bool test_mode = false;
 	bool capture = false;
 	bool progress = true;
 	float tolerance = 1.0e-6;
 	int use_cnn = 1;
+	int fc_hidden_size = -1;
 
 	tiny_dnn::core::backend_t default_backend_type = tiny_dnn::core::backend_t::internal;
 	//tiny_dnn::core::backend_t default_backend_type = tiny_dnn::core::backend_t::intel_mkl;
@@ -888,9 +1008,26 @@ public:
 		nY = Y;
 		if (normalize_type == "zscore") zscore_normalization = true;
 		if (normalize_type == "minmax") minmax_normalization = true;
+		if (normalize_type == "-1..1") _11_normalization = true;
 
 		classification = classification_;
 		printf("classification:%d\n", classification);
+
+		if (_11_normalization)
+		{
+			normalize1_1(nY, Min, MaxMin);
+			printf("[-1,1] normalization\n");
+
+			//get Mean, Sigma
+			auto dmy = iY;
+			normalizeZ(dmy, Mean, Sigma);
+
+			if (classification > 0)
+			{
+				printf("no!! [-1, 1] normalization");
+				exit(0);
+			}
+		}
 		if (minmax_normalization)
 		{
 			normalizeMinMax(nY, Min, MaxMin);
@@ -1082,8 +1219,15 @@ public:
 		printf("n_minibatch:%d sequence_length:%d\n", n_minibatch, sequence_length);
 		printf("out_sequence_length:%d\n", out_sequence_length);
 
-		size_t dataAll = iY.size() - sequence_length - out_sequence_length;
+		int dataAll = iY.size() - sequence_length - out_sequence_length;
 		printf("dataset All:%d->", dataAll);
+
+		if (dataAll <= 0 && test_mode)
+		{
+			printf("Too many min_batch or Sequence length\n");
+			error = -1;
+			return error;
+		}
 		size_t test_Num = dataAll*test;
 		int datasetNum = dataAll - test_Num;
 
@@ -1263,12 +1407,12 @@ public:
 		for (int i = 0; i < n_rnn_layers; i++) 
 		{
 			nn << layers.add_fc(input_size/*, false*/);
-			nn << layers.add_batnorm(nn.template at<tiny_dnn::layer>(nn.layer_size() - 1), 0.00001, 0.9);
+			//nn << layers.add_batnorm(nn.template at<tiny_dnn::layer>(nn.layer_size() - 1), 0.00001, 0.9);
 			nn << layers.add_rnn(rnn_type, hidden_size, sequence_length, params);
 			input_size = hidden_size;
 			//Scaled Exponential Linear Unit. (Klambauer et al., 2017)
-			nn << layers.selu_layer();
-			//nn << layers.tanh();
+			//nn << layers.selu_layer();
+			nn << layers.tanh();
 			//nn << layers.relu();
 		}
 
@@ -1278,7 +1422,14 @@ public:
 
 		sz = train_labels[0].size() * 10;
 		for (int i = 0; i < n_layers_tmp; i++) {
-			nn << layers.add_fc(sz);
+			if (fc_hidden_size > 0)
+			{
+				nn << layers.add_fc(fc_hidden_size);
+			}
+			else
+			{
+				nn << layers.add_fc(sz);
+			}
 			//nn << layers.relu();
 			nn << layers.tanh();
 		}
@@ -1616,6 +1767,10 @@ public:
 			{
 				y_predict[k] = y_predict[k] * MaxMin[k] + Min[k];
 			}
+			if (_11_normalization)
+			{
+				y_predict[k] = 0.5*(y_predict[k] + 1) * MaxMin[k] + Min[k];
+			}
 		}
 		return y_predict;
 	}
@@ -1809,6 +1964,11 @@ public:
 				{
 					y[k] = y[k] * MaxMin[k] + Min[k];
 					z = z * MaxMin[k] + Min[k];
+				}
+				if (_11_normalization)
+				{
+					y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
+					z = 0.5*(z + 1) * MaxMin[k] + Min[k];
 				}
 
 				d = (y[k] - z);

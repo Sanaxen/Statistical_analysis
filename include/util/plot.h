@@ -7,7 +7,7 @@
 #include <string>
 
 //#define GNUPLOT_PATH "\"C:\\Program Files\\gnuplot\\bin\\wgnuplot.exe\""
-#define GNUPLOT_PATH "start wgnuplot.exe -persist"
+#define GNUPLOT_PATH "start gnuplot.exe -persist"
 
 #pragma warning( disable : 4244 ) 
 

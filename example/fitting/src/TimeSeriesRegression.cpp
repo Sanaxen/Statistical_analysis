@@ -59,6 +59,7 @@ int main(int argc, char** argv)
 	bool test_mode = false;
 	int ts_decomp_frequency = 0;
 	bool dump_input = false;
+	int fc_hidden_size = -1;
 
 	std::string data_path = "";
 
@@ -139,6 +140,10 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--dump_input") {
 			dump_input = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
+		else if (argname == "--fc_hidden_size") {
+			fc_hidden_size = atoi(argv[count + 1]);
 			continue;
 		}
 	}
@@ -760,6 +765,9 @@ int main(int argc, char** argv)
 		else if (argname == "--test_mode") {
 			continue;
 		}
+		else if (argname == "--fc_hidden_size") {
+			continue;
+		}
 		else if (argname == "--bptt_max") {
 			timeSeries.n_bptt_max = atoi(argv[count + 1]);
 			continue;
@@ -867,6 +875,8 @@ int main(int argc, char** argv)
 	timeSeries.x_idx = x_var_idx;
 	timeSeries.y_idx = y_var_idx;
 
+	timeSeries.fc_hidden_size = fc_hidden_size;
+
 	if (sequence_length > timeSeries.n_minibatch)
 	{
 		printf("!!Warning!! sequence_length:%d > Minibatch:%d\n", sequence_length, timeSeries.n_minibatch);
@@ -889,7 +899,7 @@ int main(int argc, char** argv)
 		<< "dropout         : " << timeSeries.dropout << std::endl
 		<< "clip_gradients  : " << timeSeries.clip_gradients << std::endl
 		<< "timeformat      : " << timeSeries.timeformat << std::endl
-		<< "dump_input      : " << dump_input << std::endl
+		<< "fc_hidden_size  : " << fc_hidden_size << std::endl
 		<< std::endl;
 //
 	{
