@@ -459,13 +459,16 @@ private:
 
 				//if (!this->test_mode)
 				{
-					if (i >= train_images.size() - sequence_length)
+					if (i >= train_images.size()- sequence_length)
 					{
 						for (int j = 0; j < out_sequence_length; j++)
 						{
-							for (int k = 0; k < y_dim; k++)
+							if (i + sequence_length + j >= train_images.size())
 							{
-								YY[i + sequence_length + j][k] = predict[i + sequence_length + j][k];
+								for (int k = 0; k < y_dim; k++)
+								{
+									YY[i + sequence_length + j][k] = predict[i + sequence_length + j][k];
+								}
 							}
 						}
 					}
@@ -1422,6 +1425,7 @@ public:
 
 		sz = train_labels[0].size() * 10;
 		for (int i = 0; i < n_layers_tmp; i++) {
+			if (dropout) nn << layers.add_dropout(dropout);
 			if (fc_hidden_size > 0)
 			{
 				nn << layers.add_fc(fc_hidden_size);
