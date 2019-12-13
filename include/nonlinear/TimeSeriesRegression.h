@@ -558,7 +558,7 @@ private:
 				FILE* fp_test = fopen("predict1.dat", "w");
 				if (fp_test)
 				{
-					for (int i = 0; i < iY.size(); i++)
+					for (int i = 0; i < iY.size() + prophecy; i++)
 					{
 						tiny_dnn::vec_t y = train[i];
 						tiny_dnn::vec_t yy = predict[i];
@@ -586,13 +586,24 @@ private:
 
 						for (int k = 0; k < y_dim - 1; k++)
 						{
-							fprintf(fp_test, "%f %f ", y[k], yy[k]);
+							if (i >= iY.size())
+							{
+								fprintf(fp_test, "NaN %f ", yy[k]);
+							}
+							else
+							{
+								fprintf(fp_test, "%f %f ", y[k], yy[k]);
+							}
 							if (fp_predict)
 							{
 								fprintf(fp_test, "%f,", yy[k]);
 							}
 						}
-						fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
+						if (i >= iY.size())
+							fprintf(fp_test, "NaN %f\n", yy[y_dim - 1]);
+						else
+							fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
+
 						if (fp_predict)
 						{
 							fprintf(fp_test, "%f\n", yy[y_dim - 1]);
@@ -748,11 +759,23 @@ private:
 						}
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
 						fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
-						for (int k = 0; k < y_dim - 1; k++)
+
+						if (i >= iY.size())
 						{
-							fprintf(fp_test, "%f %f ", y[k], yy[k]);
+							for (int k = 0; k < y_dim - 1; k++)
+							{
+								fprintf(fp_test, "NaN %f ", yy[k]);
+							}
+							fprintf(fp_test, "NaN %f\n", yy[y_dim - 1]);
 						}
-						fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
+						else
+						{
+							for (int k = 0; k < y_dim - 1; k++)
+							{
+								fprintf(fp_test, "%f %f ", y[k], yy[k]);
+							}
+							fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
+						}
 					}
 					fclose(fp_test);
 				}
@@ -914,7 +937,7 @@ private:
 		}
 	}
 
-
+public:
 	void gen_visualize_fit_state()
 	{
 		set_test(nn, 1);
@@ -941,6 +964,7 @@ private:
 #endif
 	}
 
+private:
 	float_t support_length = 1.0;
 	int epoch = 1;
 	int plot_count = 0;
@@ -1019,7 +1043,7 @@ public:
 		if (_11_normalization)
 		{
 			normalize1_1(nY, Min, MaxMin);
-			printf("[-1,1] normalization\n");
+			printf("ERROR:[-1,1] normalization\n");
 
 			//get Mean, Sigma
 			auto dmy = iY;
@@ -1027,7 +1051,7 @@ public:
 
 			if (classification > 0)
 			{
-				printf("no!! [-1, 1] normalization");
+				printf("ERROR:no!! [-1, 1] normalization");
 				exit(0);
 			}
 		}
@@ -1227,7 +1251,7 @@ public:
 
 		if (dataAll <= 0 && test_mode)
 		{
-			printf("Too many min_batch or Sequence length\n");
+			printf("ERROR:Too many min_batch or Sequence length\n");
 			error = -1;
 			return error;
 		}
@@ -1239,7 +1263,7 @@ public:
 		{
 			if (datasetNum == 0 || datasetNum < this->n_minibatch)
 			{
-				printf("Too many min_batch or Sequence length\n");
+				printf("ERROR:Too many min_batch or Sequence length\n");
 				error = -1;
 				return error;
 			}
@@ -1248,7 +1272,7 @@ public:
 		{
 			if (datasetNum == 0)
 			{
-				printf("Too many Sequence length\n");
+				printf("ERROR:Too many Sequence length\n");
 				error = -1;
 				return error;
 			}
@@ -1256,7 +1280,7 @@ public:
 		size_t train_num_max = datasetNum;
 		if (datasetNum < 0)
 		{
-			printf("Insufficient data length\n");
+			printf("ERROR:Insufficient data length\n");
 			error = -1;
 			return error;
 		}

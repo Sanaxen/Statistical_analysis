@@ -37,7 +37,7 @@ int main(int argc, char** argv)
 	int resp = commandline_args(&argc, &argv);
 	if (resp == -1)
 	{
-		printf("command line error.\n");
+		printf("ERROR:command line error.\n");
 		return -1;
 	}
 
@@ -128,7 +128,7 @@ int main(int argc, char** argv)
 		if (argname == "--normal")
 		{
 			normalization_type = argv[count + 1];
-			printf("--normal %s\n", argv[count + 1]);
+			printf("ERROR:--normal %s\n", argv[count + 1]);
 		}
 		else if (argname == "--test_mode") {
 			test_mode = (0 < atoi(argv[count + 1])) ? true : false;
@@ -253,7 +253,7 @@ int main(int argc, char** argv)
 		}
 		if (x_var_idx.size() != x_var.size())
 		{
-			printf("--x_var ERROR\n");
+			printf("ERROR:--x_var ERROR\n");
 			return -1;
 		}
 	}
@@ -300,7 +300,7 @@ int main(int argc, char** argv)
 		}
 		if (y_var_idx.size() != y_var.size())
 		{
-			printf("--y_var ERROR\n");
+			printf("ERROR:--y_var ERROR\n");
 			return -1;
 		}
 	}
@@ -348,7 +348,7 @@ int main(int argc, char** argv)
 	{
 		if (x_var.size()/*+yx_var.size()*/ != x_dim)
 		{
-			printf("arguments number error:--x_var != --x");
+			printf("ERROR:arguments number error:--x_var != --x");
 			return -1;
 		}
 	}
@@ -357,7 +357,7 @@ int main(int argc, char** argv)
 	{
 		if (y_var.size() != y_dim)
 		{
-			printf("arguments number error:--y_var != --y");
+			printf("ERROR:arguments number error:--y_var != --y");
 			return -1;
 		}
 	}
@@ -917,6 +917,7 @@ int main(int argc, char** argv)
 		timeSeries.visualize_observed_predict_plot = true;
 		timeSeries.visualize_observed_predict();
 	}
+	timeSeries.gen_visualize_fit_state();
 
 	{
 		std::ofstream stream("Time_to_finish.txt");

@@ -596,7 +596,7 @@ private:
 		visualize_observed_predict();
 	}
 
-
+public:
 	void gen_visualize_fit_state()
 	{
 		set_test(nn, 1);
@@ -623,6 +623,7 @@ private:
 		plot_count++;
 #endif
 	}
+private:
 	std::vector<int> test_data_index;
 
 	//int load_count = 1;
@@ -707,7 +708,7 @@ public:
 
 			if (regression == "logistic" || classification >= 2)
 			{
-				printf("no!! [-1, 1] normalization");
+				printf("ERROR:no!! [-1, 1] normalization");
 				exit(0);
 			}
 
@@ -908,7 +909,7 @@ public:
 
 		if (datasetNum == 0 || datasetNum < this->n_minibatch)
 		{
-			printf("Too many min_batch or Sequence length\n");
+			printf("ERROR:Too many min_batch or Sequence length\n");
 			error = -1;
 			return error;
 		}
