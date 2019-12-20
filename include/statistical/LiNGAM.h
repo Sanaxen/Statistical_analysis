@@ -418,6 +418,7 @@ public:
 			sprintf(cmd, "dot.exe -T%s %s -o Digraph.%s", outformat, filename, outformat);
 		}
 		system(cmd);
+		printf("%s\n", cmd);
 #endif
 	}
 
