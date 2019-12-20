@@ -1043,7 +1043,7 @@ public:
 		if (_11_normalization)
 		{
 			normalize1_1(nY, Min, MaxMin);
-			printf("ERROR:[-1,1] normalization\n");
+			printf("[-1,1] normalization\n");
 
 			//get Mean, Sigma
 			auto dmy = iY;
@@ -1775,6 +1775,9 @@ public:
 		if (fp_error_loss)fclose(fp_error_loss);
 		if (fp_error_vari_loss)fclose(fp_error_vari_loss);
 		if (fp_accuracy)fclose(fp_accuracy);
+		fp_error_loss = NULL;
+		fp_error_vari_loss = NULL;
+		fp_accuracy = NULL;
 
 		// save network model & trained weights
 		nn.save(model_file);
