@@ -1399,6 +1399,9 @@ public:
 		if (fp_error_loss)fclose(fp_error_loss);
 		if (fp_error_vari_loss)fclose(fp_error_vari_loss);
 		if (fp_accuracy)fclose(fp_accuracy);
+		fp_error_loss = NULL;
+		fp_error_vari_loss = NULL;
+		fp_accuracy = NULL;
 
 		// save network model & trained weights
 		nn.save(model_file+".json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
