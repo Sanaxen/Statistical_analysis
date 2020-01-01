@@ -1925,6 +1925,59 @@ public:
 		std::cout << result.num_success << "/" << result.num_total << std::endl;
 		printf("accuracy:%.3f%%\n", result.accuracy());
 
+		std::ofstream ofs("ConfusionMatrix.txt");
+		result.print_detail(ofs);
+		{
+			FILE* fp = fopen("ConfusionMatrix.txt", "r");
+			FILE* fp2 = fopen("ConfusionMatrix.r", "w");
+			char* p = NULL;
+			if (fp && fp2)
+			{
+				fprintf(fp2, "confusionMatrix <- data.frame(");
+
+				char buf[4096];
+				int nn = 0;
+				fgets(buf, 4096, fp);
+				fgets(buf, 4096, fp);
+				fgets(buf, 4096, fp);
+				do
+				{
+					int n = 0;
+					p = buf;
+					while (isspace(*p)) p++;
+
+					fprintf(fp2, "c(");
+					while (*p != '\n'&& *p != '\0')
+					{
+						if (n > 1) fprintf(fp2, ",");
+						do
+						{
+							if (n >= 1)fprintf(fp2, "%c", *p);
+							p++;
+						} while (!isspace(*p));
+						while (isspace(*p)) p++;
+						n++;
+						if (*p == '\n')break;
+					}
+					if (n >= 1)fprintf(fp2, ")");
+					p = fgets(buf, 4096, fp);
+					if (p != NULL)fprintf(fp2, ",");
+					nn++;
+				} while (p != NULL);
+				fprintf(fp2, ")\r\n");
+
+				fprintf(fp2, "colnames(confusionMatrix)<-c(");
+				for (int i = 1; i <= nn; i++)
+				{
+					fprintf(fp2, "\"C%d\"", i);
+					if (i < nn) fprintf(fp2, ",");
+				}
+				fprintf(fp2, ")\r\n");
+				fprintf(fp2, "rownames(confusionMatrix)<-colnames(confusionMatrix)\r\n");
+				fclose(fp);
+				fclose(fp2);
+			}
+		}
 		return result;
 	}
 
