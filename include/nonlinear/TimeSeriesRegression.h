@@ -992,6 +992,7 @@ public:
 	float tolerance = 1.0e-6;
 	int use_cnn = 1;
 	int fc_hidden_size = -1;
+	std::string weight_init_type = "xavier";
 
 	tiny_dnn::core::backend_t default_backend_type = tiny_dnn::core::backend_t::internal;
 	//tiny_dnn::core::backend_t default_backend_type = tiny_dnn::core::backend_t::intel_mkl;
@@ -1480,9 +1481,27 @@ public:
 		}
 
 
-		nn.weight_init(tiny_dnn::weight_init::xavier());
-		//nn.weight_init(tiny_dnn::weight_init::he());
-		
+		if (weight_init_type == "xavier")
+		{
+			nn.weight_init(tiny_dnn::weight_init::xavier());
+		}
+		if (weight_init_type == "lecun")
+		{
+			nn.weight_init(tiny_dnn::weight_init::lecun());
+		}
+		if (weight_init_type == "gaussian")
+		{
+			nn.weight_init(tiny_dnn::weight_init::gaussian());
+		}
+		if (weight_init_type == "constant")
+		{
+			nn.weight_init(tiny_dnn::weight_init::constant());
+		}
+		if (weight_init_type == "he")
+		{
+			nn.weight_init(tiny_dnn::weight_init::he());
+		}
+
 		for (auto n : nn) n->set_parallelize(true);
 		printf("layers:%zd\n", nn.depth());
 		freedom = layers.get_parameter_num();

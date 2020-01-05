@@ -60,6 +60,7 @@ int main(int argc, char** argv)
 	int ts_decomp_frequency = 0;
 	bool dump_input = false;
 	int fc_hidden_size = -1;
+	std::string weight_init_type = "xavier";
 
 	std::string data_path = "";
 
@@ -128,7 +129,7 @@ int main(int argc, char** argv)
 		if (argname == "--normal")
 		{
 			normalization_type = argv[count + 1];
-			printf("ERROR:--normal %s\n", argv[count + 1]);
+			printf("--normal %s\n", argv[count + 1]);
 		}
 		else if (argname == "--test_mode") {
 			test_mode = (0 < atoi(argv[count + 1])) ? true : false;
@@ -717,6 +718,7 @@ int main(int argc, char** argv)
 	timeSeries.visualize_loss(10);
 	timeSeries.plot = 10;
 	timeSeries.test_mode = test_mode;
+	timeSeries.weight_init_type = weight_init_type;
 
 	int n_layers = -1;
 	int n_rnn_layers = -1;
@@ -766,6 +768,10 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--fc_hidden_size") {
+			continue;
+		}
+		else if (argname == "--weight_init_type") {
+			timeSeries.weight_init_type = std::string(argv[count + 1]);
 			continue;
 		}
 		else if (argname == "--bptt_max") {
@@ -900,6 +906,8 @@ int main(int argc, char** argv)
 		<< "clip_gradients  : " << timeSeries.clip_gradients << std::endl
 		<< "timeformat      : " << timeSeries.timeformat << std::endl
 		<< "fc_hidden_size  : " << fc_hidden_size << std::endl
+		<< "weight_init_type       : " << timeSeries.weight_init_type << std::endl
+		<< "dump_input      : " << dump_input << std::endl
 		<< std::endl;
 //
 	{

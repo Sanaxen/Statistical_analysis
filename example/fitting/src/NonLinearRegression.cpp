@@ -52,6 +52,7 @@ int main(int argc, char** argv)
 	int y_s = 0;
 	bool test_mode = false;
 	bool dump_input = false;
+	std::string weight_init_type = "xavier";
 
 	std::string csvfile("sample.csv");
 	std::string report_file("NonLinearRegression.txt");
@@ -110,7 +111,7 @@ int main(int argc, char** argv)
 		else if (argname == "--normal")
 		{
 			normalization_type = argv[count + 1];
-			printf("ERROR:--normal %s\n", argv[count + 1]);
+			printf("--normal %s\n", argv[count + 1]);
 		}
 		else if (argname == "--test_mode") {
 			test_mode = (0 < atoi(argv[count + 1])) ? true : false;
@@ -478,6 +479,7 @@ int main(int argc, char** argv)
 	regression.header = header_names;
 	regression.x_idx = x_var_idx;
 	regression.y_idx = y_var_idx;
+	regression.weight_init_type = weight_init_type;
 
 
 	double test_num = 0;
@@ -529,6 +531,10 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--test_mode") {
+			continue;
+		}
+		else if (argname == "--weight_init_type") {
+			regression.weight_init_type = std::string(argv[count + 1]);
 			continue;
 		}
 		else if (argname == "--capture") {
@@ -616,6 +622,7 @@ int main(int argc, char** argv)
 		<< "regression       : " << regression.regression << std::endl
 		<< "classification       : " << regression.classification << std::endl
 		<< "dropout       : " << regression.dropout << std::endl
+		<< "weight_init_type       : " << regression.weight_init_type << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		<< std::endl;
 
