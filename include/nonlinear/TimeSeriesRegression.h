@@ -1508,11 +1508,25 @@ public:
 		printf("freedom:%zd\n", freedom);
 
 #ifdef USE_GRAPHVIZ_DOT
+		char cmd[512];
 		// generate graph model in dot language
 		std::ofstream ofs("graph_net.txt");
 		tiny_dnn::graph_visualizer viz(nn, "graph");
 		viz.generate(ofs);
-		printf("dot -Tgif graph_net.txt -o graph.gif\n");
+
+		graphviz_path_::getGraphvizPath();
+		std::string path = graphviz_path_::path_;
+		if (path != "")
+		{
+			sprintf(cmd, "\"%s\\dot.exe\" -T%s %s -o Digraph.%s", path.c_str(), "png", "graph_net.txt", "png");
+		}
+		else
+		{
+			sprintf(cmd, "dot.exe -T%s %s -o Digraph.%s", "png", "graph_net.txt", "png");
+		}
+		system(cmd);
+		printf("%s\n", cmd);
+		//printf("dot -Tgif graph_net.txt -o graph.gif\n");
 #endif
 	}
 
