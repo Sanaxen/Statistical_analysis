@@ -61,6 +61,7 @@ int main(int argc, char** argv)
 	bool dump_input = false;
 	int fc_hidden_size = -1;
 	std::string weight_init_type = "xavier";
+	bool layer_graph_only = false;
 
 	std::string data_path = "";
 
@@ -145,6 +146,10 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--fc_hidden_size") {
 			fc_hidden_size = atoi(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--layer_graph_only") {
+			layer_graph_only = (0 < atoi(argv[count + 1])) ? true : false;
 			continue;
 		}
 	}
@@ -731,6 +736,10 @@ int main(int argc, char** argv)
 		if (argname == "--dir") {
 			continue;
 		}
+		if (argname == "--layer_graph_only") {
+			continue;
+		}
+		else
 		if (argname == "--read_max") {
 			continue;
 		}else
@@ -876,6 +885,7 @@ int main(int argc, char** argv)
 	timeSeries.sequence_length = sequence_length;
 	timeSeries.out_sequence_length = out_sequence_length;
 	timeSeries.data_set(test);
+	timeSeries.layer_graph_only = layer_graph_only;
 
 	timeSeries.header = header_names;
 	timeSeries.x_idx = x_var_idx;
@@ -919,6 +929,11 @@ int main(int argc, char** argv)
 		fclose(fp);
 	}
 	timeSeries.fit(sequence_length, n_rnn_layers, n_layers, hidden_size);
+	if (layer_graph_only)
+	{
+		goto end;
+	}
+
 	timeSeries.report(0.05, report_file);
 	if (classification < 2)
 	{
@@ -935,6 +950,8 @@ int main(int argc, char** argv)
 			stream.flush();
 		}
 	}
+
+end:;
 	if (resp == 0)
 	{
 		for (int i = 0; i < argc; i++)
