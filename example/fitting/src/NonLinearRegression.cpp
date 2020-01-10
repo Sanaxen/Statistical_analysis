@@ -53,6 +53,7 @@ int main(int argc, char** argv)
 	bool test_mode = false;
 	bool dump_input = false;
 	std::string weight_init_type = "xavier";
+	bool layer_graph_only = false;
 
 	std::string csvfile("sample.csv");
 	std::string report_file("NonLinearRegression.txt");
@@ -135,6 +136,10 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--dump_input") {
 			dump_input = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
+		else if (argname == "--layer_graph_only") {
+			layer_graph_only = (0 < atoi(argv[count + 1])) ? true : false;
 			continue;
 		}
 	}
@@ -480,6 +485,7 @@ int main(int argc, char** argv)
 	regression.x_idx = x_var_idx;
 	regression.y_idx = y_var_idx;
 	regression.weight_init_type = weight_init_type;
+	regression.layer_graph_only = layer_graph_only;
 
 
 	double test_num = 0;
@@ -490,6 +496,10 @@ int main(int argc, char** argv)
 		if (argname == "--dir") {
 			continue;
 		}
+		else 
+		if (argname == "--layer_graph_only") {
+			continue;
+		}else
 		if (argname == "--read_max") {
 			continue;
 		}
@@ -636,6 +646,10 @@ int main(int argc, char** argv)
 		fclose(fp);
 	}
 	regression.fit(n_layers, input_unit);
+	if (layer_graph_only)
+	{
+		goto end;
+	}
 	regression.report(0.05, report_file);
 	if (classification < 2)
 	{
@@ -653,6 +667,7 @@ int main(int argc, char** argv)
 		}
 	}
 
+end:;
 	if (resp == 0)
 	{
 		for (int i = 0; i < argc; i++)
