@@ -993,6 +993,7 @@ public:
 	int use_cnn = 1;
 	int fc_hidden_size = -1;
 	std::string weight_init_type = "xavier";
+	bool layer_graph_only = false;
 
 	tiny_dnn::core::backend_t default_backend_type = tiny_dnn::core::backend_t::internal;
 	//tiny_dnn::core::backend_t default_backend_type = tiny_dnn::core::backend_t::intel_mkl;
@@ -1581,7 +1582,11 @@ public:
 		}
 
 		construct_net(rnn_layers, n_layers, n_hidden_size);
-		
+		if (layer_graph_only)
+		{
+			return;
+		}
+
 		if (opt_type == "adam") optimizer_adam.reset();
 		if (opt_type == "sgd" )	optimizer_sgd.reset();
 		if (opt_type == "rmsprop" )	optimizer_rmsprop.reset();
