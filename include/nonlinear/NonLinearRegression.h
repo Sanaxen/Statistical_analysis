@@ -651,6 +651,7 @@ public:
 	bool progress = true;
 	float tolerance = 1.0e-6;
 	std::string weight_init_type = "xavier";
+	bool layer_graph_only = 0;
 
 	tiny_dnn::core::backend_t default_backend_type = tiny_dnn::core::backend_t::internal;
 	//tiny_dnn::core::backend_t default_backend_type = tiny_dnn::core::backend_t::intel_mkl;
@@ -1217,6 +1218,10 @@ public:
 		}
 
 		construct_net(n_layers);
+		if (layer_graph_only)
+		{
+			return;
+		}
 
 		if (opt_type == "adam") optimizer_adam.reset();
 		if (opt_type == "sgd")	optimizer_sgd.reset();
