@@ -2069,38 +2069,45 @@ public:
 		std::vector<double> ff;
 		double mse = 0.0;
 		double rmse = 0.0;
-		for (int i = 1; i < train_images.size(); i++)
+		for (int i = 0; i < train_images.size()-1; i++)
 		{
-			tiny_dnn::vec_t y = nn.predict(train_images[i-1]);
-			for (int k = 0; k < y.size(); k++)
+			tiny_dnn::vec_t next_y = nn.predict(seq_vec(nY, i));
+
+			//output sequence_length 
+			for (int j = 0; j < out_sequence_length; j++)
 			{
-				float_t d;
-				auto z = train_labels[i][k];
+				tiny_dnn::vec_t z(y_dim);
+				tiny_dnn::vec_t y(y_dim);
+				for (int k = 0; k < y_dim; k++)
+				{
+					z[k] = nY[i + sequence_length + j][k];
+					y[k] = next_y[y_dim*j + k];
 
-				if (zscore_normalization)
-				{
-					y[k] = y[k] * Sigma[k] + Mean[k];
-					z = z * Sigma[k] + Mean[k];
-				}
-				if (minmax_normalization)
-				{
-					y[k] = y[k] * MaxMin[k] + Min[k];
-					z = z * MaxMin[k] + Min[k];
-				}
-				if (_11_normalization)
-				{
-					y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
-					z = 0.5*(z + 1) * MaxMin[k] + Min[k];
-				}
+					if (zscore_normalization)
+					{
+						y[k] = y[k] * Sigma[k] + Mean[k];
+						z[k] = z[k] * Sigma[k] + Mean[k];
+					}
+					if (minmax_normalization)
+					{
+						y[k] = y[k] * MaxMin[k] + Min[k];
+						z[k] = z[k] * MaxMin[k] + Min[k];
+					}
+					if (_11_normalization)
+					{
+						y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
+						z[k] = 0.5*(z[k] + 1) * MaxMin[k] + Min[k];
+					}
 
-				d = (y[k] - z);
-				mse += d*d;
-				yy.push_back(y[k]);
-				ff.push_back(train_labels[i][k]);
+					double d = (y[k] - z[k]);
+					mse += d*d;
+					yy.push_back(y[k]);
+					ff.push_back(z[k]);
+				}
 			}
 		}
 		double se = mse;
-		mse /= (train_images.size());
+		mse /= (yy.size());
 		rmse = sqrt(mse);
 		double Maximum_likelihood_estimator = mse;
 		double Maximum_log_likelihood = log(2.0*M_PI) + log(Maximum_likelihood_estimator) + 1.0;
@@ -2136,7 +2143,8 @@ public:
 		}
 
 		double r = y_yy_f_yy / sqrt(syy*sff);
-		double R2 = 1.0 - mse / sff;
+		double R2 = 1.0 - se / sff;
+		double adjustedR2 = 1.0 - (se/(yy.size()-this->x_dim-1)) / (sff/(yy.size() - 1));
 
 
 		//set_test(nn, out_sequence_length);
@@ -2176,7 +2184,8 @@ public:
 		fprintf(fp, "RMSE                    :%.4f\n", rmse);
 		fprintf(fp, "r(‘ŠŠÖŒW”)             :%.4f\n", r);
 		fprintf(fp, "R^2(Œˆ’èŒW”(Šñ—^—¦))   :%.4f\n", R2);
-		fprintf(fp, "AIC                     :%.3f\n", AIC);
+		fprintf(fp, "R^2(©—R“x’²®Ï‚İŒˆ’èŒW”(Šñ—^—¦))   :%.4f\n", adjustedR2);
+		//fprintf(fp, "AIC                     :%.3f\n", AIC);
 		//fprintf(fp, "chi square       :%f\n", chi_square);
 		//fprintf(fp, "p value          :%f\n", chi_pdf);
 		fprintf(fp, "--------------------------------------------------------------------\n");
