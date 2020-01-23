@@ -3,10 +3,21 @@
 
 #include "../../third_party/CSVparser/CSVparser_single.hpp"
 
+#define XXXXXX	-1
+#define YYYMMDD			0
+#define YYYMMDDHHMMSS	1
+#define _______HHMMSS	2
+#define _________MMSS	3
+#define ___________SS	3
+
 class CSVReader
 {
 	csv::Parser* csvfile_;
 public:
+	std::vector<std::string> timeform;
+	std::vector<int> timeform_idx;
+	int time_form_type = XXXXXX;
+	char time_form_delimiter = '\0';
 	CSVReader(char* filename, char separator = ',', bool use_header = true)
 	{
 		try
@@ -48,6 +59,17 @@ public:
 	std::string getHeader(const int index)
 	{
 		return csvfile_->getHeaderElement(index);
+	}
+
+	void gsub(std::string& s, std::string& target, std::string& replacement)
+	{
+		if (!target.empty()) {
+			std::string::size_type pos = 0;
+			while ((pos = s.find(target, pos)) != std::string::npos) {
+				s.replace(pos, target.length(), replacement);
+				pos += replacement.length();
+			}
+		}
 	}
 
 	std::vector<int> empty_cell;
@@ -118,6 +140,7 @@ public:
 
 		Matrix<dnn_double> mat(m, n);
 
+		timeform = std::vector<std::string>(m*n);
 		for (int i = 0; i < m; i++)
 		{
 			for (int j = 0; j < n; j++)
@@ -135,9 +158,10 @@ public:
 				const char* value = cell.c_str();
 
 				double v = 0.0;
+				bool no_number = true;
 				if (*value == '+' || *value == '-' || *value == '.' || isdigit(*value))
 				{
-					bool no_number = false;
+					no_number = false;
 					int dot = 0;
 					char* p = (char*)cell.c_str();
 					while (isspace(*p)) p++;
@@ -195,6 +219,204 @@ public:
 					v = 0;
 				}
 				mat(i, j) = v;
+#if 10				
+				if(no_number)
+				{
+					float t[6];
+					char buf[256];
+					bool match = false;
+					int stat = -1;
+					stat = sscanf(value, "%f/%f/%f %f:%f:%f", t, t + 1, t + 2, t + 3, t + 4, t + 5);
+					if (stat == 6)
+					{
+						time_form_type = YYYMMDDHHMMSS;
+						time_form_delimiter = '/';
+						match = true;
+					}
+					if (!match)
+					{
+						stat = sscanf(value, "\"%f/%f/%f %f:%f:%f\"", t, t + 1, t + 2, t + 3, t + 4, t + 5);
+						if (stat == 6)
+						{
+							time_form_type = YYYMMDDHHMMSS;
+							time_form_delimiter = '/';
+							match = true;
+						}
+					}
+					if (!match)
+					{
+						stat = sscanf(value, "%f/%f/%f", t, t + 1, t + 2);
+						if (stat == 3)
+						{
+							time_form_type = YYYMMDD;
+							time_form_delimiter = '/';
+							match = true;
+						}
+					}
+					if (!match)
+					{
+						stat = sscanf(value, "\"%f/%f/%f\"", t, t + 1, t + 2);
+						if (stat == 3)
+						{
+							time_form_type = YYYMMDD;
+							time_form_delimiter = '/';
+							match = true;
+						}
+					}
+					if (!match)
+					{
+						stat = sscanf(value, "%f-%f-%f %f:%f:%f", t, t + 1, t + 2, t + 3, t + 4, t + 5);
+						if (stat == 6)
+						{
+							time_form_type = YYYMMDDHHMMSS;
+							time_form_delimiter = '-';
+							match = true;
+						}
+					}
+					if (!match)
+					{
+						stat = sscanf(value, "\"%f-%f-%f %f:%f:%f\"", t, t + 1, t + 2, t + 3, t + 4, t + 5);
+						if (stat == 6)
+						{
+							time_form_type = YYYMMDDHHMMSS;
+							time_form_delimiter = '-';
+							match = true;
+						}
+					}
+					if (!match)
+					{
+						stat = sscanf(value, "%f-%f-%f", t, t + 1, t + 2);
+						if (stat == 3)
+						{
+							time_form_type = YYYMMDD;
+							time_form_delimiter = '-';
+							match = true;
+						}
+					}
+					if (!match)
+					{
+						stat = sscanf(value, "\"%f-%f-%f\"", t, t + 1, t + 2);
+						if (stat == 3)
+						{
+							time_form_type = YYYMMDD;
+							time_form_delimiter = '-';
+							match = true;
+						}
+					}
+					if (!match)
+					{
+						stat = sscanf(value, "\"%f:%f:%f\"", t, t + 1, t + 2);
+						if (stat == 3)
+						{
+							time_form_type = _______HHMMSS;
+							time_form_delimiter = ':';
+							match = true;
+						}
+					}
+					if (!match)
+					{
+						stat = sscanf(value, "%f:%f:%f", t, t + 1, t + 2);
+						if (stat == 3)
+						{
+							time_form_type = _______HHMMSS;
+							time_form_delimiter = ':';
+							match = true;
+						}
+					}
+					if (!match)
+					{
+						stat = sscanf(value, "\"%f:%f\"", t, t + 1);
+						if (stat == 2)
+						{
+							time_form_type = _________MMSS;
+							time_form_delimiter = ':';
+							match = true;
+						}
+					}
+					if (!match)
+					{
+						stat = sscanf(value, "%f:%f", t, t + 1);
+						if (stat == 2)
+						{
+							time_form_type = _________MMSS;
+							time_form_delimiter = ':';
+							match = true;
+						}
+					}
+
+					/////////////
+					stat = sscanf(value, "%f年%f月%f日 %f:%f:%f", t, t + 1, t + 2, t + 3, t + 4, t + 5);
+					if (stat == 6)
+					{
+						time_form_type = YYYMMDDHHMMSS;
+						time_form_delimiter = '/';
+						match = true;
+					}
+					if (!match)
+					{
+						stat = sscanf(value, "\"%f年%f月%f日 %f:%f:%f\"", t, t + 1, t + 2, t + 3, t + 4, t + 5);
+						if (stat == 6)
+						{
+							time_form_type = YYYMMDDHHMMSS;
+							time_form_delimiter = '/';
+							match = true;
+						}
+					}
+					if (!match)
+					{
+						stat = sscanf(value, "%f年%f月%f日", t, t + 1, t + 2);
+						if (stat == 3)
+						{
+							time_form_type = YYYMMDD;
+							time_form_delimiter = '/';
+							match = true;
+						}
+					}
+					if (!match)
+					{
+						stat = sscanf(value, "\"%f年%f月%f日\"", t, t + 1, t + 2);
+						if (stat == 3)
+						{
+							time_form_type = YYYMMDD;
+							time_form_delimiter = '/';
+							match = true;
+						}
+					}
+					if (!match)
+					{
+						stat = sscanf(value, "\"%f時%f分%f秒\"", t, t + 1, t + 2);
+						if (stat == 3)
+						{
+							time_form_type = _______HHMMSS;
+							time_form_delimiter = ':';
+							match = true;
+						}
+					}
+
+					/////////////
+					if (match)
+					{
+						char tmp[32];
+						strcpy(tmp, value);
+						if (tmp[0] == '\"')
+						{
+							tmp[strlen(tmp)-1] = '\0';
+							timeform[i*n + j] = tmp + 1;
+						}
+						else
+						{
+							timeform[i*n + j] = tmp;
+						}
+						gsub(timeform[i*n + j], std::string("-"), std::string("/"));
+						gsub(timeform[i*n + j], std::string("年"), std::string("/"));
+						gsub(timeform[i*n + j], std::string("月"), std::string("/"));
+						gsub(timeform[i*n + j], std::string("日"), std::string("/"));
+						gsub(timeform[i*n + j], std::string("時"), std::string(":"));
+						gsub(timeform[i*n + j], std::string("分"), std::string(":"));
+						gsub(timeform[i*n + j], std::string("秒"), std::string(":"));
+					}
+				}
+#endif
 			}
 		}
 		printf("empty cell:%d\n", empty.size());
