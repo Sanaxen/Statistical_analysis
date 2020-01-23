@@ -582,7 +582,15 @@ private:
 						}
 
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
-						fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
+						//fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
+						if (timestamp.size() > i)
+						{
+							fprintf(fp_test, "%s ", timestamp[i].c_str());
+						}
+						else
+						{
+							fprintf(fp_test, "%.3f ",timver_tmp[i]);
+						}
 
 						for (int k = 0; k < y_dim - 1; k++)
 						{
@@ -636,7 +644,15 @@ private:
 							}
 						}
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
-						fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
+						//fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
+						if (timestamp.size() > i)
+						{
+							fprintf(fp_test, "%s ", timestamp[i].c_str());
+						}
+						else
+						{
+							fprintf(fp_test, "%.3f ", timver_tmp[i]);
+						}
 						for (int k = 0; k < y_dim - 1; k++)
 						{
 							fprintf(fp_test, "%f %f ", y[k], y[k]);
@@ -678,7 +694,15 @@ private:
 							}
 						}
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
-						fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
+						//fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
+						if (timestamp.size() > i)
+						{
+							fprintf(fp_test, "%s ", timestamp[i].c_str());
+						}
+						else
+						{
+							fprintf(fp_test, "%.3f ", timver_tmp[i]);
+						}
 						for (int k = 0; k < y_dim - 1; k++)
 						{
 							fprintf(fp_test, "%f %f ", y[k], yy[k]);
@@ -718,7 +742,15 @@ private:
 							}
 						}
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
-						fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
+						//fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
+						if (timestamp.size() > i)
+						{
+							fprintf(fp_test, "%s ", timestamp[i].c_str());
+						}
+						else
+						{
+							fprintf(fp_test, "%.3f ", timver_tmp[i]);
+						}
 						for (int k = 0; k < y_dim - 1; k++)
 						{
 							fprintf(fp_test, "%f %f ", y[k], yy[k]);
@@ -758,7 +790,15 @@ private:
 							}
 						}
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
-						fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
+						//fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
+						if (timestamp.size() > i)
+						{
+							fprintf(fp_test, "%s ", timestamp[i].c_str());
+						}
+						else
+						{
+							fprintf(fp_test, "%.3f ", timver_tmp[i]);
+						}
 
 						if (i >= iY.size())
 						{
@@ -978,6 +1018,8 @@ public:
 	bool visualize_observed_predict_plot = false;
 	std::vector < std::vector<double>> Diff;
 	Matrix<dnn_double> timevar;
+	std::vector<std::string> timestamp;
+
 	size_t x_dim;
 	size_t y_dim;
 	size_t prophecy = 0;
@@ -1233,6 +1275,10 @@ public:
 		tiny_dnn::vec_t seq;
 		for (int k = 0; k < sequence_length; k++)
 		{
+			if (ny.size() <= start + k)
+			{
+				printf("range over");
+			}
 			add_seq(ny[start + k], seq);
 		}
 		return seq;
