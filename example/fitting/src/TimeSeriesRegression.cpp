@@ -62,6 +62,7 @@ int main(int argc, char** argv)
 	int fc_hidden_size = -1;
 	std::string weight_init_type = "xavier";
 	bool layer_graph_only = false;
+	std::string timeformat = "";
 
 	std::string data_path = "";
 
@@ -150,6 +151,10 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--layer_graph_only") {
 			layer_graph_only = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
+		else if (argname == "--timeformat") {
+			timeformat = std::string(argv[count + 1]);
 			continue;
 		}
 	}
@@ -487,10 +492,31 @@ int main(int argc, char** argv)
 	}
 	//y.print("y+yx");
 
+	std::vector<std::string> timestamp;
 	Matrix<dnn_double> tvar;
 	if (t_var_idx >= 0)
 	{
 		tvar = z.Col(t_var_idx);
+
+		if (csv1.timeform.size() && timeformat != "")
+		{
+			for (int i = 0; i < z.m; i++)
+			{
+				//tvar(i, 0) = i;
+				timestamp.push_back(csv1.timeform[i*z.n + t_var_idx]);
+				printf("%s\n", csv1.timeform[i*z.n + t_var_idx].c_str());
+			}
+		}
+		if (csv1.timeform.size() && timeformat == "")
+		{
+			for (int i = 0; i < z.m; i++)
+			{
+				char tmp[32];
+				sprintf(tmp, "%d", i);
+				timestamp.push_back(tmp);
+				tvar(i, 0) = i;
+			}
+		}
 	}
 	else
 	{
@@ -715,6 +741,8 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
+	timeSeries.timeformat = timeformat;
+	timeSeries.timestamp = timestamp;
 	timeSeries.timevar = tvar;
 	timeSeries.x_dim = x_dim;
 	timeSeries.y_dim = y_dim;
@@ -777,6 +805,9 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--fc_hidden_size") {
+			continue;
+		}
+		else if (argname == "--timeformat") {
 			continue;
 		}
 		else if (argname == "--weight_init_type") {
@@ -868,10 +899,6 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--observed_predict_plot") {
 			timeSeries.visualize_observed_predict_plot = atoi(argv[count + 1]);
-			continue;
-		}
-		else if (argname == "--timeformat") {
-			timeSeries.timeformat = std::string(argv[count + 1]);
 			continue;
 		}
 		else {
