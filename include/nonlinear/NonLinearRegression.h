@@ -1826,32 +1826,34 @@ public:
 		double rmse = 0.0;
 		for (int i = 0; i < nY.size(); i++)
 		{
-			tiny_dnn::vec_t& y = nn.predict(nX[i]);
-			for (int k = 0; k < y.size(); k++)
+			tiny_dnn::vec_t& predict_y = nn.predict(nX[i]);
+			tiny_dnn::vec_t y(predict_y.size());
+			tiny_dnn::vec_t z(predict_y.size());
+			for (int k = 0; k < predict_y.size(); k++)
 			{
-				float_t d;
+				z[k] = nY[i][k];
+				y[k] = predict_y[k];
+
 				if (zscore_normalization)
 				{
-					d = (y[k] - nY[i][k])* Sigma_y[k];
-				}else
+					y[k] = y[k] * Sigma_y[k] + Mean_y[k];
+					z[k] = z[k] * Sigma_y[k] + Mean_y[k];
+				}
 				if (minmax_normalization)
 				{
-					d = (y[k] - nY[i][k])* MaxMin_y[k];
-				}else
+					y[k] = y[k] * MaxMin_y[k] + Min_y[k];
+					z[k] = z[k] * MaxMin_y[k] + Min_y[k];
+				}
 				if (_11_normalization)
 				{
-					d = 2.0*(y[k] - nY[i][k])* MaxMin_y[k];
+					y[k] = 0.5*(y[k] + 1) * MaxMin_y[k] + Min_y[k];
+					z[k] = 0.5*(z[k] + 1) * MaxMin_y[k] + Min_y[k];
 				}
-				else
-				{
-					d = (y[k] - nY[i][k]);
-				}
-				mse += d*d;
 
-				dd.push_back(d);
-				xx.push_back(nX[i][0]);
+				double d = (y[k] - z[k]);
+				mse += d*d;
 				yy.push_back(y[k]);
-				ff.push_back(nY[i][k]);
+				ff.push_back(z[k]);
 			}
 		}
 		double se = mse;
@@ -1876,7 +1878,6 @@ public:
 		{
 			mean_yy += yy[i];
 			mean_ff += ff[i];
-			d_sum += dd[i];
 		}
 		f_sum = mean_ff;
 		mean_ff /= yy.size();
@@ -1898,16 +1899,16 @@ public:
 		double R2 = 1.0 - se / sff;
 		double adjustedR2 = 1.0 - (se / (yy.size() - this->x_idx.size() - 1)) / (sff / (yy.size() - 1));
 
-		double chi_square = 0.0;
-		for (int i = 0; i < yy.size(); i++)
-		{
-			double d = dd[i] / d_sum;
-			double f = ff[i] / f_sum;
-			chi_square += (d / (f + 1.e-10))*(d / (f + 1.e-10));
-		}
+		//double chi_square = 0.0;
+		//for (int i = 0; i < yy.size(); i++)
+		//{
+		//	double d = dd[i] / d_sum;
+		//	double f = ff[i] / f_sum;
+		//	chi_square += (d / (f + 1.e-10))*(d / (f + 1.e-10));
+		//}
 
-		Chi_distribution chi_distribution(yy.size() -1);
-		double chi_pdf = chi_distribution.p_value(ƒ¿);
+		//Chi_distribution chi_distribution(yy.size() -1);
+		//double chi_pdf = chi_distribution.p_value(ƒ¿);
 
 		fprintf(fp, "Status:%d\n", getStatus());
 		fprintf(fp, "--------------------------------------------------------------------\n");
