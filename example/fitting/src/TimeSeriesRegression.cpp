@@ -502,6 +502,14 @@ int main(int argc, char** argv)
 		{
 			for (int i = 0; i < z.m; i++)
 			{
+				if (csv1.timeform[i*z.n + t_var_idx] == "")
+				{
+					char tmp[32];
+					sprintf(tmp, "%d/01/01", (int)(tvar(i, 0)+0.5f));
+					timestamp.push_back(tmp);
+					printf("%s\n", tmp);
+					continue;
+				}
 				//tvar(i, 0) = i;
 				timestamp.push_back(csv1.timeform[i*z.n + t_var_idx]);
 				printf("%s\n", csv1.timeform[i*z.n + t_var_idx].c_str());
