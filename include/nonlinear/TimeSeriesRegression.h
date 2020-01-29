@@ -612,10 +612,10 @@ private:
 						else
 							fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
 
-						if (fp_predict)
-						{
-							fprintf(fp_test, "%f\n", yy[y_dim - 1]);
-						}
+						//if (fp_predict)
+						//{
+						//	fprintf(fp_test, "%f\n", yy[y_dim - 1]);
+						//}
 					}
 					fclose(fp_test);
 				}
@@ -866,8 +866,8 @@ private:
 			{
 				Matrix<dnn_double> x;
 				Matrix<dnn_double> y;
-				train.resize(iY.size() - sequence_length);
-				predict.resize(iY.size() - sequence_length);
+				train.resize(iY.size()- sequence_length);
+				predict.resize(iY.size()- sequence_length);
 				TensorToMatrix(train, x);
 				TensorToMatrix(predict, y);
 				Matrix<dnn_double> xx = x;
