@@ -866,11 +866,18 @@ private:
 			{
 				Matrix<dnn_double> x;
 				Matrix<dnn_double> y;
-				train.resize(iY.size()- sequence_length);
-				predict.resize(iY.size()- sequence_length);
+				train.resize(iY.size() - sequence_length);
+				predict.resize(iY.size() - sequence_length);
 				TensorToMatrix(train, x);
 				TensorToMatrix(predict, y);
 				Matrix<dnn_double> xx = x;
+
+				auto& mean = x.Mean();
+				x = x.whitening(mean, x.Std(mean));
+				mean = y.Mean();
+				y = y.whitening(mean, y.Std(mean));
+				mean = xx.Mean();
+				xx = xx.whitening(mean, xx.Std(mean));
 
 				const size_t time_str_sz = 80;
 				char time_str[time_str_sz];
@@ -880,10 +887,19 @@ private:
 				FILE* fp_test = fopen("mahalanobis_dist.csv", "w");
 				if (fp_test)
 				{
+					fprintf(fp_test, "T,measured,predict,mahalanobis_dist\n");
 					for (int i = 0; i < train.size(); i++)
 					{
 						//fprintf(fp_test, "%f,%f,%f\n", timver_tmp[i], y(i,0), x(i,0));
-						fprintf(fp_test, "%s,%f,%f\n", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz), y(i, 0), x(i, 0));
+						if (timestamp.size() > i)
+						{
+							fprintf(fp_test, "%s, ", timestamp[i].c_str());
+						}
+						else
+						{
+							fprintf(fp_test, "%.3f, ", timver_tmp[i]);
+						}
+						fprintf(fp_test, "%f,%f,%f\n", xx(i, 0), y(i, 0), x(i, 0));
 					}
 					fclose(fp_test);
 				}
