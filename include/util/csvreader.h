@@ -407,10 +407,10 @@ public:
 						{
 							timeform[i*n + j] = tmp;
 						}
-						gsub(timeform[i*n + j], std::string("-"), std::string("/"));
-						gsub(timeform[i*n + j], std::string("”N"), std::string("/"));
-						gsub(timeform[i*n + j], std::string("ŒŽ"), std::string("/"));
-						gsub(timeform[i*n + j], std::string("“ú"), std::string("/"));
+						gsub(timeform[i*n + j], std::string("/"), std::string("-"));
+						gsub(timeform[i*n + j], std::string("”N"), std::string("-"));
+						gsub(timeform[i*n + j], std::string("ŒŽ"), std::string("-"));
+						gsub(timeform[i*n + j], std::string("“ú"), std::string("-"));
 						gsub(timeform[i*n + j], std::string("Žž"), std::string(":"));
 						gsub(timeform[i*n + j], std::string("•ª"), std::string(":"));
 						gsub(timeform[i*n + j], std::string("•b"), std::string(":"));
