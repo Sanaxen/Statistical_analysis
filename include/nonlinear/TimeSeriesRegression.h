@@ -69,6 +69,8 @@ class TimeSeriesRegression
 
 public:
 	std::vector<std::string> header;
+	std::vector<int> xx_var_idx;		// non normalize var
+	double xx_var_scale = 1.0;			// non normalize var scaling
 	std::vector<int> x_idx;
 	std::vector<int> y_idx;
 	std::string timeformat = "";
@@ -104,6 +106,11 @@ private:
 		}
 		for (int i = 0; i < X.size(); i++)
 		{
+			if (xx_var_idx.size() && xx_var_idx[i])
+			{
+				sigma[i] = xx_var_scale;
+				mean[i] = 0.0;
+			}
 			for (int k = 0; k < X[0].size(); k++)
 			{
 				X[i][k] = (X[i][k] - mean[k]) / (sigma[k] + 1.0e-10);
@@ -166,6 +173,11 @@ private:
 		}
 		for (int i = 0; i < X.size(); i++)
 		{
+			if (xx_var_idx.size() && xx_var_idx[i])
+			{
+				maxmin_[i] = xx_var_scale;
+				min_[i] = 0.0;
+			}
 			for (int k = 0; k < X[0].size(); k++)
 			{
 				X[i][k] = (X[i][k] - min_[k]) / maxmin_[k];
@@ -229,6 +241,11 @@ private:
 		}
 		for (int i = 0; i < X.size(); i++)
 		{
+			if (xx_var_idx.size() && xx_var_idx[i])
+			{
+				maxmin_[i] = 2.0*xx_var_scale;
+				min_[i] = -1.0 * xx_var_scale;
+			}
 			for (int k = 0; k < X[0].size(); k++)
 			{
 				X[i][k] = (X[i][k] - min_[k])*2 / maxmin_[k]-1;

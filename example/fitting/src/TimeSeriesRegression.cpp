@@ -17,6 +17,7 @@
 #ifdef USE_MKL
 #define CNN_USE_INTEL_MKL
 #endif
+#define CNN_USE_TBB
 
 #include "../../../include/util/dnn_util.hpp"
 #include "../../../include/nonlinear/TimeSeriesRegression.h"
@@ -43,6 +44,8 @@ int main(int argc, char** argv)
 
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
+	std::vector<std::string> xx_var;
+	double xx_var_scale = 1.0;
 	std::string t_var = "";
 	int sequence_length = -1;
 	int out_sequence_length = 1;
@@ -113,8 +116,14 @@ int main(int argc, char** argv)
 		if (argname == "--header") {
 			header = (atoi(argv[count + 1]) != 0) ? true : false;
 		}
+		if (argname == "--xx_var") {
+			xx_var.push_back(argv[count + 1]);
+		}
 		if (argname == "--x_var") {
 			x_var.push_back(argv[count + 1]);
+		}
+		if (argname == "--xx_var_scale") {
+			xx_var_scale = atof(argv[count + 1]);
 		}
 		if (argname == "--y_var") {
 			y_var.push_back(argv[count + 1]);
@@ -217,9 +226,58 @@ int main(int argc, char** argv)
 	}
 	csv1.clear();
 
+	std::vector<int> xx_var_idx;
 	std::vector<int> x_var_idx;
 	std::vector<int> y_var_idx;
 	int t_var_idx = -1;
+
+	if (xx_var.size())
+	{
+		for (int i = 0; i < xx_var.size(); i++)
+		{
+			for (int j = 0; j < header_names.size(); j++)
+			{
+				if (xx_var[i] == header_names[j])
+				{
+					xx_var_idx.push_back(j);
+				}
+				else if ("\"" + xx_var[i] + "\"" == header_names[j])
+				{
+					xx_var_idx.push_back(j);
+				}
+				else if ("\"" + header_names[j] + "\"" == xx_var[i])
+				{
+					xx_var_idx.push_back(j);
+				}
+				else
+				{
+					char buf[32];
+					sprintf(buf, "%d", j);
+					if (xx_var[i] == std::string(buf))
+					{
+						xx_var_idx.push_back(j);
+					}
+					sprintf(buf, "\"%d\"", j);
+					if (xx_var[i] == std::string(buf))
+					{
+						xx_var_idx.push_back(j);
+					}
+				}
+			}
+		}
+		if (xx_var_idx.size() == 0)
+		{
+			for (int i = 0; i < xx_var.size(); i++)
+			{
+				xx_var_idx.push_back(atoi(xx_var[i].c_str()));
+			}
+		}
+		if (xx_var_idx.size() != xx_var.size())
+		{
+			printf("ERROR:--x_var ERROR\n");
+			return -1;
+		}
+	}
 
 	if (x_var.size())
 	{
@@ -446,6 +504,13 @@ int main(int argc, char** argv)
 			if (fp)fprintf(fp, "%d,%s\n", x_var_idx[i], header_names[x_var_idx[i]].c_str());
 		}
 		fclose(fp);
+
+		fp = fopen("select_variables2.dat", "w");
+		for (int i = 0; i < xx_var_idx.size(); i++)
+		{
+			if (fp)fprintf(fp, "%d,%s\n", xx_var_idx[i], header_names[xx_var_idx[i]].c_str());
+		}
+		fclose(fp);
 	}
 
 	Matrix<dnn_double> x;
@@ -505,7 +570,7 @@ int main(int argc, char** argv)
 				if (csv1.timeform[i*z.n + t_var_idx] == "")
 				{
 					char tmp[32];
-					sprintf(tmp, "%d-01-01", (int)(tvar(i, 0)+0.5f));
+					sprintf(tmp, "%d/01/01", (int)(tvar(i, 0)+0.5f));
 					timestamp.push_back(tmp);
 					printf("%s\n", tmp);
 					continue;
@@ -760,6 +825,8 @@ int main(int argc, char** argv)
 	timeSeries.plot = 10;
 	timeSeries.test_mode = test_mode;
 	timeSeries.weight_init_type = weight_init_type;
+	timeSeries.xx_var_idx = xx_var_idx;
+	timeSeries.xx_var_scale = xx_var_scale;
 
 	int n_layers = -1;
 	int n_rnn_layers = -1;
@@ -792,6 +859,12 @@ int main(int argc, char** argv)
 			continue;
 		} 
 		else if (argname == "--header") {
+			continue;
+		}
+		if (argname == "--xx_var_scale") {
+			continue;
+		}
+		else if (argname == "--xx_var") {
 			continue;
 		}
 		else if (argname == "--x_var") {

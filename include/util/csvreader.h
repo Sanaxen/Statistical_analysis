@@ -157,6 +157,7 @@ public:
 				std::string cell = row[j];
 				const char* value = cell.c_str();
 
+				mat(i, j) = 0.0;
 				double v = 0.0;
 				bool no_number = true;
 				if (*value == '+' || *value == '-' || *value == '.' || isdigit(*value))

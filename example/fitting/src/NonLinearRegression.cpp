@@ -36,6 +36,8 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
+	std::vector<std::string> xx_var;	//non normalize var
+	double xx_var_scale = 1.0;			// non normalize var scaling
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
 	std::string normalization_type = "zscore";
@@ -102,6 +104,12 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--header") {
 			header = (atoi(argv[count + 1]) != 0) ? true : false;
+		}
+		else if (argname == "--xx_var_scale") {
+			xx_var_scale = atof(argv[count + 1]);
+		}
+		else if (argname == "--xx_var") {
+			xx_var.push_back(argv[count + 1]);
 		}
 		else if (argname == "--x_var") {
 			x_var.push_back(argv[count + 1]);
@@ -207,8 +215,57 @@ int main(int argc, char** argv)
 	}
 	csv1.clear();
 
+	std::vector<int> xx_var_idx;
 	std::vector<int> x_var_idx;
 	std::vector<int> y_var_idx;
+
+	if (xx_var.size())
+	{
+		for (int i = 0; i < xx_var.size(); i++)
+		{
+			for (int j = 0; j < header_names.size(); j++)
+			{
+				if (xx_var[i] == header_names[j])
+				{
+					xx_var_idx.push_back(j);
+				}
+				else if ("\"" + xx_var[i] + "\"" == header_names[j])
+				{
+					xx_var_idx.push_back(j);
+				}
+				else if ("\"" + header_names[j] + "\"" == xx_var[i])
+				{
+					xx_var_idx.push_back(j);
+				}
+				else
+				{
+					char buf[32];
+					sprintf(buf, "%d", j);
+					if (xx_var[i] == std::string(buf))
+					{
+						xx_var_idx.push_back(j);
+					}
+					sprintf(buf, "\"%d\"", j);
+					if (xx_var[i] == std::string(buf))
+					{
+						xx_var_idx.push_back(j);
+					}
+				}
+			}
+		}
+		if (xx_var_idx.size() == 0)
+		{
+			for (int i = 0; i < xx_var.size(); i++)
+			{
+				xx_var_idx.push_back(atoi(x_var[i].c_str()));
+			}
+		}
+		if (xx_var_idx.size() != xx_var.size())
+		{
+			printf("ERROR:--x_var ERROR\n");
+			return -1;
+		}
+	}
 
 	if (x_var.size())
 	{
@@ -458,6 +515,13 @@ int main(int argc, char** argv)
 			if (fp)fprintf(fp, "%d,%s\n", x_var_idx[i], header_names[x_var_idx[i]].c_str());
 		}
 		fclose(fp);
+		
+		fp = fopen("select_variables2.dat", "w");
+		for (int i = 0; i < xx_var_idx.size(); i++)
+		{
+			if (fp)fprintf(fp, "%d,%s\n", xx_var_idx[i], header_names[xx_var_idx[i]].c_str());
+		}
+		fclose(fp);
 	}
 
 	tiny_dnn::tensor_t X, Y;
@@ -482,6 +546,8 @@ int main(int argc, char** argv)
 	regression.test_mode = test_mode;
 
 	regression.header = header_names;
+	regression.xx_idx = xx_var_idx;
+	regression.xx_var_scale = xx_var_scale;
 	regression.x_idx = x_var_idx;
 	regression.y_idx = y_var_idx;
 	regression.weight_init_type = weight_init_type;
@@ -517,6 +583,12 @@ int main(int argc, char** argv)
 		}
 		else
 		if (argname == "--header") {
+			continue;
+		}
+		else if (argname == "--xx_var") {
+			continue;
+		}
+		else if (argname == "--xx_var_scale") {
 			continue;
 		}
 		else if (argname == "--x_var") {
