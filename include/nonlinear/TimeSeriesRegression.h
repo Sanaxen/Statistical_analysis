@@ -619,10 +619,10 @@ private:
 							{
 								fprintf(fp_test, "%f %f ", y[k], yy[k]);
 							}
-							if (fp_predict)
-							{
-								fprintf(fp_test, "%f,", yy[k]);
-							}
+							//if (fp_predict)
+							//{
+							//	fprintf(fp_test, "%f,", yy[k]);
+							//}
 						}
 						if (i >= iY.size())
 							fprintf(fp_test, "NaN %f\n", yy[y_dim - 1]);
