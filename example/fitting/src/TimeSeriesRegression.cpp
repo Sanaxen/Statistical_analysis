@@ -50,6 +50,7 @@ int main(int argc, char** argv)
 	int sequence_length = -1;
 	int out_sequence_length = 1;
 	std::string normalization_type = "";
+	bool use_latest_observations = true;
 
 	int classification = -1;
 	int read_max = -1;
@@ -116,14 +117,14 @@ int main(int argc, char** argv)
 		if (argname == "--header") {
 			header = (atoi(argv[count + 1]) != 0) ? true : false;
 		}
-		if (argname == "--xx_var") {
-			xx_var.push_back(argv[count + 1]);
-		}
 		if (argname == "--x_var") {
 			x_var.push_back(argv[count + 1]);
 		}
 		if (argname == "--xx_var_scale") {
 			xx_var_scale = atof(argv[count + 1]);
+		}
+		if (argname == "--xx_var") {
+			xx_var.push_back(argv[count + 1]);
 		}
 		if (argname == "--y_var") {
 			y_var.push_back(argv[count + 1]);
@@ -804,7 +805,7 @@ int main(int argc, char** argv)
 	MatrixToTensor(y, Y, read_max);
 
 
-	TimeSeriesRegression timeSeries(X, Y, y_dim, x_dim, normalization_type, classification);
+	TimeSeriesRegression timeSeries(X, Y, y_dim, x_dim, normalization_type, classification, test_mode);
 	if (timeSeries.getStatus() == -1)
 	{
 		if (classification < 2)
@@ -982,6 +983,11 @@ int main(int argc, char** argv)
 			timeSeries.visualize_observed_predict_plot = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--use_latest_observations")
+		{
+			timeSeries.use_latest_observations = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
@@ -1025,6 +1031,7 @@ int main(int argc, char** argv)
 		<< "timeformat      : " << timeSeries.timeformat << std::endl
 		<< "fc_hidden_size  : " << fc_hidden_size << std::endl
 		<< "weight_init_type       : " << timeSeries.weight_init_type << std::endl
+		<< "use_latest_observations: " << timeSeries.use_latest_observations << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		<< std::endl;
 //

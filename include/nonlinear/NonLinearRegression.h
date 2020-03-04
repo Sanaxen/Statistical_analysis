@@ -49,6 +49,7 @@ class NonLinearRegression
 	};
 
 public:
+	bool normalized = false;
 	std::vector<std::string> header;
 	std::vector<int> xx_idx;			// non normalize var
 	double xx_var_scale = 1.0;			// non normalize var scaling
@@ -58,32 +59,36 @@ public:
 private:
 	void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
 	{
-		mean = std::vector<float_t>(X[0].size(), 0.0);
-		sigma = std::vector<float_t>(X[0].size(), 0.0);
+		if (!normalized)
+		{
+			mean = std::vector<float_t>(X[0].size(), 0.0);
+			sigma = std::vector<float_t>(X[0].size(), 0.0);
 
-		for (int i = 0; i < X.size(); i++)
-		{
+			for (int i = 0; i < X.size(); i++)
+			{
+				for (int k = 0; k < X[0].size(); k++)
+				{
+					mean[k] += X[i][k];
+				}
+			}
 			for (int k = 0; k < X[0].size(); k++)
 			{
-				mean[k] += X[i][k];
+				mean[k] /= X.size();
 			}
-		}
-		for (int k = 0; k < X[0].size(); k++)
-		{
-			mean[k] /= X.size();
-		}
-		for (int i = 0; i < X.size(); i++)
-		{
+			for (int i = 0; i < X.size(); i++)
+			{
+				for (int k = 0; k < X[0].size(); k++)
+				{
+					sigma[k] += (X[i][k] - mean[k])*(X[i][k] - mean[k]);
+				}
+			}
 			for (int k = 0; k < X[0].size(); k++)
 			{
-				sigma[k] += (X[i][k] - mean[k])*(X[i][k] - mean[k]);
+				sigma[k] /= (X.size() - 1);
+				sigma[k] = sqrt(sigma[k]);
 			}
 		}
-		for (int k = 0; k < X[0].size(); k++)
-		{
-			sigma[k] /= (X.size()-1);
-			sigma[k] = sqrt(sigma[k]);
-		}
+
 		for (int i = 0; i < X.size(); i++)
 		{
 			if (xx_idx.size() && xx_idx[i])
@@ -100,56 +105,72 @@ private:
 
 	void normalizeMinMax(tiny_dnn::tensor_t& X, std::vector<float_t>& min_, std::vector<float_t>& maxmin_)
 	{
-		min_ = std::vector<float_t>(X[0].size(), 0.0);
-		maxmin_ = std::vector<float_t>(X[0].size(), 1.0);
+		if (!normalized)
+		{
+			min_ = std::vector<float_t>(X[0].size(), 0.0);
+			maxmin_ = std::vector<float_t>(X[0].size(), 1.0);
 
 #if 0
-		float max_value = -std::numeric_limits<float>::max();
-		float min_value = std::numeric_limits<float>::max();
-		for (int i = 0; i < X.size(); i++)
-		{
-			for (int k = 0; k < X[0].size(); k++)
-			{
-				if (max_value < X[i][k]) max_value = X[i][k];
-				if (min_value > X[i][k]) min_value = X[i][k];
-			}
-		}
-		for (int k = 0; k < X[0].size(); k++)
-		{
-			min_[k] = min_value;
-			maxmin_[k] = (max_value - min_value);
-
-			if (fabs(maxmin_[k]) < 1.0e-14)
-			{
-				min_[k] = 0.0;
-				maxmin_[k] = max_value;
-			}
-		}
-
-		for (int i = 0; i < X.size(); i++)
-		{
-			for (int k = 0; k < X[0].size(); k++)
-			{
-				X[i][k] = (X[i][k] - min_[k]) / maxmin_[k];
-			}
-		}
-#else
-		for (int k = 0; k < X[0].size(); k++)
-		{
 			float max_value = -std::numeric_limits<float>::max();
 			float min_value = std::numeric_limits<float>::max();
 			for (int i = 0; i < X.size(); i++)
 			{
-				if (max_value < X[i][k]) max_value = X[i][k];
-				if (min_value > X[i][k]) min_value = X[i][k];
+				for (int k = 0; k < X[0].size(); k++)
+				{
+					if (max_value < X[i][k]) max_value = X[i][k];
+					if (min_value > X[i][k]) min_value = X[i][k];
+				}
 			}
-			min_[k] = min_value;
-			maxmin_[k] = (max_value - min_value);
-			if (fabs(maxmin_[k]) < 1.0e-14)
+			for (int k = 0; k < X[0].size(); k++)
 			{
-				min_[k] = 0.0;
-				maxmin_[k] = max_value;
+				min_[k] = min_value;
+				maxmin_[k] = (max_value - min_value);
+
+				if (fabs(maxmin_[k]) < 1.0e-14)
+				{
+					min_[k] = 0.0;
+					maxmin_[k] = max_value;
+				}
 			}
+
+			for (int i = 0; i < X.size(); i++)
+			{
+				for (int k = 0; k < X[0].size(); k++)
+				{
+					X[i][k] = (X[i][k] - min_[k]) / maxmin_[k];
+				}
+			}
+#else
+			for (int k = 0; k < X[0].size(); k++)
+			{
+				float max_value = -std::numeric_limits<float>::max();
+				float min_value = std::numeric_limits<float>::max();
+				for (int i = 0; i < X.size(); i++)
+				{
+					if (max_value < X[i][k]) max_value = X[i][k];
+					if (min_value > X[i][k]) min_value = X[i][k];
+				}
+				min_[k] = min_value;
+				maxmin_[k] = (max_value - min_value);
+				if (fabs(maxmin_[k]) < 1.0e-14)
+				{
+					min_[k] = 0.0;
+					maxmin_[k] = max_value;
+				}
+			}
+			for (int i = 0; i < X.size(); i++)
+			{
+				if (xx_idx.size() && xx_idx[i])
+				{
+					maxmin_[i] = xx_var_scale;
+					min_[i] = 0.0;
+				}
+				for (int k = 0; k < X[0].size(); k++)
+				{
+					X[i][k] = (X[i][k] - min_[k]) / maxmin_[k];
+				}
+			}
+#endif
 		}
 		for (int i = 0; i < X.size(); i++)
 		{
@@ -163,60 +184,63 @@ private:
 				X[i][k] = (X[i][k] - min_[k]) / maxmin_[k];
 			}
 		}
-#endif
 	}
 	void normalize1_1(tiny_dnn::tensor_t& X, std::vector<float_t>& min_, std::vector<float_t>& maxmin_)
 	{
-		min_ = std::vector<float_t>(X[0].size(), 0.0);
-		maxmin_ = std::vector<float_t>(X[0].size(), 1.0);
+		if (!normalized)
+		{
+			min_ = std::vector<float_t>(X[0].size(), 0.0);
+			maxmin_ = std::vector<float_t>(X[0].size(), 1.0);
 
 #if 0
-		float max_value = -std::numeric_limits<float>::max();
-		float min_value = std::numeric_limits<float>::max();
-		for (int i = 0; i < X.size(); i++)
-		{
-			for (int k = 0; k < X[0].size(); k++)
-			{
-				if (max_value < X[i][k]) max_value = X[i][k];
-				if (min_value > X[i][k]) min_value = X[i][k];
-			}
-		}
-		for (int k = 0; k < X[0].size(); k++)
-		{
-			min_[k] = min_value;
-			maxmin_[k] = (max_value - min_value);
-
-			if (fabs(maxmin_[k]) < 1.0e-14)
-			{
-				min_[k] = 0.0;
-				maxmin_[k] = max_value;
-			}
-		}
-
-		for (int i = 0; i < X.size(); i++)
-		{
-			for (int k = 0; k < X[0].size(); k++)
-			{
-				X[i][k] = (X[i][k] - min_[k]) / maxmin_[k];
-			}
-		}
-#else
-		for (int k = 0; k < X[0].size(); k++)
-		{
 			float max_value = -std::numeric_limits<float>::max();
 			float min_value = std::numeric_limits<float>::max();
 			for (int i = 0; i < X.size(); i++)
 			{
-				if (max_value < X[i][k]) max_value = X[i][k];
-				if (min_value > X[i][k]) min_value = X[i][k];
+				for (int k = 0; k < X[0].size(); k++)
+				{
+					if (max_value < X[i][k]) max_value = X[i][k];
+					if (min_value > X[i][k]) min_value = X[i][k];
+				}
 			}
-			min_[k] = min_value;
-			maxmin_[k] = (max_value - min_value);
-			if (fabs(maxmin_[k]) < 1.0e-14)
+			for (int k = 0; k < X[0].size(); k++)
 			{
-				min_[k] = 0.0;
-				maxmin_[k] = max_value;
+				min_[k] = min_value;
+				maxmin_[k] = (max_value - min_value);
+
+				if (fabs(maxmin_[k]) < 1.0e-14)
+				{
+					min_[k] = 0.0;
+					maxmin_[k] = max_value;
+				}
 			}
+
+			for (int i = 0; i < X.size(); i++)
+			{
+				for (int k = 0; k < X[0].size(); k++)
+				{
+					X[i][k] = (X[i][k] - min_[k]) / maxmin_[k];
+		}
+	}
+#else
+			for (int k = 0; k < X[0].size(); k++)
+			{
+				float max_value = -std::numeric_limits<float>::max();
+				float min_value = std::numeric_limits<float>::max();
+				for (int i = 0; i < X.size(); i++)
+				{
+					if (max_value < X[i][k]) max_value = X[i][k];
+					if (min_value > X[i][k]) min_value = X[i][k];
+				}
+				min_[k] = min_value;
+				maxmin_[k] = (max_value - min_value);
+				if (fabs(maxmin_[k]) < 1.0e-14)
+				{
+					min_[k] = 0.0;
+					maxmin_[k] = max_value;
+				}
+			}
+#endif
 		}
 		for (int i = 0; i < X.size(); i++)
 		{
@@ -230,7 +254,6 @@ private:
 				X[i][k] = (X[i][k] - min_[k]) * 2 / maxmin_[k] - 1;
 			}
 		}
-#endif
 	}
 
 	float cost_min = std::numeric_limits<float>::max();
@@ -246,7 +269,14 @@ private:
 
 		tiny_dnn::network2<tiny_dnn::sequential> nn_test;
 
-		nn_test.load("tmp.model");
+		if (test_mode)
+		{
+			nn_test.load("fit_best.model");
+		}
+		else
+		{
+			nn_test.load("tmp.model");
+		}
 		printf("layers:%zd\n", nn_test.depth());
 
 		set_test(nn_test, 1);
@@ -697,8 +727,99 @@ public:
 	{
 		return error;
 	}
-	NonLinearRegression(tiny_dnn::tensor_t& Xi, tiny_dnn::tensor_t& Yi, std::string& normalize_type= std::string("zscore"), double dec_random_=0.0, double fluctuation_=0.0, std::string regression_type = "", int classification_ = -1)
+
+	void normalize_info_save(std::string& normalize_type)
+	{
+		if (test_mode) return;
+
+		FILE* fp = fopen("normalize_info.dat", "w");
+		if (fp)
+		{
+			fprintf(fp, "%s\n", normalize_type.c_str());
+			fprintf(fp, "%d %d\n", nX[0].size(), nY[0].size());
+			for (int i = 0; i < nX[0].size(); i++)
+			{
+				fprintf(fp, "%.16f %.16f\n", Mean_x[i], Sigma_x[i]);
+				fprintf(fp, "%.16f %.16f\n", Min_x[i], MaxMin_x[i]);
+			}
+			for (int i = 0; i < nY[0].size(); i++)
+			{
+				fprintf(fp, "%.16f %.16f\n", Mean_y[i], Sigma_y[i]);
+				fprintf(fp, "%.16f %.16f\n", Min_y[i], MaxMin_y[i]);
+			}
+			fclose(fp);
+		}
+	}
+	void normalize_info_load(std::string& normalize_type)
+	{
+		normalized = false;
+		if (!test_mode) return;
+
+		FILE* fp = fopen("normalize_info.dat", "r");
+		if (fp)
+		{
+			char buf[256];
+			char dummy[128];
+			double a = 0.0, b = 0.0;
+			int d = 0, dd = 0;
+
+			fgets(buf, 256, fp);
+			sscanf(buf, "%s\n", dummy);
+			char *p = strchr(dummy, '\n');
+			if (p) *p = '\0';
+			if (normalize_type != dummy)
+			{
+				printf("ERROR:normalize_type miss match!\n");
+				exit(0);
+			}
+
+			fgets(buf, 256, fp);
+			sscanf(buf, "%d %d\n", &d, &dd);
+			if (d != nX[0].size() || dd != nY[0].size())
+			{
+				printf("ERROR:dimension miss match!\n");
+				exit(0);
+			}
+			Mean_x = std::vector<float_t>(d, 0.0);
+			Sigma_x = std::vector<float_t>(d, 0.0);
+			Min_x = std::vector<float_t>(d, 0.0);
+			MaxMin_x = std::vector<float_t>(d, 0.0);
+
+			Mean_y = std::vector<float_t>(dd, 0.0);
+			Sigma_y = std::vector<float_t>(dd, 0.0);
+			Min_y = std::vector<float_t>(dd, 0.0);
+			MaxMin_y = std::vector<float_t>(dd, 0.0);
+			for (int i = 0; i < d; i++)
+			{
+				fgets(buf, 256, fp);
+				sscanf(buf, "%lf %lf\n", &a, &b);
+				Mean_x[i] = a;
+				Sigma_x[i] = b;
+				fgets(buf, 256, fp);
+				sscanf(buf, "%lf %lf\n", &a, &b);
+				Min_x[i] = a;
+				MaxMin_x[i] = b;
+			}
+			for (int i = 0; i < dd; i++)
+			{
+				fgets(buf, 256, fp);
+				sscanf(buf, "%lf %lf\n", &a, &b);
+				Mean_y[i] = a;
+				Sigma_y[i] = b;
+				fgets(buf, 256, fp);
+				sscanf(buf, "%lf %lf\n", &a, &b);
+				Min_y[i] = a;
+				MaxMin_y[i] = b;
+			}
+			printf("load scaling data\n");
+			fclose(fp);
+		}
+		normalized = true;
+	}
+
+	NonLinearRegression(tiny_dnn::tensor_t& Xi, tiny_dnn::tensor_t& Yi, std::string& normalize_type= std::string("zscore"), double dec_random_=0.0, double fluctuation_=0.0, std::string regression_type = "", int classification_ = -1, bool test_mode_ = false)
 	{		
+		test_mode = test_mode_;
 		iX = Xi;
 		iY = Yi;
 		nX = Xi;
@@ -716,6 +837,8 @@ public:
 
 		if (_11_normalization)
 		{
+			if (test_mode) normalize_info_load(normalize_type);
+
 			normalize1_1(nX, Min_x, MaxMin_x);
 			normalize1_1(nY, Min_y, MaxMin_y);
 			printf("[-1,1] normalization\n");
@@ -724,6 +847,7 @@ public:
 			tiny_dnn::tensor_t dmyY = nY;
 			normalizeZ(dmyX, Mean_x, Sigma_x);
 			normalizeZ(dmyY, Mean_y, Sigma_y);
+			if (!test_mode) normalize_info_save(normalize_type);
 
 			if (regression == "logistic" || classification >= 2)
 			{
@@ -735,6 +859,8 @@ public:
 
 		if (minmax_normalization)
 		{
+			if (test_mode) normalize_info_load(normalize_type);
+
 			normalizeMinMax(nX, Min_x, MaxMin_x);
 			normalizeMinMax(nY, Min_y, MaxMin_y);
 			printf("minmax_normalization\n");
@@ -743,6 +869,8 @@ public:
 			tiny_dnn::tensor_t dmyY = nY;
 			normalizeZ(dmyX, Mean_x, Sigma_x);
 			normalizeZ(dmyY, Mean_y, Sigma_y);
+
+			if (!test_mode) normalize_info_save(normalize_type);
 
 			if (regression == "logistic" || classification >= 2)
 			{
@@ -753,10 +881,11 @@ public:
 					MaxMin_y[k] = 1.0;
 				}
 			}
-
 		}
 		if (zscore_normalization)
 		{
+			if (test_mode) normalize_info_load(normalize_type);
+
 			normalizeZ(nX, Mean_x, Sigma_x);
 			normalizeZ(nY, Mean_y, Sigma_y);
 			printf("zscore_normalization\n");
@@ -765,6 +894,8 @@ public:
 			tiny_dnn::tensor_t dmyY = nY;
 			normalizeMinMax(dmyX, Min_x, MaxMin_x);
 			normalizeMinMax(dmyY, Min_y, MaxMin_y);
+
+			if (!test_mode) normalize_info_save(normalize_type);
 
 			if (regression == "logistic" || classification >= 2 )
 			{

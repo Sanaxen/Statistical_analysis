@@ -530,7 +530,7 @@ int main(int argc, char** argv)
 	x = Matrix<dnn_double>(1, 1);
 	y = Matrix<dnn_double>(1, 1);
 
-	NonLinearRegression regression(X, Y, normalization_type, dec_random, fluctuation, regression_type, classification);
+	NonLinearRegression regression(X, Y, normalization_type, dec_random, fluctuation, regression_type, classification, test_mode);
 	if (regression.getStatus() == -1)
 	{
 		if (classification < 2)
