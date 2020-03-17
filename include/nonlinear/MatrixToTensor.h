@@ -45,4 +45,114 @@ inline tiny_dnn::vec_t label2tensor(size_t lable, int class_max_num)
 	return tmp;
 }
 
+tiny_dnn::tensor_t diff_vec(tiny_dnn::tensor_t& X, std::vector<int>& idx, int lag = 1)
+{
+	tiny_dnn::tensor_t diff;
+	const bool isidx = idx.size() > 0;
+
+	diff.resize(X.size() - lag);
+	for (int i = 0; i < X.size() - lag; i++)
+	{
+		for (int k = 0; k < X[0].size(); k++)
+		{
+			if (!isidx || isidx && !idx[k])
+			{
+				float_t z = X[i + lag][k] - X[i][k];
+				diff[i].push_back(z);
+			}
+			else
+			{
+				diff[i].push_back(X[i + lag][k]);
+			}
+		}
+	}
+	return diff;
+}
+
+tiny_dnn::tensor_t diffinv_vec(tiny_dnn::tensor_t& base, tiny_dnn::tensor_t& X, std::vector<int>& idx, int lag = 1, bool logfnc = false)
+{
+	tiny_dnn::tensor_t diffinv;
+	diffinv.resize(X.size());
+
+	const bool isidx = idx.size() > 0;
+
+	for (int i = 0; i < X.size(); i++)
+	{
+		diffinv[i].resize(X[0].size(), 0.0);
+	}
+	for (int i = 0; i < X.size(); i++)
+	{
+		for (int k = 0; k < X[0].size(); k++)
+		{
+			if (!isidx || isidx && !idx[k])
+			{
+				if (i <= lag - 1)
+				{
+					if (logfnc)
+					{
+						diffinv[i][k] = log(base[i][k]);
+					}
+					else
+					{
+						diffinv[i][k] = base[i][k];
+					}
+				}
+				else
+				{
+					diffinv[i][k] = diffinv[i - lag][k] + X[i - lag][k];
+				}
+			}
+			else
+			{
+				if (i <= lag - 1)
+				{
+					diffinv[i][k] = base[i][k];
+				}
+				else
+				{
+					diffinv[i][k] = X[i - lag][k];
+				}
+			}
+		}
+	}
+	return diffinv;
+}
+
+tiny_dnn::tensor_t log(tiny_dnn::tensor_t& X, std::vector<int>& idx)
+{
+	tiny_dnn::tensor_t r = X;
+
+	const bool isidx = idx.size() > 0;
+
+#pragma omp parallel for
+	for (int i = 0; i < X.size(); i++)
+	{
+		for (int k = 0; k < X[0].size(); k++)
+		{
+			if (X[i][k] < 0)
+			{
+				printf("ERROR:-------- log ( 0 < x ) --------\n");
+			}
+			if (!isidx || isidx && !idx[k]) r[i][k] = log(X[i][k]);
+			else r[i][k] = X[i][k];
+		}
+	}
+	return r;
+}
+tiny_dnn::tensor_t exp(tiny_dnn::tensor_t& X, std::vector<int>& idx)
+{
+	tiny_dnn::tensor_t r = X;
+	const bool isidx = idx.size() > 0;
+
+#pragma omp parallel for
+	for (int i = 0; i < X.size(); i++)
+	{
+		for (int k = 0; k < X[0].size(); k++)
+		{
+			if (!isidx || isidx && !idx[k]) r[i][k] = exp(X[i][k]);
+			else r[i][k] = X[i][k];
+		}
+	}
+	return r;
+}
 #endif

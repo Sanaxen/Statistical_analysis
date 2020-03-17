@@ -41,6 +41,7 @@ int main(int argc, char** argv)
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
 	std::string normalization_type = "zscore";
+	bool use_trained_scale = true;
 
 	int classification = -1;
 	std::string regression_type = "";
@@ -148,6 +149,11 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--layer_graph_only") {
 			layer_graph_only = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
+		else if (argname == "--use_trained_scale")
+		{
+			use_trained_scale = (0 < atoi(argv[count + 1])) ? true : false;
 			continue;
 		}
 	}
@@ -448,10 +454,29 @@ int main(int argc, char** argv)
 		}
 	}
 
+	std::vector<int> normalizeskipp;
+	std::vector<int> flag;
+	if (xx_var_idx.size())
+	{
+		flag.resize(*std::max_element(xx_var_idx.begin(), xx_var_idx.end()) + 1, 0);
+		for (int k = 0; k < xx_var_idx.size(); k++)
+		{
+			flag[xx_var_idx[k]] = 1;
+		}
+	}
+	else
+	{
+		flag.resize(*std::max_element(x_var_idx.begin(), x_var_idx.end()) + 1, 0);
+	}
+
 	Matrix<dnn_double> x = z.Col(x_var_idx[0]);
+	if (flag[x_var_idx[0]]) normalizeskipp.push_back(1);
+	else  normalizeskipp.push_back(0);
 	for (int i = 1; i < x_dim; i++)
 	{
 		x = x.appendCol(z.Col(x_var_idx[i]));
+		if (flag[x_var_idx[i]]) normalizeskipp.push_back(1);
+		else  normalizeskipp.push_back(0);
 	}
 	Matrix<dnn_double> y = z.Col(y_var_idx[0]);
 	for (int i = 1; i < y_dim; i++)
@@ -530,7 +555,7 @@ int main(int argc, char** argv)
 	x = Matrix<dnn_double>(1, 1);
 	y = Matrix<dnn_double>(1, 1);
 
-	NonLinearRegression regression(X, Y, normalization_type, dec_random, fluctuation, regression_type, classification, test_mode);
+	NonLinearRegression regression(X, Y, normalizeskipp, normalization_type, dec_random, fluctuation, regression_type, classification, test_mode, use_trained_scale);
 	if (regression.getStatus() == -1)
 	{
 		if (classification < 2)
@@ -546,7 +571,7 @@ int main(int argc, char** argv)
 	regression.test_mode = test_mode;
 
 	regression.header = header_names;
-	regression.xx_idx = xx_var_idx;
+	regression.normalizeskipp = normalizeskipp;
 	regression.xx_var_scale = xx_var_scale;
 	regression.x_idx = x_var_idx;
 	regression.y_idx = y_var_idx;
@@ -613,6 +638,10 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--test_mode") {
+			continue;
+		}
+		else if (argname == "--use_trained_scale")
+		{
 			continue;
 		}
 		else if (argname == "--weight_init_type") {
@@ -705,6 +734,7 @@ int main(int argc, char** argv)
 		<< "classification       : " << regression.classification << std::endl
 		<< "dropout       : " << regression.dropout << std::endl
 		<< "weight_init_type       : " << regression.weight_init_type << std::endl
+		<< "use_trained_scale: " << regression.use_trained_scale << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		<< std::endl;
 

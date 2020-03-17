@@ -51,6 +51,12 @@ int main(int argc, char** argv)
 	int out_sequence_length = 1;
 	std::string normalization_type = "";
 	bool use_latest_observations = true;
+	bool use_trained_scale = true;
+	bool use_defined_scale = false;
+	bool use_logdiffernce = false;
+	int use_differnce = 0;
+	bool use_differnce_auto_inv = false;
+	bool use_differnce_output_only = false;
 
 	int classification = -1;
 	int read_max = -1;
@@ -165,6 +171,31 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--timeformat") {
 			timeformat = std::string(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--use_trained_scale")
+		{
+			use_trained_scale = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
+		else if (argname == "--use_defined_scale")
+		{
+			use_defined_scale = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
+		else if (argname == "--use_differnce")
+		{
+			use_differnce = atoi(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--use_logdiffernce")
+		{
+			use_logdiffernce = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
+		else if (argname == "--use_differnce_output_only")
+		{
+			use_differnce_output_only = (0 < atoi(argv[count + 1])) ? true : false;
 			continue;
 		}
 	}
@@ -514,13 +545,32 @@ int main(int argc, char** argv)
 		fclose(fp);
 	}
 
+	std::vector<int> normalize_skilp;
 	Matrix<dnn_double> x;
 	if (x_dim > 0)
 	{
+		std::vector<int> flag;
+		if (xx_var_idx.size())
+		{
+			flag.resize(*std::max_element(xx_var_idx.begin(), xx_var_idx.end()) + 1, 0);
+			for (int k = 0; k < xx_var_idx.size(); k++)
+			{
+				flag[xx_var_idx[k]] = 1;
+			}
+		}
+		else
+		{
+			flag.resize(*std::max_element(x_var_idx.begin(), x_var_idx.end()) + 1, 0);
+		}
+
+		if (flag[x_var_idx[0]]) normalize_skilp.push_back(1);
+		else normalize_skilp.push_back(0);
 		x = z.Col(x_var_idx[0]);
 		for (int i = 1; i < x_dim/*- yx_var.size()*/; i++)
 		{
 			x = x.appendCol(z.Col(x_var_idx[i]));
+			if (flag[x_var_idx[i]]) normalize_skilp.push_back(1);
+			else normalize_skilp.push_back(0);
 		}
 
 		//Shift the explanatory variable by one time ago
@@ -804,8 +854,36 @@ int main(int argc, char** argv)
 	MatrixToTensor(x, X, read_max);
 	MatrixToTensor(y, Y, read_max);
 
+#if 0
+	{
+		Matrix<double> c(20, 2);
+		for (int i = 0; i < 2; i++)
+		{
+			for (int k = 0; k < 20; k++) c(k, i) = k+1;
+		}
 
-	TimeSeriesRegression timeSeries(X, Y, y_dim, x_dim, normalization_type, classification, test_mode);
+		const int lag = 3;
+		c.print();
+		tiny_dnn::tensor_t C;
+		MatrixToTensor(c, C, read_max);
+
+		tiny_dnn::tensor_t d = diff_vec(C, lag);
+
+		Matrix<double> a;
+		TensorToMatrix(d, a);
+
+		a.print();
+		
+		d = diffinv_vec(C, d, lag);
+		Matrix<double> b;
+		TensorToMatrix(d, b);
+
+		b.print();
+		exit(0);
+	}
+#endif
+
+	TimeSeriesRegression timeSeries(X, Y, normalize_skilp, xx_var_scale, y_dim, x_dim, normalization_type, classification, test_mode, use_trained_scale, use_defined_scale, use_differnce, use_logdiffernce, use_differnce_output_only);
 	if (timeSeries.getStatus() == -1)
 	{
 		if (classification < 2)
@@ -813,6 +891,10 @@ int main(int argc, char** argv)
 			printf("class %.3f %.3f\n", timeSeries.class_minmax[0], timeSeries.class_minmax[1]);
 		}
 		return -1;
+	}
+	if (use_differnce_output_only)
+	{
+		return 0;
 	}
 
 	timeSeries.timeformat = timeformat;
@@ -826,7 +908,7 @@ int main(int argc, char** argv)
 	timeSeries.plot = 10;
 	timeSeries.test_mode = test_mode;
 	timeSeries.weight_init_type = weight_init_type;
-	timeSeries.xx_var_idx = xx_var_idx;
+	timeSeries.normalize_skilp = normalize_skilp;
 	timeSeries.xx_var_scale = xx_var_scale;
 
 	int n_layers = -1;
@@ -890,6 +972,27 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--timeformat") {
+			continue;
+		}
+		else if (argname == "--use_differnce")
+		{
+			continue;
+		}
+		else if (argname == "--use_logdiffernce")
+		{
+			continue;
+		}
+		else if (argname == "--use_trained_scale")
+		{
+			continue;
+		}
+		else if (argname == "--use_defined_scale")
+		{
+			continue;
+		}
+		else if (argname == "--use_differnce_auto_inv")
+		{
+			timeSeries.use_differnce_auto_inv = (0 < atoi(argv[count + 1])) ? true : false;
 			continue;
 		}
 		else if (argname == "--weight_init_type") {
@@ -1032,6 +1135,11 @@ int main(int argc, char** argv)
 		<< "fc_hidden_size  : " << fc_hidden_size << std::endl
 		<< "weight_init_type       : " << timeSeries.weight_init_type << std::endl
 		<< "use_latest_observations: " << timeSeries.use_latest_observations << std::endl
+		<< "use_trained_scale: " << timeSeries.use_trained_scale << std::endl
+		<< "use_defined_scale: " << timeSeries.use_defined_scale << std::endl
+		<< "use_differnce: " << timeSeries.use_differnce << std::endl
+		<< "use_logdiffernce: " << timeSeries.use_logdiffernce << std::endl
+		<< "use_differnce_auto_inv: " << timeSeries.use_differnce_auto_inv << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		<< std::endl;
 //

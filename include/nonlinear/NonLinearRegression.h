@@ -49,9 +49,10 @@ class NonLinearRegression
 	};
 
 public:
+	bool use_trained_scale = true;
 	bool normalized = false;
 	std::vector<std::string> header;
-	std::vector<int> xx_idx;			// non normalize var
+	std::vector<int> normalizeskipp;			// non normalize var
 	double xx_var_scale = 1.0;			// non normalize var scaling
 	std::vector<int> x_idx;
 	std::vector<int> y_idx;
@@ -87,15 +88,21 @@ private:
 				sigma[k] /= (X.size() - 1);
 				sigma[k] = sqrt(sigma[k]);
 			}
+			if (normalizeskipp.size() > 0)
+			{
+				for (int k = 0; k < X[0].size(); k++)
+				{
+					if (normalizeskipp[k])
+					{
+						sigma[k] = xx_var_scale;
+						mean[k] = 0.0;
+					}
+				}
+			}
 		}
 
 		for (int i = 0; i < X.size(); i++)
 		{
-			if (xx_idx.size() && xx_idx[i])
-			{
-				sigma[i] = xx_var_scale;
-				mean[i] = 0.0;
-			}
 			for (int k = 0; k < X[0].size(); k++)
 			{
 				X[i][k] = (X[i][k] - mean[k]) / (sigma[k] + 1.0e-10);
@@ -158,27 +165,21 @@ private:
 					maxmin_[k] = max_value;
 				}
 			}
-			for (int i = 0; i < X.size(); i++)
+			if (normalizeskipp.size() > 0)
 			{
-				if (xx_idx.size() && xx_idx[i])
-				{
-					maxmin_[i] = xx_var_scale;
-					min_[i] = 0.0;
-				}
 				for (int k = 0; k < X[0].size(); k++)
 				{
-					X[i][k] = (X[i][k] - min_[k]) / maxmin_[k];
+					if (normalizeskipp[k])
+					{
+						maxmin_[k] = 1.0 / xx_var_scale;
+						min_[k] = 0.0;
+					}
 				}
 			}
 #endif
 		}
 		for (int i = 0; i < X.size(); i++)
 		{
-			if (xx_idx.size() && xx_idx[i])
-			{
-				maxmin_[i] = xx_var_scale;
-				min_[i] = 0.0;
-			}
 			for (int k = 0; k < X[0].size(); k++)
 			{
 				X[i][k] = (X[i][k] - min_[k]) / maxmin_[k];
@@ -240,15 +241,22 @@ private:
 					maxmin_[k] = max_value;
 				}
 			}
+			if (normalizeskipp.size() > 0)
+			{
+				for (int k = 0; k < X[0].size(); k++)
+				{
+					if (normalizeskipp[k])
+					{
+						maxmin_[k] = 2.0*(1.0 / xx_var_scale);
+						min_[k] = -1.0 * (1.0 / xx_var_scale);
+					}
+				}
+			}
+
 #endif
 		}
 		for (int i = 0; i < X.size(); i++)
 		{
-			if (xx_idx.size() && xx_idx[i])
-			{
-				maxmin_[i] = 2.0*xx_var_scale;
-				min_[i] = -1.0 * xx_var_scale;
-			}
 			for (int k = 0; k < X[0].size(); k++)
 			{
 				X[i][k] = (X[i][k] - min_[k]) * 2 / maxmin_[k] - 1;
@@ -412,6 +420,31 @@ private:
 			return;
 		}
 
+		//////////////////////////////////////////////////
+		std::vector<tiny_dnn::vec_t> Y_predict(nX.size());
+//#pragma omp parallel for
+		for (int i = 0; i < nX.size(); i++)
+		{
+			tiny_dnn::vec_t& x = nX[i];
+			Y_predict[i] = nn_test.predict(x);
+
+			for (int k = 0; k < Y_predict[i].size(); k++)
+			{
+				if (zscore_normalization)
+				{
+					Y_predict[i][k] = Y_predict[i][k] * Sigma_y[k] + Mean_y[k];
+				}
+				if (minmax_normalization)
+				{
+					Y_predict[i][k] = Y_predict[i][k] * MaxMin_y[k] + Min_y[k];
+				}
+				if (_11_normalization)
+				{
+					Y_predict[i][k] = 0.5*(Y_predict[i][k] + 1) * MaxMin_y[k] + Min_y[k];
+				}
+			}
+		}
+		//////////////////////////////////////////////////
 
 		char plotName[256];
 		//sprintf(plotName, "test%04d.dat", plot_count);
@@ -442,22 +475,11 @@ private:
 
 				tiny_dnn::vec_t& y = iY[i];
 				fprintf(fp_test, "%d ", i);
-				for (int k = 0; k < y_predict.size()-1; k++)
+				for (int k = 0; k < Y_predict[i].size()-1; k++)
 				{
-					float_t yy = y_predict[k];
-					if (zscore_normalization)
-					{
-						yy = y_predict[k] * Sigma_y[k] + Mean_y[k];
-					}
-					if (minmax_normalization)
-					{
-						yy = y_predict[k] * MaxMin_y[k] + Min_y[k];
-					}
-					if (_11_normalization)
-					{
-						yy = 0.5*(y_predict[k]+1) * MaxMin_y[k] + Min_y[k];
-					}
+					float_t yy = Y_predict[i][k];
 					fprintf(fp_test, "%f %f ", yy, y[k]);
+
 					diff.push_back(y[k]);
 					diff.push_back(yy);
 
@@ -478,20 +500,7 @@ private:
 					cost_tot += (yy - y[k])*(yy - y[k]);
 				}
 
-				float_t yy = y_predict[y_predict.size() - 1];
-				if (zscore_normalization)
-				{
-					yy = y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1];
-				}
-				if (minmax_normalization)
-				{
-					yy = y_predict[y_predict.size() - 1] * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1];
-				}
-				if (_11_normalization)
-				{
-					yy = 0.5*(y_predict[y_predict.size() - 1]+1) * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1];
-				}
-
+				float_t yy = Y_predict[i][Y_predict[i].size() - 1];
 				fprintf(fp_test, "%f %f\n", yy, y[y_predict.size() - 1]);
 				diff.push_back(y[y_predict.size() - 1]);
 				diff.push_back(yy);
@@ -530,57 +539,15 @@ private:
 			for (int i = train_images.size(); i < nY.size(); i++)
 			{
 				tiny_dnn::vec_t x = nX[i];
-				tiny_dnn::vec_t& y_predict = nn_test.predict(x);
+				tiny_dnn::vec_t y_predict = Y_predict[i];
 
 				tiny_dnn::vec_t& y = iY[i];
 				fprintf(fp_test, "%d ", i);
 				for (int k = 0; k < y_predict.size() - 1; k++)
 				{
-					if (zscore_normalization)
-					{
-						fprintf(fp_test, "%f %f ", y_predict[k] * Sigma_y[k] + Mean_y[k], y[k]);
-						vari_cost += (y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k])*(y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k]);
-						cost_tot += (y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k])*(y_predict[k] * Sigma_y[k] + Mean_y[k] - y[k]);
-					}else				
-					if (minmax_normalization)
-					{
-						fprintf(fp_test, "%f %f ", y_predict[k] * MaxMin_y[k] + Min_y[k], y[k]);
-						vari_cost += (y_predict[k] * MaxMin_y[k] + Min_y[k] - y[k])*(y_predict[k] * MaxMin_y[k] + Min_y[k] - y[k]);
-						cost_tot += (y_predict[k] * MaxMin_y[k] + Min_y[k] - y[k])*(y_predict[k] * MaxMin_y[k] + Min_y[k] - y[k]);
-					}else
-					if (_11_normalization)
-					{
-						fprintf(fp_test, "%f %f ", 0.5*(y_predict[k]+1) * MaxMin_y[k] + Min_y[k], y[k]);
-						vari_cost += (0.5*(y_predict[k] + 1) * MaxMin_y[k] + Min_y[k] - y[k])*(0.5*(y_predict[k] + 1) * MaxMin_y[k] + Min_y[k] - y[k]);
-						cost_tot += (0.5*(y_predict[k] + 1) * MaxMin_y[k] + Min_y[k] - y[k])*(0.5*(y_predict[k] + 1) * MaxMin_y[k] + Min_y[k] - y[k]);
-					}
-					else
-					{
-						fprintf(fp_test, "%f %f ", y_predict[k], y[k]);
-					}
+					fprintf(fp_test, "%f %f ", y_predict[k], y[k]);
 				}
-				if (zscore_normalization)
-				{
-					fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1], y[y_predict.size() - 1]);
-					vari_cost += (y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
-					cost_tot += (y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * Sigma_y[y_predict.size() - 1] + Mean_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
-				}else
-				if (minmax_normalization)
-				{
-					fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1] * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1], y[y_predict.size() - 1]);
-					vari_cost += (y_predict[y_predict.size() - 1] * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
-					cost_tot += (y_predict[y_predict.size() - 1] * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(y_predict[y_predict.size() - 1] * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
-				}else
-				if (_11_normalization)
-				{
-					fprintf(fp_test, "%f %f\n", 0.5*(y_predict[y_predict.size() - 1]+1) * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1], y[y_predict.size() - 1]);
-					vari_cost += (0.5*(y_predict[y_predict.size() - 1] + 1) * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(0.5*(y_predict[y_predict.size() - 1] + 1) * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
-					cost_tot += (0.5*(y_predict[y_predict.size() - 1] + 1) * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1] - y[y_predict.size() - 1])*(0.5*(y_predict[y_predict.size() - 1] + 1) * MaxMin_y[y_predict.size() - 1] + Min_y[y_predict.size() - 1] - y[y_predict.size() - 1]);
-				}
-				else
-				{
-					fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1], y[y_predict.size() - 1]);
-				}
+				fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1], y[y_predict.size() - 1]);
 			}
 			fclose(fp_test);
 		}
@@ -732,20 +699,20 @@ public:
 	{
 		if (test_mode) return;
 
-		FILE* fp = fopen("normalize_info.dat", "w");
+		FILE* fp = fopen("normalize_info.txt", "w");
 		if (fp)
 		{
 			fprintf(fp, "%s\n", normalize_type.c_str());
 			fprintf(fp, "%d %d\n", nX[0].size(), nY[0].size());
 			for (int i = 0; i < nX[0].size(); i++)
 			{
-				fprintf(fp, "%.16f %.16f\n", Mean_x[i], Sigma_x[i]);
-				fprintf(fp, "%.16f %.16f\n", Min_x[i], MaxMin_x[i]);
+				fprintf(fp, "à–¾•Ï”(%d)•½‹Ï.•ªŽU:%.16f %.16f\n", i, Mean_x[i], Sigma_x[i]);
+				fprintf(fp, "à–¾•Ï”(%d)Min.Max:%.16f %.16f\n", i, Min_x[i], MaxMin_x[i]+ Min_x[i]);
 			}
 			for (int i = 0; i < nY[0].size(); i++)
 			{
-				fprintf(fp, "%.16f %.16f\n", Mean_y[i], Sigma_y[i]);
-				fprintf(fp, "%.16f %.16f\n", Min_y[i], MaxMin_y[i]);
+				fprintf(fp, "–Ú“I•Ï”(%d)•½‹Ï.•ªŽU:%.16f %.16f\n", i, Mean_y[i], Sigma_y[i]);
+				fprintf(fp, "–Ú“I•Ï”(%d)Min.Max:%.16f %.16f\n", i, Min_y[i], MaxMin_y[i]+ Min_y[i]);
 			}
 			fclose(fp);
 		}
@@ -753,15 +720,20 @@ public:
 	void normalize_info_load(std::string& normalize_type)
 	{
 		normalized = false;
+		if (!use_trained_scale)
+		{
+			return;
+		}
 		if (!test_mode) return;
 
-		FILE* fp = fopen("normalize_info.dat", "r");
+		FILE* fp = fopen("normalize_info.txt", "r");
 		if (fp)
 		{
 			char buf[256];
 			char dummy[128];
 			double a = 0.0, b = 0.0;
 			int d = 0, dd = 0;
+			int tmp = 0;
 
 			fgets(buf, 256, fp);
 			sscanf(buf, "%s\n", dummy);
@@ -792,24 +764,26 @@ public:
 			for (int i = 0; i < d; i++)
 			{
 				fgets(buf, 256, fp);
-				sscanf(buf, "%lf %lf\n", &a, &b);
+				sscanf(buf, "à–¾•Ï”(%d)•½‹Ï.•ªŽU:%lf %lf\n", &tmp, &a, &b);
+				printf(buf);
 				Mean_x[i] = a;
 				Sigma_x[i] = b;
 				fgets(buf, 256, fp);
-				sscanf(buf, "%lf %lf\n", &a, &b);
+				sscanf(buf, "à–¾•Ï”(%d)Min.Max:%lf %lf\n", &tmp, &a, &b);
+				printf(buf);
 				Min_x[i] = a;
-				MaxMin_x[i] = b;
+				MaxMin_x[i] = b - a;
 			}
 			for (int i = 0; i < dd; i++)
 			{
 				fgets(buf, 256, fp);
-				sscanf(buf, "%lf %lf\n", &a, &b);
+				sscanf(buf, "–Ú“I•Ï”(%d)•½‹Ï.•ªŽU:%lf %lf\n", &tmp, &a, &b);
 				Mean_y[i] = a;
 				Sigma_y[i] = b;
 				fgets(buf, 256, fp);
-				sscanf(buf, "%lf %lf\n", &a, &b);
+				sscanf(buf, "–Ú“I•Ï”(%d)Min.Max:%lf %lf\n", &tmp, &a, &b);
 				Min_y[i] = a;
-				MaxMin_y[i] = b;
+				MaxMin_y[i] = b - a;
 			}
 			printf("load scaling data\n");
 			fclose(fp);
@@ -817,8 +791,10 @@ public:
 		normalized = true;
 	}
 
-	NonLinearRegression(tiny_dnn::tensor_t& Xi, tiny_dnn::tensor_t& Yi, std::string& normalize_type= std::string("zscore"), double dec_random_=0.0, double fluctuation_=0.0, std::string regression_type = "", int classification_ = -1, bool test_mode_ = false)
-	{		
+	NonLinearRegression(tiny_dnn::tensor_t& Xi,  tiny_dnn::tensor_t& Yi, std::vector<int>& normalizeskipp_, std::string& normalize_type= std::string("zscore"), double dec_random_=0.0, double fluctuation_=0.0, std::string regression_type = "", int classification_ = -1, bool test_mode_ = false, bool use_trained_scale_=true)
+	{	
+		normalizeskipp = normalizeskipp_;
+		use_trained_scale = use_trained_scale_;
 		test_mode = test_mode_;
 		iX = Xi;
 		iY = Yi;

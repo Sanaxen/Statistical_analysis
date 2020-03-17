@@ -9,6 +9,7 @@
 
 #define EARLY_STOPPING_	10
 
+
 /* ÉVÉOÉiÉãéÛêM/èàóù */
 bool ctr_c_stopping_time_series_regression = false;
 inline void SigHandler_time_series_regression(int p_signame)
@@ -43,6 +44,7 @@ inline char* timeToStr(dnn_double t, const std::string& format, char* str, size_
 	return str;
 }
 
+
 class TimeSeriesRegression
 {
 	bool convergence = false;
@@ -68,10 +70,16 @@ class TimeSeriesRegression
 	};
 
 public:
+	bool use_logdiffernce = false;
+	int use_differnce = 0;
+	bool use_differnce_output_only = false;
+	bool use_differnce_auto_inv = false;
+	bool use_defined_scale = false;
+	bool use_trained_scale = true;
 	bool use_latest_observations = true;	//Always use the latest observations
 	bool normalized = false;
 	std::vector<std::string> header;
-	std::vector<int> xx_var_idx;		// non normalize var
+	std::vector<int> normalize_skilp;		// non normalize var
 	double xx_var_scale = 1.0;			// non normalize var scaling
 	std::vector<int> x_idx;
 	std::vector<int> y_idx;
@@ -108,27 +116,24 @@ private:
 				sigma[k] /= (X.size() - 1);
 				sigma[k] = sqrt(sigma[k]);
 			}
-			for (int i = 0; i < X.size(); i++)
+
+			if (normalize_skilp.size() > 0)
 			{
-				if (xx_var_idx.size() && xx_var_idx[i])
-				{
-					sigma[i] = xx_var_scale;
-					mean[i] = 0.0;
-				}
 				for (int k = 0; k < X[0].size(); k++)
 				{
-					X[i][k] = (X[i][k] - mean[k]) / (sigma[k] + 1.0e-10);
+					if (normalize_skilp[k])
+					{
+						sigma[k] = 1.0 / xx_var_scale;
+						mean[k] = 0.0;
+					}
 				}
 			}
 		}
-		else
+		for (int i = 0; i < X.size(); i++)
 		{
-			for (int i = 0; i < X.size(); i++)
+			for (int k = 0; k < X[0].size(); k++)
 			{
-				for (int k = 0; k < X[0].size(); k++)
-				{
-					X[i][k] = (X[i][k] - mean[k]) / (sigma[k] + 1.0e-10);
-				}
+				X[i][k] = (X[i][k] - mean[k]) / (sigma[k] + 1.0e-10);
 			}
 		}
 	}
@@ -188,15 +193,22 @@ private:
 					maxmin_[k] = max_value;
 				}
 			}
+			if (normalize_skilp.size() > 0)
+			{
+				for (int k = 0; k < X[0].size(); k++)
+				{
+					if (normalize_skilp[k])
+					{
+						min_[k] = 0.0;
+						maxmin_[k] = 1.0 / xx_var_scale;
+					}
+				}
+			}
 		}
 #endif
+
 		for (int i = 0; i < X.size(); i++)
 		{
-			if (xx_var_idx.size() && xx_var_idx[i])
-			{
-				maxmin_[i] = xx_var_scale;
-				min_[i] = 0.0;
-			}
 			for (int k = 0; k < X[0].size(); k++)
 			{
 				X[i][k] = (X[i][k] - min_[k]) / maxmin_[k];
@@ -259,15 +271,22 @@ private:
 					maxmin_[k] = max_value;
 				}
 			}
+
+			if (normalize_skilp.size() > 0)
+			{
+				for (int k = 0; k < X[0].size(); k++)
+				{
+					if (normalize_skilp[k])
+					{
+						maxmin_[k] = 2.0*(1.0 / xx_var_scale);
+						min_[k] = -1.0 * (1.0 / xx_var_scale);
+					}
+				}
+			}
 		}
 #endif
 		for (int i = 0; i < X.size(); i++)
 		{
-			if (xx_var_idx.size() && xx_var_idx[i])
-			{
-				maxmin_[i] = 2.0*xx_var_scale;
-				min_[i] = -1.0 * xx_var_scale;
-			}
 			for (int k = 0; k < X[0].size(); k++)
 			{
 				X[i][k] = (X[i][k] - min_[k]) * 2 / maxmin_[k] - 1;
@@ -481,7 +500,7 @@ private:
 				train[j] = predict[j] = y;
 			}
 
-			const int sz = iY.size() + prophecy;
+			const int sz = iY.size() + prophecy - use_differnce;
 			for (int i = 0; i < sz; i++)
 			{
 				//i...i+sequence_length-1 -> 
@@ -530,6 +549,45 @@ private:
 					}
 				}
 			}
+			{
+				//denormalize
+				const size_t sz = iY.size() + prophecy - use_differnce;
+
+#pragma omp parallel for
+				for (int i = 0; i < sz; i++)
+				{
+					for (int k = 0; k < y_dim; k++)
+					{
+						if (zscore_normalization)
+						{
+							predict[i][k] = predict[i][k] * Sigma[k] + Mean[k];
+							train[i][k] = train[i][k] * Sigma[k] + Mean[k];
+						}
+						if (minmax_normalization)
+						{
+							predict[i][k] = predict[i][k] * MaxMin[k] + Min[k];
+							train[i][k] = train[i][k] * MaxMin[k] + Min[k];
+						}
+						if (_11_normalization)
+						{
+							predict[i][k] = 0.5*(predict[i][k] + 1) * MaxMin[k] + Min[k];
+							train[i][k] = 0.5*(train[i][k] + 1) * MaxMin[k] + Min[k];
+						}
+					}
+				}
+
+				if (use_differnce > 0 && use_differnce_auto_inv)
+				{
+					predict = diffinv_vec(iY, predict, this->normalize_skilp, use_differnce, use_logdiffernce);
+					train = diffinv_vec(iY, train, this->normalize_skilp, use_differnce, use_logdiffernce);
+
+					if (use_logdiffernce)
+					{
+						predict = exp(predict, this->normalize_skilp);
+						train = exp(train, this->normalize_skilp);
+					}
+				}
+			}
 
 			if (this->test_mode)
 			{
@@ -547,24 +605,6 @@ private:
 
 						tiny_dnn::vec_t yy = predict[i];
 						tiny_dnn::vec_t y = train[i];
-						for (int k = 0; k < y_dim; k++)
-						{
-							if (zscore_normalization)
-							{
-								yy[k] = yy[k] * Sigma[k] + Mean[k];
-								y[k] = y[k] * Sigma[k] + Mean[k];
-							}
-							if (minmax_normalization)
-							{
-								yy[k] = yy[k] * MaxMin[k] + Min[k];
-								y[k] = y[k] * MaxMin[k] + Min[k];
-							}
-							if (_11_normalization)
-							{
-								yy[k] = 0.5*(yy[k]+1) * MaxMin[k] + Min[k];
-								y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
-							}
-						}
 						for (int k = 0; k < y_dim-1; k++)
 						{
 							fprintf(fp_predict, "%.3f,%.3f,%.3f,", yy[k], y[k], yy[k]-y[k]);
@@ -572,7 +612,7 @@ private:
 						fprintf(fp_predict, "%.3f,%.3f,%.3f\n", yy[y_dim-1], y[y_dim - 1], yy[y_dim - 1]- y[y_dim - 1]);
 					}
 
-					for (int i = iY.size(); i < iY.size() + prophecy; i++)
+					for (int i = iY.size(); i < iY.size() + prophecy- use_differnce; i++)
 					{
 						if (iX.size())
 						{
@@ -583,24 +623,6 @@ private:
 						}
 						tiny_dnn::vec_t yy = predict[i];
 						tiny_dnn::vec_t y = train[iY.size()-1];
-						for (int k = 0; k < y_dim; k++)
-						{
-							if (zscore_normalization)
-							{
-								yy[k] = yy[k] * Sigma[k] + Mean[k];
-								y[k] = y[k] * Sigma[k] + Mean[k];
-							}
-							if (minmax_normalization)
-							{
-								yy[k] = yy[k] * MaxMin[k] + Min[k];
-								y[k] = y[k] * MaxMin[k] + Min[k];
-							}
-							if (_11_normalization)
-							{
-								yy[k] = 0.5*(yy[k] + 1) * MaxMin[k] + Min[k];
-								y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
-							}
-						}
 						for (int k = 0; k < y_dim - 1; k++)
 						{
 							fprintf(fp_predict, "%.3f,%.3f,%.3f,", yy[k], yy[k], 0);
@@ -614,28 +636,10 @@ private:
 				FILE* fp_test = fopen("predict1.dat", "w");
 				if (fp_test)
 				{
-					for (int i = 0; i < iY.size() + prophecy; i++)
+					for (int i = 0; i < iY.size() + prophecy- use_differnce; i++)
 					{
 						tiny_dnn::vec_t y = train[i];
 						tiny_dnn::vec_t yy = predict[i];
-						for (int k = 0; k < y_dim; k++)
-						{
-							if (zscore_normalization)
-							{
-								y[k] = y[k] * Sigma[k] + Mean[k];
-								yy[k] = yy[k] * Sigma[k] + Mean[k];
-							}
-							if (minmax_normalization)
-							{
-								y[k] = y[k] * MaxMin[k] + Min[k];
-								yy[k] = yy[k] * MaxMin[k] + Min[k];
-							}
-							if (_11_normalization)
-							{
-								yy[k] = 0.5*(yy[k] + 1) * MaxMin[k] + Min[k];
-								y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
-							}
-						}
 
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
 						//fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
@@ -684,21 +688,6 @@ private:
 					for (int i = 0; i < sequence_length; i++)
 					{
 						tiny_dnn::vec_t y = train[i];
-						for (int k = 0; k < y_dim; k++)
-						{
-							if (zscore_normalization)
-							{
-								y[k] = y[k] * Sigma[k] + Mean[k];
-							}
-							if (minmax_normalization)
-							{
-								y[k] = y[k] * MaxMin[k] + Min[k];
-							}
-							if (_11_normalization)
-							{
-								y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
-							}
-						}
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
 						//fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
 						if (timestamp.size() > i)
@@ -727,28 +716,10 @@ private:
 						tiny_dnn::vec_t y = train[i];
 						tiny_dnn::vec_t yy = predict[i];
 
-						if (i < iY.size())
-						{
-							y = nY[i];
-						}
-						for (int k = 0; k < y_dim; k++)
-						{
-							if (zscore_normalization)
-							{
-								y[k] = y[k] * Sigma[k] + Mean[k];
-								yy[k] = yy[k] * Sigma[k] + Mean[k];
-							}
-							if (minmax_normalization)
-							{
-								y[k] = y[k] * MaxMin[k] + Min[k];
-								yy[k] = yy[k] * MaxMin[k] + Min[k];
-							}
-							if (_11_normalization)
-							{
-								yy[k] = 0.5*(yy[k] + 1) * MaxMin[k] + Min[k];
-								y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
-							}
-						}
+						//if (i < iY.size())
+						//{
+						//	y = nY[i];
+						//}
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
 						//fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
 						if (timestamp.size() > i)
@@ -775,28 +746,10 @@ private:
 					{
 						tiny_dnn::vec_t y = train[i];
 						tiny_dnn::vec_t yy = predict[i];
-						if (i < iY.size())
-						{
-							y = nY[i];
-						}
-						for (int k = 0; k < y_dim; k++)
-						{
-							if (zscore_normalization)
-							{
-								y[k] = y[k] * Sigma[k] + Mean[k];
-								yy[k] = yy[k] * Sigma[k] + Mean[k];
-							}
-							if (minmax_normalization)
-							{
-								y[k] = y[k] * MaxMin[k] + Min[k];
-								yy[k] = yy[k] * MaxMin[k] + Min[k];
-							}
-							if (_11_normalization)
-							{
-								yy[k] = 0.5*(yy[k] + 1) * MaxMin[k] + Min[k];
-								y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
-							}
-						}
+						//if (i < iY.size())
+						//{
+						//	y = nY[i];
+						//}
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
 						//fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
 						if (timestamp.size() > i)
@@ -819,32 +772,14 @@ private:
 				fp_test = fopen("prophecy.dat", "w");
 				if (fp_test)
 				{
-					for (int i = iY.size() - sequence_length - 1; i < iY.size() + prophecy; i++)
+					for (int i = iY.size() - sequence_length - 1; i < iY.size() + prophecy - use_differnce; i++)
 					{
 						tiny_dnn::vec_t y = train[i];
 						tiny_dnn::vec_t yy = predict[i];
-						if (i < iY.size())
-						{
-							y = nY[i];
-						}
-						for (int k = 0; k < y_dim; k++)
-						{
-							if (zscore_normalization)
-							{
-								y[k] = y[k] * Sigma[k] + Mean[k];
-								yy[k] = yy[k] * Sigma[k] + Mean[k];
-							}
-							if (minmax_normalization)
-							{
-								y[k] = y[k] * MaxMin[k] + Min[k];
-								yy[k] = yy[k] * MaxMin[k] + Min[k];
-							}
-							if (_11_normalization)
-							{
-								yy[k] = 0.5*(yy[k] + 1) * MaxMin[k] + Min[k];
-								y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
-							}
-						}
+						//if (i < iY.size())
+						//{
+						//	y = nY[i];
+						//}
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
 						//fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
 						if (timestamp.size() > i)
@@ -888,21 +823,6 @@ private:
 				tiny_dnn::vec_t yy = predict[i];
 				for (int k = 0; k < y_dim; k++)
 				{
-					if (zscore_normalization)
-					{
-						y[k] = y[k] * Sigma[k] + Mean[k];
-						yy[k] = yy[k] * Sigma[k] + Mean[k];
-					}
-					if (minmax_normalization)
-					{
-						y[k] = y[k] * MaxMin[k] + Min[k];
-						yy[k] = yy[k] * MaxMin[k] + Min[k];
-					}
-					if (_11_normalization)
-					{
-						yy[k] = 0.5*(yy[k] + 1) * MaxMin[k] + Min[k];
-						y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
-					}
 					if (i < train_images.size())
 					{
 						cost += (yy[k] - y[k])*(yy[k] - y[k]);
@@ -922,8 +842,8 @@ private:
 			{
 				Matrix<dnn_double> x;
 				Matrix<dnn_double> y;
-				train.resize(iY.size() - sequence_length);
-				predict.resize(iY.size() - sequence_length);
+				train.resize(iY.size() - sequence_length - use_differnce);
+				predict.resize(iY.size() - sequence_length - use_differnce);
 				TensorToMatrix(train, x);
 				TensorToMatrix(predict, y);
 				Matrix<dnn_double> xx = x;
@@ -1147,15 +1067,20 @@ public:
 	{
 		if (test_mode) return;
 
-		FILE* fp = fopen("normalize_info_t.dat", "w");
+		FILE* fp = fopen("normalize_info_t.txt", "w");
 		if (fp)
 		{
 			fprintf(fp, "%s\n", normalize_type.c_str());
 			fprintf(fp, "%d\n", nY[0].size());
-			for (int i = 0; i < nY[0].size(); i++)
+			for (int i = 0; i < y_dim; i++)
 			{
-				fprintf(fp, "%.16f %.16f\n", Mean[i], Sigma[i]);
-				fprintf(fp, "%.16f %.16f\n", Min[i], MaxMin[i]);
+				fprintf(fp, "ñ⁄ìIïœêî(%d)ïΩãœ.ï™éU:%.16f %.16f\n", i, Mean[i], Sigma[i]);
+				fprintf(fp, "ñ⁄ìIïœêî(%d)Min.Max:%.16f %.16f\n", i, Min[i], MaxMin[i] + Min[i]);
+			}
+			for (int i = y_dim; i < nY[0].size(); i++)
+			{
+				fprintf(fp, "ê‡ñæïœêî(%d)ïΩãœ.ï™éU:%.16f %.16f\n", i, Mean[i], Sigma[i]);
+				fprintf(fp, "ê‡ñæïœêî(%d)Min.Max:%.16f %.16f\n", i, Min[i], MaxMin[i]+ Min[i]);
 			}
 			fclose(fp);
 		}
@@ -1163,15 +1088,25 @@ public:
 	void normalize_info_load(std::string& normalize_type)
 	{
 		normalized = false;
-		if (!test_mode) return;
+		if (test_mode && !use_trained_scale)
+		{
+			return;
+		}
+		if (!test_mode && !use_defined_scale)
+		{
+			return;
+		}
 
-		FILE* fp = fopen("normalize_info_t.dat", "r");
+		//if (!test_mode) return;
+
+		FILE* fp = fopen("normalize_info_t.txt", "r");
 		if (fp)
 		{
 			char buf[256];
 			char dummy[128];
 			double a = 0.0, b = 0.0;
 			int d = 0;
+			int tmp = 0;
 
 			fgets(buf, 256, fp);
 			sscanf(buf, "%s\n", dummy);
@@ -1194,16 +1129,31 @@ public:
 			Sigma = std::vector<float_t>(d, 0.0);
 			Min = std::vector<float_t>(d, 0.0);
 			MaxMin = std::vector<float_t>(d, 0.0);
-			for (int i = 0; i < d; i++)
+			for (int i = 0; i < y_dim; i++)
 			{
 				fgets(buf, 256, fp);
-				sscanf(buf, "%lf %lf\n", &a, &b);
+				sscanf(buf, "ñ⁄ìIïœêî(%d)ïΩãœ.ï™éU:%lf %lf\n", &tmp, &a, &b);
+				printf(buf);
 				Mean[i] = a;
 				Sigma[i] = b;
 				fgets(buf, 256, fp);
-				sscanf(buf, "%lf %lf\n", &a, &b);
+				sscanf(buf, "ñ⁄ìIïœêî(%d)Min.Max:%lf %lf\n", &tmp, &a, &b);
+				printf(buf);
 				Min[i] = a;
-				MaxMin[i] = b;
+				MaxMin[i] = b-a;
+			}
+			for (int i = y_dim; i < d; i++)
+			{
+				fgets(buf, 256, fp);
+				sscanf(buf, "ê‡ñæïœêî(%d)ïΩãœ.ï™éU:%lf %lf\n", &tmp, &a, &b);
+				printf(buf);
+				Mean[i] = a;
+				Sigma[i] = b;
+				fgets(buf, 256, fp);
+				sscanf(buf, "ê‡ñæïœêî(%d)Min.Max:Min.Max:%lf %lf\n", &a, &b);
+				printf(buf);
+				Min[i] = a;
+				MaxMin[i] = b - a;
 			}
 			fclose(fp);
 			printf("load scaling data\n");
@@ -1211,9 +1161,18 @@ public:
 		normalized = true;
 	}
 
-	TimeSeriesRegression(tiny_dnn::tensor_t& X, tiny_dnn::tensor_t& Y, int ydim = 1, int xdim = 1, std::string normalize_type = "", int classification_ = -1, bool test_mode_ = false )
+	TimeSeriesRegression(tiny_dnn::tensor_t& X, tiny_dnn::tensor_t& Y, std::vector<int>& normalize_skilp_, float scale = 1.0, int ydim = 1, int xdim = 1, std::string normalize_type = "", int classification_ = -1, bool test_mode_ = false, bool use_trained_scale_ = true, bool use_defined_scale_ = false, int use_differnce_=0, bool use_logdiffernce_ = true, bool use_differnce_output_only_ = false)
 	{
+		use_differnce_output_only = use_differnce_output_only_;
+		use_differnce = use_differnce_;
+		use_logdiffernce = use_logdiffernce_;
+		use_defined_scale = use_defined_scale_;
+		use_trained_scale = use_trained_scale_;
 		test_mode = test_mode_;
+
+		normalize_skilp = normalize_skilp_;
+		xx_var_scale = scale;
+
 		y_dim = ydim;
 		x_dim = xdim;
 		iX = X;
@@ -1226,10 +1185,27 @@ public:
 		classification = classification_;
 		printf("classification:%d\n", classification);
 
+		if (use_differnce > 0)
+		{
+			if (use_logdiffernce)
+			{
+				nY = log(nY, this->normalize_skilp);
+			}
+			nY = diff_vec(nY, this->normalize_skilp, use_differnce);
+
+			Matrix<dnn_double> tmp;
+			TensorToMatrix(nY, tmp);
+			tmp.print_csv("differnce_.csv");
+			if (use_differnce_output_only)
+			{
+				return;
+			}
+		}
+
 
 		if (_11_normalization)
 		{
-			if (test_mode) normalize_info_load(normalize_type);
+			normalize_info_load(normalize_type);
 
 			normalize1_1(nY, Min, MaxMin);
 			printf("[-1,1] normalization\n");
@@ -1248,7 +1224,7 @@ public:
 		}
 		if (minmax_normalization)
 		{
-			if (test_mode) normalize_info_load(normalize_type);
+			normalize_info_load(normalize_type);
 
 			normalizeMinMax(nY, Min, MaxMin);
 			printf("minmax_normalization\n");
@@ -1271,7 +1247,7 @@ public:
 		}
 		if (zscore_normalization)
 		{
-			if (test_mode) normalize_info_load(normalize_type);
+			normalize_info_load(normalize_type);
 			normalizeZ(nY, Mean, Sigma);
 			printf("zscore_normalization\n");
 
@@ -1460,7 +1436,7 @@ public:
 		printf("n_minibatch:%d sequence_length:%d\n", n_minibatch, sequence_length);
 		printf("out_sequence_length:%d\n", out_sequence_length);
 
-		int dataAll = iY.size() - sequence_length - out_sequence_length;
+		int dataAll = iY.size() - sequence_length - out_sequence_length - use_differnce;
 		printf("dataset All:%d->", dataAll);
 
 		if (dataAll <= 0 && test_mode)
@@ -1642,8 +1618,10 @@ public:
 		else
 		{
 			nn << layers.add_fc(input_size, false);
+			nn << layers.tanh();
 		}
 
+#if 0
 		//printf("n_rnn_layers:%d\n", n_rnn_layers);
 		for (int i = 0; i < n_rnn_layers; i++) 
 		{
@@ -1656,6 +1634,15 @@ public:
 			nn << layers.tanh();
 			//nn << layers.relu();
 		}
+#else
+		//printf("n_rnn_layers:%d\n", n_rnn_layers);
+		for (int i = 0; i < n_rnn_layers; i++)
+		{
+			//nn << layers.add_batnorm(nn.template at<tiny_dnn::layer>(nn.layer_size() - 1), 0.00001, 0.9);
+			nn << layers.add_rnn(rnn_type, hidden_size, sequence_length, params);
+			input_size = hidden_size;
+		}
+#endif
 
 
 		int n_layers_tmp = n_layers;
@@ -2277,11 +2264,9 @@ public:
 			return;
 		}
 		
-		std::vector<double> yy;
-		std::vector<double> ff;
-		double mse = 0.0;
-		double rmse = 0.0;
-		for (int i = 0; i < train_images.size()-1; i++)
+		tiny_dnn::tensor_t train, predict;
+
+		for (int i = 0; i < train_images.size() - 1; i++)
 		{
 			tiny_dnn::vec_t next_y = nn.predict(seq_vec(nY, i));
 
@@ -2310,7 +2295,37 @@ public:
 						y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
 						z[k] = 0.5*(z[k] + 1) * MaxMin[k] + Min[k];
 					}
+				}
+				train.push_back(z);
+				predict.push_back(y);
+			}
+		}
+		if (use_differnce > 0 && use_differnce_auto_inv)
+		{
+			predict = diffinv_vec(iY, predict, this->normalize_skilp, use_differnce, use_logdiffernce);
+			train = diffinv_vec(iY, train, this->normalize_skilp, use_differnce, use_logdiffernce);
 
+			if (use_logdiffernce)
+			{
+				predict = exp(predict, this->normalize_skilp);
+				train = exp(train, this->normalize_skilp);
+			}
+		}
+
+
+		std::vector<double> yy;
+		std::vector<double> ff;
+		double mse = 0.0;
+		double rmse = 0.0;
+		for (int i = 0; i < train_images.size()-1; i++)
+		{
+			//output sequence_length 
+			for (int j = 0; j < out_sequence_length; j++)
+			{
+				tiny_dnn::vec_t z = train[i];
+				tiny_dnn::vec_t y = predict[i];
+				for (int k = 0; k < y_dim; k++)
+				{
 					double d = (y[k] - z[k]);
 					mse += d*d;
 					yy.push_back(y[k]);
