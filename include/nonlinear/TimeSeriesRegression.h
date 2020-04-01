@@ -813,29 +813,34 @@ private:
 			}
 
 			Diff.clear();
+			Diff.resize(iY.size());
 			float vari_cost = 0.0;
 			float cost = 0.0;
 			float cost_tot = 0.0;
+			const size_t train_sz = train_images.size();
+
+#pragma omp parallel for reduction(+:cost,vari_cost,cost_tot)
 			for (int i = 0; i < iY.size(); i++)
 			{
-				std::vector<double> diff;
+				std::vector<double> diff(y_dim*2);
 				tiny_dnn::vec_t y = train[i];
 				tiny_dnn::vec_t yy = predict[i];
 				for (int k = 0; k < y_dim; k++)
 				{
-					if (i < train_images.size())
+					double d = (yy[k] - y[k])*(yy[k] - y[k]);
+					cost_tot += d;
+					if (i < train_sz)
 					{
-						cost += (yy[k] - y[k])*(yy[k] - y[k]);
+						cost += d;
 					}
 					else
 					{
-						vari_cost += (yy[k] - y[k])*(yy[k] - y[k]);
+						vari_cost += d;
 					}
-					diff.push_back(y[k]);
-					diff.push_back(yy[k]);
-					cost_tot += (yy[k] - y[k])*(yy[k] - y[k]);
+					diff[2*k] = y[k];
+					diff[2*k+1] = yy[k];
 				}
-				Diff.push_back(diff);
+				Diff[i] = diff;
 			}
 
 			if (this->test_mode)
@@ -1650,7 +1655,7 @@ public:
 
 		sz = train_labels[0].size() * 10;
 		for (int i = 0; i < n_layers_tmp; i++) {
-			if (dropout) nn << layers.add_dropout(dropout);
+			if (dropout && i == n_layers_tmp-1) nn << layers.add_dropout(dropout);
 			if (fc_hidden_size > 0)
 			{
 				nn << layers.add_fc(fc_hidden_size);
@@ -1678,6 +1683,7 @@ public:
 		{
 			nn << layers.add_fc(train_labels[0].size());
 			nn << layers.add_linear(train_labels[0].size());
+			printf("output size:%d\n", train_labels[0].size());
 		}
 
 
@@ -2454,12 +2460,16 @@ public:
 				plot1.set_capture(win_size, std::string("observed_predict_NL.png"));
 			}
 			Matrix<dnn_double> T(Diff.size()*Diff[0].size() / 2, 2);
-			for (int i = 0; i < Diff.size(); i++)
+
+			const int diff0_sz2 = Diff[0].size() / 2;
+			const int diff_sz = Diff.size();
+#pragma omp parallel for
+			for (int i = 0; i < diff_sz; i++)
 			{
-				for (int j = 0; j < Diff[0].size() / 2; j++)
+				for (int j = 0; j < diff0_sz2; j++)
 				{
-					T(i*Diff[0].size() / 2 + j, 0) = Diff[i][2 * j];
-					T(i*Diff[0].size() / 2 + j, 1) = Diff[i][2 * j + 1];
+					T(i*diff0_sz2 + j, 0) = Diff[i][2 * j];
+					T(i*diff0_sz2 + j, 1) = Diff[i][2 * j + 1];
 				}
 			}
 

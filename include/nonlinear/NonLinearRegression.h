@@ -1215,7 +1215,7 @@ public:
 			nn << layers.tanh();
 
 			for (int i = 0; i < n_layers; i++) {
-				if (dropout) nn << layers.add_dropout(dropout);
+				if (dropout && i == n_layers-1) nn << layers.add_dropout(dropout);
 				nn << layers.add_fc(input_size);
 				nn << layers.tanh();
 			}
