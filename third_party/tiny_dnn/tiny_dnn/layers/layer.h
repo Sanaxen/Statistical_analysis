@@ -702,18 +702,23 @@ class layer : public node {
       tensor->resize(sample_count, (*tensor)[0]);
     };
 
-    for (size_t i = 0; i < in_channels_; i++) {
-      if (!is_trainable_weight(in_type_[i])) {
-        resize(ith_in_node(i)->get_data());
+#pragma omp parallel
+    {
+#pragma omp for
+      for (int i = 0; i < in_channels_; i++) {
+        if (!is_trainable_weight(in_type_[i])) {
+          resize(ith_in_node(i)->get_data());
+        }
+        resize(ith_in_node(i)->get_gradient());
       }
-      resize(ith_in_node(i)->get_gradient());
-    }
 
-    for (size_t i = 0; i < out_channels_; i++) {
-      if (!is_trainable_weight(out_type_[i])) {
-        resize(ith_out_node(i)->get_data());
+#pragma omp for
+      for (int i = 0; i < out_channels_; i++) {
+        if (!is_trainable_weight(out_type_[i])) {
+          resize(ith_out_node(i)->get_data());
+        }
+        resize(ith_out_node(i)->get_gradient());
       }
-      resize(ith_out_node(i)->get_gradient());
     }
   }
 
