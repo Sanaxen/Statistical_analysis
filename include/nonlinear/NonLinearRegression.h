@@ -1241,6 +1241,28 @@ public:
 			nn << layers.softmax(classification);
 		}
 
+#if 10
+#ifdef CNN_USE_AVX
+		for (auto n : nn)
+		{
+			if (n->layer_type() == "fully-connected")
+			{
+				n->set_backend_type(tiny_dnn::core::backend_t::avx);
+			}
+		}
+#endif
+
+#ifdef CNN_USE_INTEL_MKL
+		for (auto n : nn)
+		{
+			if (n->layer_type() == "fully-connected")
+			{
+				n->set_backend_type(tiny_dnn::core::backend_t::intel_mkl);
+			}
+		}
+#endif
+#endif
+
 		if (weight_init_type == "xavier")
 		{
 			nn.weight_init(tiny_dnn::weight_init::xavier());

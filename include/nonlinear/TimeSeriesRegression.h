@@ -451,7 +451,7 @@ private:
 								idx = k;
 							}
 						}
-						fprintf(fp_predict, "%d,%.3f%\n", idx, y);
+						fprintf(fp_predict, "%d,%.3f\n", idx, y);
 					}
 				}
 				fclose(fp_predict);
@@ -469,27 +469,36 @@ private:
 			std::vector<tiny_dnn::vec_t> predict(nY.size() + prophecy + sequence_length + out_sequence_length);
 			std::vector<tiny_dnn::vec_t> YY = nY;
 			YY.resize(nY.size() + prophecy + sequence_length + out_sequence_length);
-			for (int i = nY.size(); i < YY.size(); i++)
-			{
-				YY[i].resize(nY[0].size());
-			}
-			for (int i = 0; i < YY.size(); i++)
-			{
-				train[i].resize(nY[0].size());
-				predict[i].resize(nY[0].size());
-			}
+
 			std::vector<double> timver_tmp(YY.size());
 
-			for (int i = 0; i < iY.size(); i++)
+#pragma omp parallel
 			{
-				timver_tmp[i] = timevar(i, 0);
-			}
-			for (int i = iY.size(); i < YY.size(); i++)
-			{
-				timver_tmp[i] = timver_tmp[i-1] + timevar(1, 0) - timevar(0, 0);
+#pragma omp for nowait
+				for (int i = nY.size(); i < YY.size(); i++)
+				{
+					YY[i].resize(nY[0].size());
+				}
+#pragma omp for nowait
+				for (int i = 0; i < YY.size(); i++)
+				{
+					train[i].resize(nY[0].size());
+					predict[i].resize(nY[0].size());
+				}
+
+#pragma omp for nowait
+				for (int i = 0; i < iY.size(); i++)
+				{
+					timver_tmp[i] = timevar(i, 0);
+				}
+				for (int i = iY.size(); i < YY.size(); i++)
+				{
+					timver_tmp[i] = timver_tmp[i-1] + timevar(1, 0) - timevar(0, 0);
+				}
 			}
 
 			//最初のシーケンス分は入力でしか無いのでそのまま
+#pragma omp for
 			for (int j = 0; j < sequence_length; j++)
 			{
 				tiny_dnn::vec_t y(y_dim);
@@ -1155,7 +1164,7 @@ public:
 				Mean[i] = a;
 				Sigma[i] = b;
 				fgets(buf, 256, fp);
-				sscanf(buf, "説明変数(%d)Min.Max:Min.Max:%lf %lf\n", &a, &b);
+				sscanf(buf, "説明変数(%d)Min.Max:Min.Max:%lf %lf\n", &tmp, &a, &b);
 				printf(buf);
 				Min[i] = a;
 				MaxMin[i] = b - a;
@@ -1411,10 +1420,20 @@ public:
 
 	void add_seq(tiny_dnn::vec_t& y, tiny_dnn::vec_t& Y)
 	{
+#if 10
+		const size_t sz = Y.size();
+		Y.resize(sz + y.size());
+		for (int i = 0; i < y.size(); i++)
+		{
+			Y[sz+i] = y[i];
+		}
+#else
 		for (int i = 0; i < y.size(); i++)
 		{
 			Y.push_back(y[i]);
 		}
+#endif
+
 	}
 	tiny_dnn::vec_t seq_vec(tiny_dnn::tensor_t& ny, int start)
 	{
@@ -1685,6 +1704,44 @@ public:
 			nn << layers.add_linear(train_labels[0].size());
 			printf("output size:%d\n", train_labels[0].size());
 		}
+
+#if 10
+#ifdef CNN_USE_AVX
+		for (auto n : nn)
+		{
+			if (n->layer_type() == "fully-connected")
+			{
+				n->set_backend_type(tiny_dnn::core::backend_t::avx);
+			}
+			if (n->layer_type() == "recurrent-layer")
+			{
+				n->set_backend_type(tiny_dnn::core::backend_t::avx);
+			}
+			if (n->layer_type() == "lstm-cell")
+			{
+				n->set_backend_type(tiny_dnn::core::backend_t::avx);
+			}
+		}
+#endif
+
+#ifdef CNN_USE_INTEL_MKL
+		for (auto n : nn)
+		{
+			if (n->layer_type() == "fully-connected")
+			{
+				n->set_backend_type(tiny_dnn::core::backend_t::intel_mkl);
+			}
+			if (n->layer_type() == "recurrent-layer")
+			{
+				n->set_backend_type(tiny_dnn::core::backend_t::avx);
+			}
+			if (n->layer_type() == "lstm-cell")
+			{
+				n->set_backend_type(tiny_dnn::core::backend_t::avx);
+			}
+		}
+#endif
+#endif
 
 
 		if (weight_init_type == "xavier")
