@@ -309,11 +309,11 @@ private:
 
 		if (test_mode)
 		{
-			nn_test.load("fit_best.model");
+			nn_test.load("fit_best_ts.model");
 		}
 		else
 		{
-			nn_test.load("tmp.model");
+			nn_test.load("tmp_ts.model");
 		}
 		printf("layers:%zd\n", nn_test.depth());
 
@@ -397,8 +397,8 @@ private:
 
 			if (accuracy_max < train_result.accuracy())
 			{
-				nn_test.save("fit_best.model");
-				nn_test.save("fit_best.model.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
+				nn_test.save("fit_best_ts.model");
+				nn_test.save("fit_best.model_ts.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
 				accuracy_max = train_result.accuracy();
 			}
 			if (1.0 - accuracy_max*0.01 < tolerance)
@@ -634,9 +634,9 @@ private:
 						tiny_dnn::vec_t y = train[iY.size()-1];
 						for (int k = 0; k < y_dim - 1; k++)
 						{
-							fprintf(fp_predict, "%.3f,%.3f,%.3f,", yy[k], yy[k], 0);
+							fprintf(fp_predict, "%.3f,%.3f,%.3f,", yy[k], yy[k], 0.0);
 						}
-						fprintf(fp_predict, "%.3f, %.3f, %.3f\n", yy[y_dim - 1], yy[y_dim - 1], 0);
+						fprintf(fp_predict, "%.3f, %.3f, %.3f\n", yy[y_dim - 1], yy[y_dim - 1], 0.0);
 					}
 				}
 				if(fp_predict) fclose(fp_predict);
@@ -926,8 +926,8 @@ private:
 			printf("%f %f\n", cost_min, cost_tot);
 			if (cost_tot < cost_min)
 			{
-				nn_test.save("fit_best.model");
-				nn_test.save("fit_best.model.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
+				nn_test.save("fit_best_ts.model");
+				nn_test.save("fit_best.model_ts.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
 				printf("!!=========== best model save ============!!\n");
 				cost_min = cost_tot;
 			}
@@ -987,7 +987,7 @@ public:
 	void gen_visualize_fit_state()
 	{
 		set_test(nn, 1);
-		nn.save("tmp.model");
+		nn.save("tmp_ts.model");
 
 		net_test();
 		set_train(nn, sequence_length, n_bptt_max, default_backend_type);
@@ -2062,7 +2062,7 @@ public:
 
 		try
 		{
-			nn.load("fit_best.model");
+			nn.load("fit_best_ts.model");
 			gen_visualize_fit_state();
 		}
 		catch (tiny_dnn::nn_error& msg)
@@ -2296,7 +2296,7 @@ public:
 		{
 			if (fp != stdout && fp != NULL) fclose(fp);
 			tiny_dnn::network2<tiny_dnn::sequential> nn_test;
-			nn_test.load("fit_best.model");
+			nn_test.load("fit_best_ts.model");
 
 			tiny_dnn::result train_result = get_accuracy(nn_test, train_images, train_labels);
 			tiny_dnn::result test_result = get_accuracy(nn_test, test_images, test_labels);
