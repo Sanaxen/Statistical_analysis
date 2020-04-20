@@ -220,8 +220,8 @@ public:
 					}
 					fprintf(fp, "%.3f\n", y_predict[i]);
 				}
+				fclose(fp);
 			}
-			fclose(fp);
 		}
 
 		se = 0.0;
