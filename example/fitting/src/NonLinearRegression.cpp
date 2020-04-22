@@ -539,14 +539,14 @@ int main(int argc, char** argv)
 		{
 			if (fp)fprintf(fp, "%d,%s\n", x_var_idx[i], header_names[x_var_idx[i]].c_str());
 		}
-		fclose(fp);
+		if (fp)fclose(fp);
 		
 		fp = fopen("select_variables2.dat", "w");
 		for (int i = 0; i < xx_var_idx.size(); i++)
 		{
 			if (fp)fprintf(fp, "%d,%s\n", xx_var_idx[i], header_names[xx_var_idx[i]].c_str());
 		}
-		fclose(fp);
+		if (fp)fclose(fp);
 	}
 
 	tiny_dnn::tensor_t X, Y;

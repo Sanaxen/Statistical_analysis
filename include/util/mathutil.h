@@ -777,4 +777,15 @@ public:
 //	return 1 - q_chi2(df, chi2);
 //}
 //
+
+inline double median(std::vector<double>& data)
+{
+	std::sort(std::begin(data), std::end(data));
+	size_t median_index = std::size(data) / 2;
+	double median = (std::size(data) % 2 == 0
+		? static_cast<double>(data[median_index] + data[median_index - 1]) / 2
+		: data[median_index]);
+
+	return median;
+}
 #endif

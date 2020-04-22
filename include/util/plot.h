@@ -27,7 +27,7 @@ class SJIStoUTF8
 		const int nSizeUtf8 = ::WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)buffUtf16, -1, NULL, 0, NULL, NULL);
 		if (!pDist) {
 			*pSize = nSizeUtf8;
-			delete buffUtf16;
+			delete [] buffUtf16;
 			return true;
 		}
 
@@ -38,8 +38,8 @@ class SJIStoUTF8
 		*pSize = lstrlenA((char*)(buffUtf8));
 		memcpy(pDist, buffUtf8, *pSize);
 
-		delete buffUtf16;
-		delete buffUtf8;
+		delete [] buffUtf16;
+		delete [] buffUtf8;
 
 		return true;
 	}
@@ -527,7 +527,7 @@ public:
 
 		const char* plot = (plot_count) ? "replot" : "plot";
 		fprintf(script, "%s '%s' %s using %d %s with points pointsize %.1f %s\n",
-			plot, data_name.c_str(), every.c_str(), 1, title, pointsize, linecolor.c_str());
+			plot, data_name.c_str(), every.c_str(), 1, title.c_str(), pointsize, linecolor.c_str());
 
 		for (int i = 1; i < X.n; i++)
 		{
@@ -545,7 +545,7 @@ public:
 				}
 			}
 			fprintf(script, "replot '%s' %s using %d %s with points pointsize %.1f %s\n",
-				data_name.c_str(), every.c_str(), i+1, title, pointsize, linecolor.c_str());
+				data_name.c_str(), every.c_str(), i+1, title.c_str(), pointsize, linecolor.c_str());
 		}
 		linecolor = "";
 		plot_count++;
@@ -642,12 +642,12 @@ public:
 						//fprintf(script, "plot '%s' using 1:2:2 %s with boxes linewidth %.1f pal\n",
 						//	histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/);
 						fprintf(script, "plot '%s' using 1:2 %s with boxes linewidth %.1f %s\n",
-							histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/, linecolor.c_str());
+							histogram_name, (std::string("t ") + x).c_str(), 1.0/*linewidth*/, linecolor.c_str());
 					}
 					else
 					{
 						fprintf(script, "plot '%s' using 1:2 %s with boxes linewidth %.1f %s\n",
-							histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/, linecolor.c_str());
+							histogram_name, (std::string("t ") + x).c_str(), 1.0/*linewidth*/, linecolor.c_str());
 					}
 					continue;
 				}
@@ -813,12 +813,12 @@ public:
 						//fprintf(script, "plot '%s' using 1:2:2 %s with boxes linewidth %.1f pal\n",
 						//	histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/);
 						fprintf(script, "plot '%s' using 1:2 %s with boxes linewidth %.1f %s\n",
-							histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/, linecolor.c_str());
+							histogram_name, (std::string("t ") + x).c_str(), 1.0/*linewidth*/, linecolor.c_str());
 					}
 					else
 					{
 						fprintf(script, "plot '%s' using 1:2 %s with boxes linewidth %.1f %s\n",
-							histogram_name, (std::string("t ") + x).c_str(), 1/*linewidth*/, linecolor.c_str());
+							histogram_name, (std::string("t ") + x).c_str(), 1.0/*linewidth*/, linecolor.c_str());
 					}
 					continue;
 				}
@@ -1303,7 +1303,7 @@ public:
 						if (residual_flag[i])
 						{
 							fprintf(script, "%s '%s' using 1:2 %s with boxes lc rgb \"light-red\" linewidth %.1f %s\n",
-								plot, histogram_name, (std::string("t ") + y).c_str(), 1/*linewidth*/, linecolor.c_str());
+								plot, histogram_name, (std::string("t ") + y).c_str(), 1.0/*linewidth*/, linecolor.c_str());
 						}
 						else
 						{
@@ -1316,12 +1316,12 @@ public:
 						if (residual_flag[i])
 						{
 							fprintf(script, "%s '%s' using 1:2 %s with boxes lc rgb \"light-red\" linewidth %.1f %s\n",
-								plot, histogram_name, (std::string("t ") + y).c_str(), 1/*linewidth*/, linecolor.c_str());
+								plot, histogram_name, (std::string("t ") + y).c_str(), 1.0/*linewidth*/, linecolor.c_str());
 						}
 						else
 						{
 							fprintf(script, "%s '%s' using 1:2 %s with boxes lc rgb \"chartreuse\" linewidth %.1f %s\n",
-								plot, histogram_name, (std::string("t ") + y).c_str(), 1/*linewidth*/, linecolor.c_str());
+								plot, histogram_name, (std::string("t ") + y).c_str(), 1.0/*linewidth*/, linecolor.c_str());
 						}
 					}
 					continue;

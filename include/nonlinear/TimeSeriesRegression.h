@@ -2378,6 +2378,7 @@ public:
 
 		std::vector<double> yy;
 		std::vector<double> ff;
+		std::vector<double> mer;
 		double mse = 0.0;
 		double rmse = 0.0;
 		for (int i = 0; i < train_images.size()-1; i++)
@@ -2393,6 +2394,8 @@ public:
 					mse += d*d;
 					yy.push_back(y[k]);
 					ff.push_back(z[k]);
+
+					mer.push_back(fabs(d) / z[k]);
 				}
 			}
 		}
@@ -2475,6 +2478,7 @@ public:
 		fprintf(fp, "r(‘ŠŠÖŒW”)             :%.4f\n", r);
 		fprintf(fp, "R^2(Œˆ’èŒW”(Šñ—^—¦))   :%.4f\n", R2);
 		fprintf(fp, "R^2(Ž©—R“x’²®Ï‚ÝŒˆ’èŒW”(Šñ—^—¦))   :%.4f\n", adjustedR2);
+		fprintf(fp, "MER                     :%.4f\n", median(mer));
 		//fprintf(fp, "AIC                     :%.3f\n", AIC);
 		//fprintf(fp, "chi square       :%f\n", chi_square);
 		//fprintf(fp, "p value          :%f\n", chi_pdf);
