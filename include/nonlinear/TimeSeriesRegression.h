@@ -119,9 +119,9 @@ private:
 
 			if (normalize_skilp.size() > 0)
 			{
-				for (int k = 0; k < X[0].size(); k++)
+				for (int k = y_dim; k < X[0].size(); k++)
 				{
-					if (normalize_skilp[k])
+					if (normalize_skilp[k- y_dim])
 					{
 						sigma[k] = 1.0 / xx_var_scale;
 						mean[k] = 0.0;
