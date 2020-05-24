@@ -1805,6 +1805,160 @@ public:
 		using train_loss = tiny_dnn::mse;
 
 	
+		{
+			char *param = "train_params.txt";
+			if (test_mode) param = "test_params.txt";
+			FILE* fp = fopen(param, "w");
+			fprintf(fp, "test_mode:%d\n", test_mode);
+			fprintf(fp, "learning_rate:%f\n", learning_rate);
+			fprintf(fp, "opt_type:%s\n", opt_type.c_str());
+			fprintf(fp, "n_train_epochs:%d\n", n_train_epochs);
+			fprintf(fp, "n_minibatch:%d\n", n_minibatch);
+
+			fprintf(fp, "train_images:%d\n", train_images.size());
+			fprintf(fp, "train_images[0]:%d\n", train_images.size()>0?train_images[0].size():0);
+			fprintf(fp, "train_labels:%d\n", train_labels.size());
+			fprintf(fp, "train_labels[0]:%d\n", train_labels.size() > 0 ? train_labels[0].size() : 0);
+			fprintf(fp, "train_images:%d\n", train_images.size());
+			fprintf(fp, "train_images[0]:%d\n", train_images.size()>0?train_images[0].size():0);
+			fprintf(fp, "train_labels:%d\n", train_labels.size());
+			fprintf(fp, "train_labels[0]:%d\n", train_labels.size() > 0 ? train_labels[0].size() : 0);
+			fprintf(fp, "test_images:%d\n", test_images.size());
+			fprintf(fp, "test_images[0]:%d\n", test_images.size()>0?test_images[0].size():0);
+			fprintf(fp, "test_labels:%d\n", test_labels.size());
+			fprintf(fp, "test_labels[0]:%d\n", test_labels.size() > 0 ? test_labels[0].size() : 0);
+			fprintf(fp, "x_dim:%d\n", x_dim);
+			fprintf(fp, "y_dim:%d\n", y_dim);
+			fprintf(fp, "sequence_length:%d\n", sequence_length);
+			fprintf(fp, "rnn_layers:%d\n", rnn_layers);
+			fprintf(fp, "n_layers:%d\n", n_layers);
+			fprintf(fp, "n_hidden_size:%d\n", n_hidden_size);
+			fprintf(fp, "fc_hidden_size:%d\n", fc_hidden_size);
+			fprintf(fp, "dropout:%d\n", dropout);
+			fprintf(fp, "prophecy:%d\n", prophecy);
+			fprintf(fp, "tolerance:%f\n", tolerance);
+			fprintf(fp, "rnn_type:%s\n", rnn_type.c_str());
+			fclose(fp);
+			
+			float maxvalue = -999999999.0;
+			float minvalue = -maxvalue;
+			char* images_file = "train_images.csv";
+			if (test_mode) images_file = "train_images.csv";
+			fp = fopen(images_file, "w");
+			for (int i = 0; i < train_images.size(); i++)
+			{
+				for (int j = 0; j < train_images[i].size(); j++)
+				{
+					if (maxvalue < train_images[i][j])
+					{
+						maxvalue = train_images[i][j];
+					}
+					if (minvalue > train_images[i][j])
+					{
+						minvalue = train_images[i][j];
+					}
+					fprintf(fp, "%f", train_images[i][j]);
+					if (j == train_images[i].size() - 1)
+					{
+						fprintf(fp, "\n");
+					}
+					else
+					{
+						fprintf(fp, ",");
+					}
+				}
+			}
+			fclose(fp);
+			
+			images_file = "test_images.csv";
+			if (test_mode) images_file = "test_images.csv";
+			fp = fopen(images_file, "w");
+			for (int i = 0; i < test_images.size(); i++)
+			{
+				for (int j = 0; j < test_images[i].size(); j++)
+				{
+					if (maxvalue < test_images[i][j])
+					{
+						maxvalue = test_images[i][j];
+					}
+					if (minvalue > test_images[i][j])
+					{
+						minvalue = train_images[i][j];
+					}
+					fprintf(fp, "%f", test_images[i][j]);
+					if (j == test_images[i].size() - 1)
+					{
+						fprintf(fp, "\n");
+					}
+					else
+					{
+						fprintf(fp, ",");
+					}
+				}
+			}
+			fclose(fp);
+			char* labels_file = "train_labels.csv";
+			if (test_mode) labels_file = "train_labels.csv";
+			fp = fopen(labels_file, "w");
+			for (int i = 0; i < train_labels.size(); i++)
+			{
+				for (int j = 0; j < train_labels[i].size(); j++)
+				{
+					if (maxvalue < train_labels[i][j])
+					{
+						maxvalue = train_labels[i][j];
+					}
+					if (minvalue > train_labels[i][j])
+					{
+						minvalue = train_labels[i][j];
+					}
+					fprintf(fp, "%f", train_labels[i][j]);
+					if (j == train_labels[i].size() - 1)
+					{
+						fprintf(fp, "\n");
+					}
+					else
+					{
+						fprintf(fp, ",");
+					}
+				}
+			}
+			fclose(fp);
+			
+			labels_file = "test_labels.csv";
+			if (test_mode) labels_file = "test_labels.csv";
+			fp = fopen(labels_file, "w");
+			for (int i = 0; i < test_labels.size(); i++)
+			{
+				for (int j = 0; j < test_labels[i].size(); j++)
+				{
+					if (maxvalue < test_labels[i][j])
+					{
+						maxvalue = test_labels[i][j];
+					}
+					if (minvalue > test_labels[i][j])
+					{
+						minvalue = test_labels[i][j];
+					}
+					fprintf(fp, "%f", test_labels[i][j]);
+					if (j == test_labels[i].size() - 1)
+					{
+						fprintf(fp, "\n");
+					}
+					else
+					{
+						fprintf(fp, ",");
+					}
+				}
+			}
+			fclose(fp);
+			
+			fp = fopen(param, "a");
+			fprintf(fp, "maxvalue:%f\n", maxvalue);
+			fprintf(fp, "minvalue:%f\n", minvalue);
+			fclose(fp);
+		}
+
 		tiny_dnn::adam optimizer_adam;
 		tiny_dnn::gradient_descent optimizer_sgd;
 		tiny_dnn::RMSprop optimizer_rmsprop;
