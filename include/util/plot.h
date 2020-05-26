@@ -406,7 +406,7 @@ public:
 				every = "every " + std::to_string(every_num);
 			}
 		}
-		printf("%s\n", every.c_str());
+		//printf("%s\n", every.c_str());
 
 		if (headers.size())
 		{
