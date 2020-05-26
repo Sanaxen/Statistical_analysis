@@ -1,5 +1,6 @@
 #define USE_MKL
 #define CNN_USE_AVX
+//#define USE_LIBTORCH
 
 #define _cublas_Init_def
 #define NOMINMAX
@@ -57,6 +58,8 @@ int main(int argc, char** argv)
 	int use_differnce = 0;
 	bool use_differnce_auto_inv = false;
 	bool use_differnce_output_only = false;
+	bool use_libtorch = false;
+	std::string device_name = "cpu";
 
 	int classification = -1;
 	int read_max = -1;
@@ -89,6 +92,14 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--device_name") {
+			device_name = std::string(argv[count + 1]);
+		}
+		else
+			if (argname == "--use_libtorch") {
+			use_libtorch = (atoi(argv[count + 1]) != 0) ? true : false;
+		}
+		else
 		if (argname == "--ts_decomp_frequency") {
 			ts_decomp_frequency = atoi(argv[count + 1]);
 		}
@@ -883,6 +894,14 @@ int main(int argc, char** argv)
 	}
 #endif
 
+#ifdef USE_LIBTORCH
+	if (use_libtorch)
+	{
+		torch_train_init();
+		torch_setDevice(device_name.c_str());
+	}
+#endif
+
 	TimeSeriesRegression timeSeries(X, Y, normalize_skilp, xx_var_scale, y_dim, x_dim, normalization_type, classification, test_mode, use_trained_scale, use_defined_scale, use_differnce, use_logdiffernce, use_differnce_output_only);
 	if (timeSeries.getStatus() == -1)
 	{
@@ -897,6 +916,10 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
+#ifdef USE_LIBTORCH
+	timeSeries.use_libtorch = use_libtorch;
+	timeSeries.device_name = device_name;
+#endif
 	timeSeries.timeformat = timeformat;
 	timeSeries.timestamp = timestamp;
 	timeSeries.timevar = tvar;
@@ -905,7 +928,7 @@ int main(int argc, char** argv)
 	timeSeries.tolerance = 0.009;
 	timeSeries.learning_rate = 1.0;
 	timeSeries.visualize_loss(10);
-	timeSeries.plot = 10;
+	timeSeries.plot = 1;
 	timeSeries.test_mode = test_mode;
 	timeSeries.weight_init_type = weight_init_type;
 	timeSeries.normalize_skilp = normalize_skilp;
@@ -919,6 +942,12 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--device_name") {
+			continue;
+		}
+		if (argname == "--use_libtorch") {
+			continue;
+		}
 		if (argname == "--dir") {
 			continue;
 		}
@@ -1140,6 +1169,8 @@ int main(int argc, char** argv)
 		<< "use_differnce: " << timeSeries.use_differnce << std::endl
 		<< "use_logdiffernce: " << timeSeries.use_logdiffernce << std::endl
 		<< "use_differnce_auto_inv: " << timeSeries.use_differnce_auto_inv << std::endl
+		<< "device_name: " << timeSeries.device_name << std::endl
+		<< "use_libtorch: " << timeSeries.use_libtorch << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		<< std::endl;
 //

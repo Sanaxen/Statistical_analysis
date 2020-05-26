@@ -7,6 +7,11 @@
 #include <signal.h>
 #pragma warning( disable : 4305 ) 
 
+
+#ifdef USE_LIBTORCH
+#include "../pytorch_cpp/tiny_dnn2libtorch_dll.h"
+#endif
+
 #define EARLY_STOPPING_	10
 
 /* シグナル受信/処理 */
@@ -277,15 +282,32 @@ private:
 
 		tiny_dnn::network2<tiny_dnn::sequential> nn_test;
 
-		if (test_mode)
+		void* torch_nn_test = NULL;
+#ifdef USE_LIBTORCH
+		if (use_libtorch)
 		{
-			nn_test.load("fit_best.model");
+			if (test_mode)
+			{
+				torch_nn_test = torch_load_new("fit_best.pt");
+			}
+			else
+			{
+				torch_nn_test = torch_load_new("tmp.pt");
+			}
 		}
 		else
+#endif
 		{
-			nn_test.load("tmp.model");
+			if (test_mode)
+			{
+				nn_test.load("fit_best.model");
+			}
+			else
+			{
+				nn_test.load("tmp.model");
+			}
 		}
-		printf("layers:%zd\n", nn_test.depth());
+		//printf("layers:%zd\n", nn_test.depth());
 
 		set_test(nn_test, 1);
 
@@ -317,7 +339,17 @@ private:
 
 		if (classification >= 2)
 		{
-			float loss_train = get_loss(nn_test, train_images, train_labels);
+			float loss_train = 0;
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				loss_train = torch_get_loss_nn(torch_nn_test, train_images, train_labels, 1);
+			}
+			else
+#endif
+			{
+				loss_train = get_loss(nn_test, train_images, train_labels);
+			}
 			if (loss_train < cost_min)
 			{
 				cost_min = loss_train;
@@ -334,16 +366,34 @@ private:
 					fflush(fp_error_loss);
 				}
 			}
-			float loss_test = get_loss(nn_test, test_images, test_labels);
+			float loss_test = 0;
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				loss_test = torch_get_loss_nn(torch_nn_test, test_images, test_labels, 1);
+			}
+			else
+#endif
+			{
+				loss_test = get_loss(nn_test, test_images, test_labels);
+			}
 
 
 			tiny_dnn::result train_result;
 			tiny_dnn::result test_result;
 
-			train_result = get_accuracy(nn_test, train_images, train_labels);
-			test_result = get_accuracy(nn_test, test_images, test_labels);
-
-
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				train_result = torch_get_accuracy_nn(torch_nn_test, train_images, train_labels, 1);
+				test_result = torch_get_accuracy_nn(torch_nn_test, test_images, test_labels, 1);
+			}
+			else
+#endif
+			{
+				train_result = get_accuracy(nn_test, train_images, train_labels);
+				test_result = get_accuracy(nn_test, test_images, test_labels);
+			}
 			if (fp_accuracy)
 			{
 				fprintf(fp_accuracy, "%.4f %.4f\n", train_result.accuracy(), test_result.accuracy());
@@ -392,9 +442,17 @@ private:
 				for (int i = 0; i < nX.size(); i++)
 				{
 					tiny_dnn::vec_t x = nX[i];
-					tiny_dnn::vec_t& y_predict = nn_test.predict(x);
-
-
+					tiny_dnn::vec_t y_predict;
+#ifdef USE_LIBTORCH
+					if (use_libtorch)
+					{
+						y_predict = torch_model_predict(torch_nn_test, x);
+					}
+					else
+#endif
+					{
+						y_predict = nn_test.predict(x);
+					}
 					if (fp_predict)
 					{
 						for (int k = 0; k < nX[0].size(); k++)
@@ -426,7 +484,16 @@ private:
 		for (int i = 0; i < nX.size(); i++)
 		{
 			tiny_dnn::vec_t& x = nX[i];
-			Y_predict[i] = nn_test.predict(x);
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				Y_predict[i] = torch_model_predict(torch_nn_test, x);
+			}
+			else
+#endif
+			{
+				Y_predict[i] = nn_test.predict(x);
+			}
 
 			for (int k = 0; k < Y_predict[i].size(); k++)
 			{
@@ -462,7 +529,18 @@ private:
 			{
 				std::vector<double> diff;
 				tiny_dnn::vec_t x = nX[i];
-				tiny_dnn::vec_t& y_predict = nn_test.predict(x);
+
+				tiny_dnn::vec_t y_predict;
+#ifdef USE_LIBTORCH
+				if (use_libtorch)
+				{
+					y_predict = torch_model_predict(torch_nn_test, x);
+				}
+				else
+#endif
+				{
+					y_predict = nn_test.predict(x);
+				}
 
 
 				if (fp_predict)
@@ -557,8 +635,17 @@ private:
 		//printf("%f %f\n", cost_min, cost);
 		if (cost_tot < cost_min)
 		{
-			nn_test.save("fit_best.model");
-			nn_test.save("fit_best.model.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				torch_save_nn(torch_nn_test, "fit_best.pt");
+			}
+			else
+#endif
+			{
+				nn_test.save("fit_best.model");
+				nn_test.save("fit_best.model.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
+			}
 			cost_min = cost_tot;
 		}
 		if (cost_min < tolerance)
@@ -607,14 +694,26 @@ private:
 				fclose(fp);
 			}
 		}
+		set_train(nn, 1, 0, default_backend_type);
 		visualize_observed_predict();
+#ifdef USE_LIBTORCH
+		torch_delete_load_model(torch_nn_test);
+#endif
 	}
 
 public:
 	void gen_visualize_fit_state()
 	{
 		set_test(nn, 1);
-		nn.save("tmp.model");
+#ifdef USE_LIBTORCH
+		if (use_libtorch)
+		{
+			torch_save("tmp.pt");
+		}else
+#endif
+		{
+			nn.save("tmp.model");
+		}
 		net_test();
 		set_train(nn, 1, 0, default_backend_type);
 
@@ -646,6 +745,8 @@ private:
 	int batch = 0;
 	bool early_stopp = false;
 public:
+	std::string device_name = "cpu";
+	int use_libtorch = 0;
 	float class_minmax[2] = { 0,0 };
 	float dropout = 0;
 	int classification = -1;
@@ -687,8 +788,12 @@ public:
 	size_t n_minibatch = 10;
 	size_t n_train_epochs = 2000;
 	float_t learning_rate = 1.0;
-	int plot = 100;
+	int plot = 1;
+#ifdef USE_LIBTORCH
+	std::string model_file = "fit.pt";
+#else
 	std::string model_file = "fit.model";
+#endif
 
 	int getStatus() const
 	{
@@ -1325,6 +1430,158 @@ public:
 		nn.set_input_size(train_images.size());
 		using train_loss = tiny_dnn::mse;
 
+		{
+			int hidden_size = train_images[0].size() * 50;
+
+			char *param = "train_params.txt";
+			if (test_mode) param = "test_params.txt";
+			FILE* fp = fopen(param, "w");
+			fprintf(fp, "test_mode:%d\n", test_mode);
+			fprintf(fp, "learning_rate:%f\n", learning_rate);
+			fprintf(fp, "opt_type:%s\n", opt_type.c_str());
+			fprintf(fp, "n_train_epochs:%d\n", n_train_epochs);
+			fprintf(fp, "n_minibatch:%d\n", n_minibatch);
+
+			fprintf(fp, "train_images:%d\n", train_images.size());
+			fprintf(fp, "train_images[0]:%d\n", train_images.size() > 0 ? train_images[0].size() : 0);
+			fprintf(fp, "train_labels:%d\n", train_labels.size());
+			fprintf(fp, "train_labels[0]:%d\n", train_labels.size() > 0 ? train_labels[0].size() : 0);
+			fprintf(fp, "train_images:%d\n", train_images.size());
+			fprintf(fp, "train_images[0]:%d\n", train_images.size() > 0 ? train_images[0].size() : 0);
+			fprintf(fp, "train_labels:%d\n", train_labels.size());
+			fprintf(fp, "train_labels[0]:%d\n", train_labels.size() > 0 ? train_labels[0].size() : 0);
+			fprintf(fp, "test_images:%d\n", test_images.size());
+			fprintf(fp, "test_images[0]:%d\n", test_images.size() > 0 ? test_images[0].size() : 0);
+			fprintf(fp, "test_labels:%d\n", test_labels.size());
+			fprintf(fp, "test_labels[0]:%d\n", test_labels.size() > 0 ? test_labels[0].size() : 0);
+			fprintf(fp, "n_layers:%d\n", n_layers);
+			fprintf(fp, "n_hidden_size:%d\n", hidden_size);
+			fprintf(fp, "dropout:%d\n", dropout);
+			fprintf(fp, "prophecy:%d\n", 0);
+			fprintf(fp, "tolerance:%f\n", tolerance);
+			fprintf(fp, "input_size:%d\n", input_size);
+			fprintf(fp, "classification:%d\n", classification);
+			fclose(fp);
+
+			float maxvalue = -999999999.0;
+			float minvalue = -maxvalue;
+			char* images_file = "train_images_tr.csv";
+			if (test_mode) images_file = "train_images_ts.csv";
+			fp = fopen(images_file, "w");
+			for (int i = 0; i < train_images.size(); i++)
+			{
+				for (int j = 0; j < train_images[i].size(); j++)
+				{
+					if (maxvalue < train_images[i][j])
+					{
+						maxvalue = train_images[i][j];
+					}
+					if (minvalue > train_images[i][j])
+					{
+						minvalue = train_images[i][j];
+					}
+					fprintf(fp, "%f", train_images[i][j]);
+					if (j == train_images[i].size() - 1)
+					{
+						fprintf(fp, "\n");
+					}
+					else
+					{
+						fprintf(fp, ",");
+					}
+				}
+			}
+			fclose(fp);
+
+			images_file = "test_images_tr.csv";
+			if (test_mode) images_file = "test_images_ts.csv";
+			fp = fopen(images_file, "w");
+			for (int i = 0; i < test_images.size(); i++)
+			{
+				for (int j = 0; j < test_images[i].size(); j++)
+				{
+					if (maxvalue < test_images[i][j])
+					{
+						maxvalue = test_images[i][j];
+					}
+					if (minvalue > test_images[i][j])
+					{
+						minvalue = train_images[i][j];
+					}
+					fprintf(fp, "%f", test_images[i][j]);
+					if (j == test_images[i].size() - 1)
+					{
+						fprintf(fp, "\n");
+					}
+					else
+					{
+						fprintf(fp, ",");
+					}
+				}
+			}
+			fclose(fp);
+			char* labels_file = "train_labels_tr.csv";
+			if (test_mode) labels_file = "train_labels_ts.csv";
+			fp = fopen(labels_file, "w");
+			for (int i = 0; i < train_labels.size(); i++)
+			{
+				for (int j = 0; j < train_labels[i].size(); j++)
+				{
+					if (maxvalue < train_labels[i][j])
+					{
+						maxvalue = train_labels[i][j];
+					}
+					if (minvalue > train_labels[i][j])
+					{
+						minvalue = train_labels[i][j];
+					}
+					fprintf(fp, "%f", train_labels[i][j]);
+					if (j == train_labels[i].size() - 1)
+					{
+						fprintf(fp, "\n");
+					}
+					else
+					{
+						fprintf(fp, ",");
+					}
+				}
+			}
+			fclose(fp);
+
+			labels_file = "test_labels_tr.csv";
+			if (test_mode) labels_file = "test_labels_ts.csv";
+			fp = fopen(labels_file, "w");
+			for (int i = 0; i < test_labels.size(); i++)
+			{
+				for (int j = 0; j < test_labels[i].size(); j++)
+				{
+					if (maxvalue < test_labels[i][j])
+					{
+						maxvalue = test_labels[i][j];
+					}
+					if (minvalue > test_labels[i][j])
+					{
+						minvalue = test_labels[i][j];
+					}
+					fprintf(fp, "%f", test_labels[i][j]);
+					if (j == test_labels[i].size() - 1)
+					{
+						fprintf(fp, "\n");
+					}
+					else
+					{
+						fprintf(fp, ",");
+					}
+				}
+			}
+			fclose(fp);
+
+			fp = fopen(param, "a");
+			fprintf(fp, "maxvalue:%f\n", maxvalue);
+			fprintf(fp, "minvalue:%f\n", minvalue);
+			fclose(fp);
+		}
+
 		tiny_dnn::adam				optimizer_adam;
 		tiny_dnn::gradient_descent	optimizer_sgd;
 		tiny_dnn::RMSprop			optimizer_rmsprop;
@@ -1399,13 +1656,31 @@ public:
 			if (convergence)
 			{
 				printf("convergence!!\n");
-				nn.stop_ongoing_training();
+#ifdef USE_LIBTORCH
+				if (use_libtorch)
+				{
+					torch_stop_ongoing_training();
+				}
+				else
+#endif
+				{
+					nn.stop_ongoing_training();
+				}
 				error = 0;
 
 			}
 			if (early_stopp)
 			{
-				nn.stop_ongoing_training();
+#ifdef USE_LIBTORCH
+				if (use_libtorch)
+				{
+					torch_stop_ongoing_training();
+				}
+				else
+#endif
+				{
+					nn.stop_ongoing_training();
+				}
 				error = 1;
 				printf("early_stopp!!\n");
 			}
@@ -1433,25 +1708,52 @@ public:
 		auto on_enumerate_minibatch = [&]() {
 			if (progress) disp += n_minibatch;
 
-			if (epoch < 3 && plot && batch % plot == 0)
-			{
-				gen_visualize_fit_state();
-			}
+			//if (epoch < 3 && plot && (batch+1) % plot == 0)
+			//{
+			//	gen_visualize_fit_state();
+			//}
 			if (convergence)
 			{
 				printf("convergence!!\n");
-				nn.stop_ongoing_training();
+#ifdef USE_LIBTORCH
+				if (use_libtorch)
+				{
+					torch_stop_ongoing_training();
+				}
+				else
+#endif
+				{
+					nn.stop_ongoing_training();
+				}
 				error = 0;
 			}
 			if (early_stopp)
 			{
-				nn.stop_ongoing_training();
+#ifdef USE_LIBTORCH
+				if (use_libtorch)
+				{
+					torch_stop_ongoing_training();
+				}
+				else
+#endif
+				{
+					nn.stop_ongoing_training();
+				}
 				error = 1;
 				printf("early_stopp!!\n");
 			}
 			if (ctr_c_stopping_nonlinear_regression)
 			{
-				nn.stop_ongoing_training();
+#ifdef USE_LIBTORCH
+				if (use_libtorch)
+				{
+					torch_stop_ongoing_training();
+				}
+				else
+#endif
+				{
+					nn.stop_ongoing_training();
+				}
 				error = 1;
 				printf("CTR-C stopp!!\n");
 			}
@@ -1460,114 +1762,147 @@ public:
 
 		if (!test_mode)
 		{
-			try
+			if (!use_libtorch)
 			{
-				// training
-				//nn.fit<tiny_dnn::mse>(*optimizer_, train_images, train_labels,
-				//	n_minibatch,
-				//	n_train_epochs,
-				//	on_enumerate_minibatch,
-				//	on_enumerate_epoch
-				//	);
-				if (opt_type == "adam")
+				try
 				{
 					// training
-					if (classification < 2)
+					//nn.fit<tiny_dnn::mse>(*optimizer_, train_images, train_labels,
+					//	n_minibatch,
+					//	n_train_epochs,
+					//	on_enumerate_minibatch,
+					//	on_enumerate_epoch
+					//	);
+					if (opt_type == "adam")
 					{
-						nn.fit<tiny_dnn::mse>(optimizer_adam, train_images, train_labels,
-							n_minibatch,
-							n_train_epochs,
-							on_enumerate_minibatch,
-							on_enumerate_epoch
-							);
+						// training
+						if (classification < 2)
+						{
+							nn.fit<tiny_dnn::mse>(optimizer_adam, train_images, train_labels,
+								n_minibatch,
+								n_train_epochs,
+								on_enumerate_minibatch,
+								on_enumerate_epoch
+								);
+						}
+						else
+						{
+							nn.fit<tiny_dnn::cross_entropy_multiclass>(optimizer_adam, train_images, train_labels,
+								n_minibatch,
+								n_train_epochs,
+								on_enumerate_minibatch,
+								on_enumerate_epoch
+								);
+						}
 					}
-					else
+					if (opt_type == "sgd")
 					{
-						nn.fit<tiny_dnn::cross_entropy_multiclass>(optimizer_adam, train_images, train_labels,
-							n_minibatch,
-							n_train_epochs,
-							on_enumerate_minibatch,
-							on_enumerate_epoch
-							);
+						// training
+						if (classification < 2)
+						{
+							nn.fit<tiny_dnn::mse>(optimizer_sgd, train_images, train_labels,
+								n_minibatch,
+								n_train_epochs,
+								on_enumerate_minibatch,
+								on_enumerate_epoch
+								);
+						}
+						else
+						{
+							nn.fit<tiny_dnn::cross_entropy_multiclass>(optimizer_sgd, train_images, train_labels,
+								n_minibatch,
+								n_train_epochs,
+								on_enumerate_minibatch,
+								on_enumerate_epoch
+								);
+						}
+					}
+					if (opt_type == "rmsprop")
+					{
+						// training
+						if (classification < 2)
+						{
+							nn.fit<tiny_dnn::mse>(optimizer_rmsprop, train_images, train_labels,
+								n_minibatch,
+								n_train_epochs,
+								on_enumerate_minibatch,
+								on_enumerate_epoch
+								);
+						}
+						else
+						{
+							nn.fit<tiny_dnn::cross_entropy_multiclass>(optimizer_rmsprop, train_images, train_labels,
+								n_minibatch,
+								n_train_epochs,
+								on_enumerate_minibatch,
+								on_enumerate_epoch
+								);
+						}
+					}
+					if (opt_type == "adagrad")
+					{
+						// training
+						if (classification < 2)
+						{
+							nn.fit<tiny_dnn::mse>(optimizer_adagrad, train_images, train_labels,
+								n_minibatch,
+								n_train_epochs,
+								on_enumerate_minibatch,
+								on_enumerate_epoch
+								);
+						}
+						else
+						{
+							nn.fit<tiny_dnn::cross_entropy_multiclass>(optimizer_adagrad, train_images, train_labels,
+								n_minibatch,
+								n_train_epochs,
+								on_enumerate_minibatch,
+								on_enumerate_epoch
+								);
+						}
 					}
 				}
-				if (opt_type == "sgd")
-				{
-					// training
-					if (classification < 2)
-					{
-						nn.fit<tiny_dnn::mse>(optimizer_sgd, train_images, train_labels,
-							n_minibatch,
-							n_train_epochs,
-							on_enumerate_minibatch,
-							on_enumerate_epoch
-							);
-					}
-					else
-					{
-						nn.fit<tiny_dnn::cross_entropy_multiclass>(optimizer_sgd, train_images, train_labels,
-							n_minibatch,
-							n_train_epochs,
-							on_enumerate_minibatch,
-							on_enumerate_epoch
-							);
-					}
+				catch (tiny_dnn::nn_error &err) {
+					std::cerr << "Exception: " << err.what() << std::endl;
+					error = -1;
+					return;
 				}
-				if (opt_type == "rmsprop")
-				{
-					// training
-					if (classification < 2)
-					{
-						nn.fit<tiny_dnn::mse>(optimizer_rmsprop, train_images, train_labels,
-							n_minibatch,
-							n_train_epochs,
-							on_enumerate_minibatch,
-							on_enumerate_epoch
-							);
-					}
-					else
-					{
-						nn.fit<tiny_dnn::cross_entropy_multiclass>(optimizer_rmsprop, train_images, train_labels,
-							n_minibatch,
-							n_train_epochs,
-							on_enumerate_minibatch,
-							on_enumerate_epoch
-							);
-					}
-				}
-				if (opt_type == "adagrad")
-				{
-					// training
-					if (classification < 2)
-					{
-						nn.fit<tiny_dnn::mse>(optimizer_adagrad, train_images, train_labels,
-							n_minibatch,
-							n_train_epochs,
-							on_enumerate_minibatch,
-							on_enumerate_epoch
-							);
-					}
-					else
-					{
-						nn.fit<tiny_dnn::cross_entropy_multiclass>(optimizer_adagrad, train_images, train_labels,
-							n_minibatch,
-							n_train_epochs,
-							on_enumerate_minibatch,
-							on_enumerate_epoch
-							);
-					}
-				}
-			}
-			catch (tiny_dnn::nn_error &err) {
-				std::cerr << "Exception: " << err.what() << std::endl;
-				error = -1;
-				return;
 			}
 		}
 
+#ifdef USE_LIBTORCH
+		{
+		if (!test_mode)
+		{
+			torch_read_train_params();
+		}
+		else
+		{
+			torch_read_test_params();
+		}
+		printf("****** pytorch (C++) mode ******\n");
+		torch_train_fc(
+			train_images,
+			train_labels,
+			n_minibatch,
+			n_train_epochs,
+			(char*)regression.c_str(),
+			on_enumerate_minibatch, on_enumerate_epoch);
+		}
+#endif
+
 		try
 		{
-			nn.load("fit_best.model");
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				torch_load("fit_best_ts.pt");
+			}
+			else
+#endif
+			{
+				nn.load("fit_best.model");
+			}
 			gen_visualize_fit_state();
 		}
 		catch (tiny_dnn::nn_error& msg)
@@ -1586,9 +1921,17 @@ public:
 		fp_accuracy = NULL;
 
 		// save network model & trained weights
-		nn.save(model_file+".json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
-		nn.save(model_file);
-
+#ifdef USE_LIBTORCH
+		if (use_libtorch)
+		{
+			torch_save(model_file.c_str());
+		}
+		else
+#endif
+		{
+			nn.save(model_file + ".json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
+			nn.save(model_file);
+		}
 
 		if (regression == "linear" || regression == "logistic")
 		{

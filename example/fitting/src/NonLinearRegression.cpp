@@ -1,5 +1,6 @@
 #define USE_MKL
 #define CNN_USE_AVX
+//#define USE_LIBTORCH
 
 #define _cublas_Init_def
 #define NOMINMAX
@@ -57,6 +58,9 @@ int main(int argc, char** argv)
 	bool dump_input = false;
 	std::string weight_init_type = "xavier";
 	bool layer_graph_only = false;
+	
+	int use_libtorch = 0;
+	std::string device_name = "cpu";
 
 	std::string csvfile("sample.csv");
 	std::string report_file("NonLinearRegression.txt");
@@ -73,6 +77,14 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--device_name") {
+			device_name = std::string(argv[count + 1]);
+		}
+		else
+		if (argname == "--use_libtorch") {
+			use_libtorch = (atoi(argv[count + 1]) != 0) ? true : false;
+		}
+		else
 		if (argname == "--read_max") {
 			read_max = atoi(argv[count + 1]);
 		}
@@ -578,12 +590,22 @@ int main(int argc, char** argv)
 	regression.weight_init_type = weight_init_type;
 	regression.layer_graph_only = layer_graph_only;
 
+#ifdef USE_LIBTORCH
+	regression.use_libtorch = use_libtorch;
+	regression.device_name = device_name;
+#endif
 
 	double test_num = 0;
 	int n_layers = -1;
 	int input_unit = -1;
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--device_name") {
+			continue;
+		}else
+		if (argname == "--use_libtorch") {
+			continue;
+		}else
 		if (argname == "--dir") {
 			continue;
 		}
@@ -735,6 +757,8 @@ int main(int argc, char** argv)
 		<< "dropout       : " << regression.dropout << std::endl
 		<< "weight_init_type       : " << regression.weight_init_type << std::endl
 		<< "use_trained_scale: " << regression.use_trained_scale << std::endl
+		<< "device_name: " << regression.device_name << std::endl
+		<< "use_libtorch: " << regression.use_libtorch << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		<< std::endl;
 
