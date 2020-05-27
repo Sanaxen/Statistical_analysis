@@ -367,15 +367,18 @@ private:
 				}
 			}
 			float loss_test = 0;
+			if (test_images.size() > 0)
+			{
 #ifdef USE_LIBTORCH
-			if (use_libtorch)
-			{
-				loss_test = torch_get_loss_nn(torch_nn_test, test_images, test_labels, 1);
-			}
-			else
+				if (use_libtorch)
+				{
+					loss_test = torch_get_loss_nn(torch_nn_test, test_images, test_labels, 1);
+				}
+				else
 #endif
-			{
-				loss_test = get_loss(nn_test, test_images, test_labels);
+				{
+					loss_test = get_loss(nn_test, test_images, test_labels);
+				}
 			}
 
 
@@ -386,13 +389,20 @@ private:
 			if (use_libtorch)
 			{
 				train_result = torch_get_accuracy_nn(torch_nn_test, train_images, train_labels, 1);
-				test_result = torch_get_accuracy_nn(torch_nn_test, test_images, test_labels, 1);
+				if (test_images.size() > 0)
+				{
+					test_result = torch_get_accuracy_nn(torch_nn_test, test_images, test_labels, 1);
+				}
 			}
 			else
 #endif
 			{
 				train_result = get_accuracy(nn_test, train_images, train_labels);
-				test_result = get_accuracy(nn_test, test_images, test_labels);
+				if (test_images.size() > 0)
+				{
+					test_result = get_accuracy(nn_test, test_images, test_labels);
+				}
+
 			}
 			if (fp_accuracy)
 			{
@@ -414,8 +424,17 @@ private:
 
 			if (accuracy_max < train_result.accuracy())
 			{
-				nn_test.save("fit_best.model");
-				nn_test.save("fit_best.model.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
+#ifdef USE_LIBTORCH
+				if (use_libtorch)
+				{
+					torch_save("fit_best.pt");
+				}
+				else
+#endif
+				{
+					nn_test.save("fit_best.model");
+					nn_test.save("fit_best.model.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
+				}
 				accuracy_max = train_result.accuracy();
 			}
 			if (1.0 - accuracy_max*0.01 < tolerance)
@@ -1871,23 +1890,24 @@ public:
 		}
 
 #ifdef USE_LIBTORCH
+		if (use_libtorch)
 		{
-		if (!test_mode)
-		{
-			torch_read_train_params();
-		}
-		else
-		{
-			torch_read_test_params();
-		}
-		printf("****** pytorch (C++) mode ******\n");
-		torch_train_fc(
-			train_images,
-			train_labels,
-			n_minibatch,
-			n_train_epochs,
-			(char*)regression.c_str(),
-			on_enumerate_minibatch, on_enumerate_epoch);
+			if (!test_mode)
+			{
+				torch_read_train_params();
+			}
+			else
+			{
+				torch_read_test_params();
+			}
+			printf("****** pytorch (C++) mode ******\n");
+			torch_train_fc(
+				train_images,
+				train_labels,
+				n_minibatch,
+				n_train_epochs,
+				(char*)regression.c_str(),
+				on_enumerate_minibatch, on_enumerate_epoch);
 		}
 #endif
 
@@ -1896,7 +1916,7 @@ public:
 #ifdef USE_LIBTORCH
 			if (use_libtorch)
 			{
-				torch_load("fit_best_ts.pt");
+				torch_load("fit_best.pt");
 			}
 			else
 #endif
@@ -2269,11 +2289,25 @@ public:
 		{
 			if (fp != stdout && fp != NULL) fclose(fp);
 			tiny_dnn::network2<tiny_dnn::sequential> nn_test;
-			nn_test.load("fit_best.model");
 
-			tiny_dnn::result train_result = get_accuracy(nn_test, train_images, train_labels);
-			tiny_dnn::result test_result = get_accuracy(nn_test, test_images, test_labels);
+			tiny_dnn::result train_result;
+			tiny_dnn::result test_result;
+#ifdef USE_LIBTORCH
+			void* torch_nn_test = NULL;
+			if (use_libtorch)
+			{
+				torch_nn_test = torch_load_new("fit_best.pt");
+				train_result = torch_get_accuracy_nn(torch_nn_test, train_images, train_labels, 1);
+				test_result = torch_get_accuracy_nn(torch_nn_test, test_images, test_labels, 1);
+			}
+			else
+#endif
+			{
+				nn_test.load("fit_best.model");
 
+				train_result = get_accuracy(nn_test, train_images, train_labels);
+				test_result = get_accuracy(nn_test, test_images, test_labels);
+			}
 			{
 				std::ofstream stream(filename);
 

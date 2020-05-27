@@ -2328,6 +2328,7 @@ public:
 		}
 
 #ifdef USE_LIBTORCH
+		if (use_libtorch)
 		{
 			if (!test_mode)
 			{

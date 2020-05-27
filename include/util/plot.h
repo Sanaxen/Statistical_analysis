@@ -170,6 +170,16 @@ namespace gnuplot_path_
 			fgets(buf, 640, fp);
 			char* p = strstr(buf, "\n");
 			if (p) *p = '\0';
+			p = buf;
+			if (*p == '\"')
+			{
+				p = buf + 1;
+				char* q = strchr(p, '\"');
+				if (q != NULL) *q = '\0';
+				char tmp[640];
+				strcpy(tmp, p);
+				strcpy(buf, tmp);
+			}
 			gnuplot_path_::path_ = std::string(buf);
 
 			fclose(fp);
@@ -1348,7 +1358,7 @@ public:
 		fclose(script);
 		script = NULL;
 	}
-	void draw(int pause=1000)
+	void draw(int pause = 1000)
 	{
 		if (script == NULL) return;
 		//if (save_image)
@@ -1379,8 +1389,24 @@ public:
 		}
 		close();
 		convf(script_name.c_str());
-		system((gnuplot_exe_path + " " + script_name).c_str());
+#ifdef _WIN32		
+		STARTUPINFO si = { sizeof(STARTUPINFO) };
+		PROCESS_INFORMATION pi = {};
+		memset(&si, '\0', sizeof(si));
+		si.cb = sizeof(si);
 
+		si.wShowWindow = SW_HIDE;
+		if (CreateProcessA(NULL, (char*)(gnuplot_exe_path+" " +script_name).c_str(), NULL, NULL, FALSE, 0, NULL, NULL, (LPSTARTUPINFOA)&si, &pi))
+		{
+			// 不要なスレッドハンドルをクローズする
+			if (!CloseHandle(pi.hThread)) {
+				return;
+			}
+			DWORD r = WaitForSingleObject(pi.hProcess, INFINITE);
+		}
+#else
+		system((gnuplot_exe_path + " " + script_name).c_str());
+#endif		
 		capture_image = false;
 	}
 
