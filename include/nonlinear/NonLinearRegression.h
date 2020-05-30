@@ -2450,8 +2450,10 @@ public:
 		//fprintf(fp, "p value          :%f\n", chi_pdf);
 		fprintf(fp, "--------------------------------------------------------------------\n");
 
-		get_accuracy(fp);
-
+		if (classification >= 2)
+		{
+			get_accuracy(fp);
+		}
 		//if (chi_distribution.status != 0)
 		//{
 		//	fprintf(fp, "chi_distribution status:%d\n", chi_distribution.status);
