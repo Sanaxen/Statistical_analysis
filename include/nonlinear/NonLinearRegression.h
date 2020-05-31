@@ -1461,18 +1461,6 @@ public:
 			fprintf(fp, "n_train_epochs:%d\n", n_train_epochs);
 			fprintf(fp, "n_minibatch:%d\n", n_minibatch);
 
-			fprintf(fp, "train_images:%d\n", train_images.size());
-			fprintf(fp, "train_images[0]:%d\n", train_images.size() > 0 ? train_images[0].size() : 0);
-			fprintf(fp, "train_labels:%d\n", train_labels.size());
-			fprintf(fp, "train_labels[0]:%d\n", train_labels.size() > 0 ? train_labels[0].size() : 0);
-			fprintf(fp, "train_images:%d\n", train_images.size());
-			fprintf(fp, "train_images[0]:%d\n", train_images.size() > 0 ? train_images[0].size() : 0);
-			fprintf(fp, "train_labels:%d\n", train_labels.size());
-			fprintf(fp, "train_labels[0]:%d\n", train_labels.size() > 0 ? train_labels[0].size() : 0);
-			fprintf(fp, "test_images:%d\n", test_images.size());
-			fprintf(fp, "test_images[0]:%d\n", test_images.size() > 0 ? test_images[0].size() : 0);
-			fprintf(fp, "test_labels:%d\n", test_labels.size());
-			fprintf(fp, "test_labels[0]:%d\n", test_labels.size() > 0 ? test_labels[0].size() : 0);
 			fprintf(fp, "n_layers:%d\n", n_layers);
 			fprintf(fp, "n_hidden_size:%d\n", hidden_size);
 			fprintf(fp, "dropout:%d\n", dropout);
@@ -1519,14 +1507,6 @@ public:
 			{
 				for (int j = 0; j < test_images[i].size(); j++)
 				{
-					if (maxvalue < test_images[i][j])
-					{
-						maxvalue = test_images[i][j];
-					}
-					if (minvalue > test_images[i][j])
-					{
-						minvalue = train_images[i][j];
-					}
 					fprintf(fp, "%f", test_images[i][j]);
 					if (j == test_images[i].size() - 1)
 					{
@@ -1574,14 +1554,6 @@ public:
 			{
 				for (int j = 0; j < test_labels[i].size(); j++)
 				{
-					if (maxvalue < test_labels[i][j])
-					{
-						maxvalue = test_labels[i][j];
-					}
-					if (minvalue > test_labels[i][j])
-					{
-						minvalue = test_labels[i][j];
-					}
 					fprintf(fp, "%f", test_labels[i][j]);
 					if (j == test_labels[i].size() - 1)
 					{
