@@ -187,7 +187,7 @@ private:
 		{
 			for (int k = 0; k < X[0].size(); k++)
 			{
-				X[i][k] = (X[i][k] - min_[k]) / maxmin_[k];
+				X[i][k] = (X[i][k] - min_[k]) / (maxmin_[k]+ 1.0e-10);
 			}
 		}
 	}
@@ -264,7 +264,7 @@ private:
 		{
 			for (int k = 0; k < X[0].size(); k++)
 			{
-				X[i][k] = (X[i][k] - min_[k]) * 2 / maxmin_[k] - 1;
+				X[i][k] = (X[i][k] - min_[k]) * 2 / (maxmin_[k]+ 1.0e-10) - 1;
 			}
 		}
 	}
@@ -380,7 +380,6 @@ private:
 					loss_test = get_loss(nn_test, test_images, test_labels);
 				}
 			}
-
 
 			tiny_dnn::result train_result;
 			tiny_dnn::result test_result;
