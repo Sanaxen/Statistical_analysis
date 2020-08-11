@@ -218,7 +218,7 @@ private:
 		{
 			for (int k = 0; k < X[0].size(); k++)
 			{
-				X[i][k] = (X[i][k] - min_[k]) / maxmin_[k];
+				X[i][k] = (X[i][k] - min_[k]) / (maxmin_[k] + 1.0e-10);
 			}
 		}
 	}
@@ -296,7 +296,7 @@ private:
 		{
 			for (int k = 0; k < X[0].size(); k++)
 			{
-				X[i][k] = (X[i][k] - min_[k]) * 2 / maxmin_[k] - 1;
+				X[i][k] = (X[i][k] - min_[k]) * 2 / (maxmin_[k]+1.0e-10) - 1;
 			}
 		}
 	}
