@@ -897,62 +897,70 @@ private:
 				TensorToMatrix(predict, y);
 				Matrix<dnn_double> xx = x;
 
-				auto& mean = x.Mean();
-				x = x.whitening(mean, x.Std(mean));
-				mean = y.Mean();
-				y = y.whitening(mean, y.Std(mean));
-				mean = xx.Mean();
-				xx = xx.whitening(mean, xx.Std(mean));
-
-				const size_t time_str_sz = 80;
-				char time_str[time_str_sz];
-
-				x = MahalanobisDist_Abnormality(x.appendCol(y));
-
-				FILE* fp_test = fopen("mahalanobis_dist.csv", "w");
-				if (fp_test)
+				try
 				{
-					fprintf(fp_test, "T,measured,predict,mahalanobis_dist\n");
-					for (int i = 0; i < train.size(); i++)
+					auto& mean = x.Mean();
+					x = x.whitening(mean, x.Std(mean) + 1.0e-10);
+					mean = y.Mean();
+					y = y.whitening(mean, y.Std(mean) + 1.0e-10);
+					mean = xx.Mean();
+					xx = xx.whitening(mean, xx.Std(mean) + 1.0e-10);
+
+					const size_t time_str_sz = 80;
+					char time_str[time_str_sz];
+
+					x = MahalanobisDist_Abnormality(x.appendCol(y));
+
+					FILE* fp_test = fopen("mahalanobis_dist.csv", "w");
+					if (fp_test)
 					{
-						//fprintf(fp_test, "%f,%f,%f\n", timver_tmp[i], y(i,0), x(i,0));
-						if (timestamp.size() > i)
+						fprintf(fp_test, "T,measured,predict,mahalanobis_dist\n");
+						for (int i = 0; i < train.size(); i++)
 						{
-							fprintf(fp_test, "%s, ", timestamp[i].c_str());
+							//fprintf(fp_test, "%f,%f,%f\n", timver_tmp[i], y(i,0), x(i,0));
+							if (timestamp.size() > i)
+							{
+								fprintf(fp_test, "%s, ", timestamp[i].c_str());
+							}
+							else
+							{
+								fprintf(fp_test, "%.3f, ", timver_tmp[i]);
+							}
+							fprintf(fp_test, "%f,%f,%f\n", xx(i, 0), y(i, 0), x(i, 0));
 						}
-						else
-						{
-							fprintf(fp_test, "%.3f, ", timver_tmp[i]);
-						}
-						fprintf(fp_test, "%f,%f,%f\n", xx(i, 0), y(i, 0), x(i, 0));
+						fclose(fp_test);
 					}
-					fclose(fp_test);
-				}
-				gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6);
+					gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6);
 
-				int win_size[] = { 640,480 };
-				if (capture)
-				{
-					plot1.set_capture(win_size, std::string("timeSeries_scatter.png"));
-				}
-				int grid = 30;
-				float pointsize = 1.0;
-				char* palette = NULL;
-				std::vector<std::string> header_names(2);
-				header_names[0] = "train";
-				header_names[1] = "predict";
-				plot1.scatter(xx, 0, 1, pointsize, grid, header_names, 5, palette);
-				if (palette != NULL)
-				{
-					plot1.set_palette(palette);
-				}
-				{
-					for (float t = 0.05; t < 0.5; t += 0.1)
+					int win_size[] = { 640,480 };
+					if (capture)
 					{
-						plot1.probability_ellipse(xx, 0, 1, t);
+						plot1.set_capture(win_size, std::string("timeSeries_scatter.png"));
 					}
+					int grid = 30;
+					float pointsize = 1.0;
+					char* palette = NULL;
+					std::vector<std::string> header_names(2);
+					header_names[0] = "train";
+					header_names[1] = "predict";
+					plot1.scatter(xx, 0, 1, pointsize, grid, header_names, 5, palette);
+					if (palette != NULL)
+					{
+						plot1.set_palette(palette);
+					}
+					{
+						for (float t = 0.05; t < 0.5; t += 0.1)
+						{
+							plot1.probability_ellipse(xx, 0, 1, t);
+						}
+					}
+					plot1.draw();
 				}
-				plot1.draw();
+				catch (...)
+				{
+					printf("MahalanobisDist error.\n");
+					fflush(stderr);
+				}
 			}
 
 			cost /= (iY.size() - sequence_length);
