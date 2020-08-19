@@ -1902,7 +1902,9 @@ public:
 			printf("fit_best.model open error.\n");
 		}
 
+#ifndef USE_LIBTORCH
 		std::cout << "end training." << std::endl;
+#endif
 
 		if (fp_error_loss)fclose(fp_error_loss);
 		if (fp_error_vari_loss)fclose(fp_error_vari_loss);

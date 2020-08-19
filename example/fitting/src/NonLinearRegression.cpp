@@ -792,6 +792,12 @@ int main(int argc, char** argv)
 			stream.flush();
 		}
 	}
+#ifdef USE_LIBTORCH
+	if (use_libtorch)
+	{
+		torch_delete_model();
+	}
+#endif
 
 end:;
 	if (resp == 0)

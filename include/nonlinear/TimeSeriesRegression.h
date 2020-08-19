@@ -2338,8 +2338,9 @@ public:
 			printf("%s\n", msg.what());
 			printf("fit_best.model open error.\n");
 		}
+#ifndef USE_LIBTORCH
 		std::cout << "end training." << std::endl;
-
+#endif
 		if (fp_error_loss)fclose(fp_error_loss);
 		if (fp_error_vari_loss)fclose(fp_error_vari_loss);
 		if (fp_accuracy)fclose(fp_accuracy);
@@ -2360,13 +2361,6 @@ public:
 			nn.save(model_file + ".json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
 		}
 
-
-#ifdef USE_LIBTORCH
-		if (use_libtorch)
-		{
-			torch_delete_model();
-		}
-#endif
 	}
 
 	//tiny_dnn::vec_t predict_next(tiny_dnn::vec_t& pre)
@@ -2616,7 +2610,17 @@ public:
 
 		for (int i = 0; i < train_images.size() - 1; i++)
 		{
-			tiny_dnn::vec_t next_y = nn.predict(seq_vec(nY, i));
+			tiny_dnn::vec_t next_y;
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				next_y = torch_predict(seq_vec(nY, i));
+			}
+			else
+#endif
+			{
+				next_y = nn.predict(seq_vec(nY, i));
+			}
 
 			//output sequence_length 
 			for (int j = 0; j < out_sequence_length; j++)
