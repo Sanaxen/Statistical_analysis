@@ -493,6 +493,13 @@ private:
 				}
 				fclose(fp_predict);
 			}
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				torch_delete_load_model(torch_nn_test);
+				torch_nn_test = NULL;
+			}
+#endif
 			return;
 		}
 
@@ -2305,6 +2312,13 @@ public:
 					stream.flush();
 				}
 			}
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				torch_delete_load_model(torch_nn_test);
+				torch_nn_test = NULL;
+			}
+#endif
 			return;
 		}
 

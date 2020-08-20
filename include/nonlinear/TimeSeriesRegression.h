@@ -374,7 +374,18 @@ private:
 
 		if (classification >= 2)
 		{
-			float loss_train = get_loss(nn_test, train_images, train_labels);
+			float loss_train = 0;
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				loss_train = torch_get_loss_nn(torch_nn_test, train_images, train_labels, 1);
+			}
+			else
+#endif
+			{
+				loss_train = get_loss(nn_test, train_images, train_labels);
+			}
+			
 			if (loss_train < cost_min)
 			{
 				cost_min = loss_train;
@@ -391,14 +402,37 @@ private:
 					fflush(fp_error_loss);
 				}
 			}
-			float loss_test = get_loss(nn_test, test_images, test_labels);
+
+			float loss_test = 0;
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				loss_test = torch_get_loss_nn(torch_nn_test, test_images, test_labels, 1);
+			}
+			else
+#endif
+			{
+				float loss_test = get_loss(nn_test, test_images, test_labels);
+			}
 
 			tiny_dnn::result train_result;
 			tiny_dnn::result test_result;
 
-			train_result = get_accuracy(nn_test, train_images, train_labels);
-			test_result = get_accuracy(nn_test, test_images, test_labels);
-
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				train_result = torch_get_accuracy_nn(torch_nn_test, train_images, train_labels, 1);
+				if (test_images.size() > 0)
+				{
+					test_result = torch_get_accuracy_nn(torch_nn_test, test_images, test_labels, 1);
+				}
+			}
+			else
+#endif
+			{
+				train_result = get_accuracy(nn_test, train_images, train_labels);
+				test_result = get_accuracy(nn_test, test_images, test_labels);
+			}
 			if (fp_accuracy)
 			{
 				fprintf(fp_accuracy, "%.4f %.4f\n", train_result.accuracy(), test_result.accuracy());
@@ -455,8 +489,18 @@ private:
 
 				for (int i = 0; i < iX.size(); i++)
 				{
-					tiny_dnn::vec_t& y_predict = nn_test.predict(seq_vec(YY, i));
+					tiny_dnn::vec_t y_predict;
+#ifdef USE_LIBTORCH
+					if (use_libtorch)
+					{
+						y_predict = torch_model_predict(torch_nn_test, seq_vec(YY, i));
+					}
+					else
+#endif
 
+					{
+						y_predict = nn_test.predict(seq_vec(YY, i));
+					}
 
 					if (fp_predict)
 					{
@@ -482,6 +526,13 @@ private:
 			}
 
 			set_train(nn, sequence_length, n_bptt_max, default_backend_type);
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				torch_delete_load_model(torch_nn_test);
+				torch_nn_test = NULL;
+			}
+#endif
 			return;
 		}
 
@@ -2583,10 +2634,32 @@ public:
 		{
 			if (fp != stdout && fp != NULL) fclose(fp);
 			tiny_dnn::network2<tiny_dnn::sequential> nn_test;
-			nn_test.load("fit_best_ts.model");
 
-			tiny_dnn::result train_result = get_accuracy(nn_test, train_images, train_labels);
-			tiny_dnn::result test_result = get_accuracy(nn_test, test_images, test_labels);
+			tiny_dnn::result train_result;
+			tiny_dnn::result test_result;
+
+#ifdef USE_LIBTORCH
+			void* torch_nn_test = NULL;
+			if (use_libtorch)
+			{
+				torch_nn_test = torch_load_new("fit_best_ts.pt");
+				train_result = torch_get_accuracy_nn(torch_nn_test, train_images, train_labels, 1);
+				if (test_images.size() > 0)
+				{
+					test_result = torch_get_accuracy_nn(torch_nn_test, test_images, test_labels, 1);
+				}
+			}
+			else
+#endif
+			{
+				nn_test.load("fit_best_ts.model");
+				train_result = get_accuracy(nn_test, train_images, train_labels);
+				if (test_images.size() > 0)
+				{
+					test_result = get_accuracy(nn_test, test_images, test_labels);
+				}
+			}
+			
 			{
 				std::ofstream stream(filename);
 
@@ -2611,6 +2684,13 @@ public:
 					stream.flush();
 				}
 			}
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				torch_delete_load_model(torch_nn_test);
+				torch_nn_test = NULL;
+			}
+#endif
 			return;
 		}
 		
@@ -2764,8 +2844,8 @@ public:
 		//	}
 		//}
 
-		Chi_distribution chi_distribution(freedom);
-		double chi_pdf = chi_distribution.p_value(ƒ¿);
+		//Chi_distribution chi_distribution(freedom);
+		//double chi_pdf = chi_distribution.p_value(ƒ¿);
 
 		fprintf(fp, "Status:%d\n", getStatus());
 		fprintf(fp, "--------------------------------------------------------------------\n");
