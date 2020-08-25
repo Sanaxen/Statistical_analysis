@@ -2369,12 +2369,23 @@ public:
 				torch_read_test_params();
 			}
 			printf("****** pytorch (C++) mode ******\n");
-			torch_train(
-				train_images,
-				train_labels,
-				n_minibatch,
-				n_train_epochs,
-				on_enumerate_minibatch, on_enumerate_epoch);
+			try
+			{
+				torch_train(
+					train_images,
+					train_labels,
+					n_minibatch,
+					n_train_epochs,
+					on_enumerate_minibatch, on_enumerate_epoch);
+			}
+			catch (std::exception& err)
+			{
+				std::cout << err.what() << std::endl;
+			}
+			catch (...)
+			{
+				printf("exception!\n");
+			}
 		}
 #endif
 
@@ -2396,6 +2407,14 @@ public:
 		{
 			printf("%s\n", msg.what());
 			printf("fit_best.model open error.\n");
+		}
+		catch (std::exception &err)
+		{
+			printf("%s\n", err.what());
+		}
+		catch (...)
+		{
+			printf("exception!\n");
 		}
 #ifndef USE_LIBTORCH
 		std::cout << "end training." << std::endl;
