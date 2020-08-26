@@ -49,6 +49,68 @@ inline char* timeToStr(dnn_double t, const std::string& format, char* str, size_
 	return str;
 }
 
+inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::string>& names, std::vector<int>& idx, std::string& timeformat)
+{
+	for (int i = 0; 1; i++)
+	{
+		char fname[256];
+		sprintf(fname, "multi_data%03d_ts.plt", i);
+
+		FILE* fp = fopen(fname, "r");
+		if (fp == NULL) break;
+		if (fp) fclose(fp);
+		remove(fname);
+	}
+
+	int count = 0;
+	for (int i = 0; 1; i++)
+	{
+		char fname[256];
+		sprintf(fname, "multi_data%03d_ts.plt", i);
+
+		FILE* fp = fopen(fname, "w");
+		if (fp == NULL) return;
+
+		if (ydim <= 2) step = 2;
+		if (ydim >= 2)
+		{
+			fprintf(fp, "set multiplot layout %d,%d\n", step, 1);
+		}
+		fprintf(fp, "set key left top box\n");
+
+		char* timex =
+			"x_timefromat=%d\n"
+			"if (x_timefromat != 0) set xdata time\n"
+			"if (x_timefromat != 0) set timefmt \"%Y/ %m/ %d[%H:%M:%S]\"\n"
+			"if (x_timefromat != 0) set xtics timedate\n"
+			"if (x_timefromat != 0) set xtics format \"%Y/%m/%d\"\n";
+		fprintf(fp, timex, timeformat!=""?1:0);
+
+		for (int k = 0; k < step; k++)
+		{
+			fprintf(fp, "set title %s\n", names[idx[count]].c_str());
+			char* plot =
+				"file = \"test.dat\"\n"
+				"plot file using 1:%d   t \"observation\"  with lines linewidth 2 lc \"#0068b7\", \\\n"
+				"\"predict1.dat\" using 1:%d   t \"observation\"  with lines linewidth 2 lc \"#0080ff\", \\\n"
+				"\"predict2.dat\" using 1:%d   t \"observation\"  with lines linewidth 2 lc \"#0068b7\", \\\n"
+				"\"prophecy.dat\" using 1:%d   t \"prophecy\"  with lines linewidth 2 lc \"#0068b7\" dt 3,\\\n"
+				"file using 1:%d   t \"predict\"  with lines linewidth 2 lc \"#009944\", \\\n"
+				"\"predict1.dat\" using 1:%d   t \"predict\"  with lines linewidth 2 lc \"#ff8000\", \\\n"
+				"\"predict2.dat\" using 1:%d   t \"predict\"  with lines linewidth 2 lc \"plum\", \\\n"
+				"\"prophecy.dat\" using 1:%d   t \"prophecy\"  with lines linewidth 2 lc \"#e4007f\"\n\n";
+
+			fprintf(fp, plot, count * 2 + 2, count * 2 + 2, count * 2 + 2, count * 2 + 2, count * 2 + 3, count * 2 + 3, count * 2 + 3, count * 2 + 3);
+			count++;
+			if (count >= ydim) break;
+		}
+		fprintf(fp, "unset multiplot\n");
+		fprintf(fp, "pause -1\n");
+		fclose(fp);
+		convf(fname);
+		if (count >= ydim) break;
+	}
+}
 
 class TimeSeriesRegression
 {

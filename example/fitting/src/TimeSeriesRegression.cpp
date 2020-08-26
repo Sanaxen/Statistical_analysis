@@ -43,6 +43,7 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
+
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
 	std::vector<std::string> xx_var;
@@ -1182,19 +1183,26 @@ int main(int argc, char** argv)
 		}
 		fclose(fp);
 	}
+
+	multiplot_gnuplot_script_ts(y_var_idx.size(), 3, header_names, y_var_idx, timeformat);
+
 	timeSeries.fit(sequence_length, n_rnn_layers, n_layers, hidden_size);
 	if (layer_graph_only)
 	{
 		goto end;
 	}
 
+	//printf("timeSeries.report start\n"); fflush(stdout);
 	timeSeries.report(0.05, report_file);
 	if (classification < 2)
 	{
 		timeSeries.visualize_observed_predict_plot = true;
 		timeSeries.visualize_observed_predict();
 	}
+	//printf("timeSeries.report end\n"); fflush(stdout);
+	//printf("timeSeries.gen_visualize_fit_state start\n"); fflush(stdout);
 	timeSeries.gen_visualize_fit_state();
+	//printf("timeSeries.gen_visualize_fit_state end\n"); fflush(stdout);
 
 	{
 		std::ofstream stream("Time_to_finish.txt");
@@ -1223,3 +1231,4 @@ end:;
 	}
 	return 0;
 }
+

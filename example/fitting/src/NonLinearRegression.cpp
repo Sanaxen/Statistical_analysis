@@ -771,6 +771,8 @@ int main(int argc, char** argv)
 		}
 		fclose(fp);
 	}
+
+	multiplot_gnuplot_script(regression.y_idx.size(), 3, header_names, y_var_idx);
 	regression.fit(n_layers, input_unit);
 	if (layer_graph_only)
 	{
@@ -810,3 +812,4 @@ end:;
 	}
 	return 0;
 }
+

@@ -29,6 +29,61 @@ inline void SigHandler_nonlinear_regression(int p_signame)
 	return;
 }
 
+inline void multiplot_gnuplot_script(int ydim, int step, std::vector<std::string>& names, std::vector<int>& idx)
+{
+	for (int i = 0; 1; i++)
+	{
+		char fname[256];
+		sprintf(fname, "multi_data%03d_ts.plt", i);
+
+		FILE* fp = fopen(fname, "r");
+		if (fp == NULL) break;
+		if (fp) fclose(fp);
+		remove(fname);
+	}
+	int count = 0;
+	for (int i = 0; 1; i++)
+	{
+		char fname[256];
+		sprintf(fname, "multi_data%03d.plt", i);
+
+		FILE* fp = fopen(fname, "w");
+		if (fp == NULL) return;
+
+		if (ydim <= 2) step = 2;
+		if (ydim >= 2)
+		{
+			fprintf(fp, "set multiplot layout %d,%d\n", step, 1);
+		}
+		fprintf(fp, "set key left top box\n");
+
+		char* timex =
+			"x_timefromat=0\n"
+			"if (x_timefromat != 0) set xdata time\n"
+			"if (x_timefromat != 0) set timefmt \"%Y/ %m/ %d[%H:%M:%S]\"\n"
+			"if (x_timefromat != 0) set xtics timedate\n"
+			"if (x_timefromat != 0) set xtics format \"%Y/%m/%d\"\n";
+		fprintf(fp, "%s\n", timex);
+
+		for (int k = 0; k < step; k++)
+		{
+			fprintf(fp, "set title %s\n", names[idx[count]].c_str());
+			char* plot =
+				"file = \"test.dat\"\n"
+				"plot file using 1:%d   t \"observation\"  with lines linewidth 2 lc \"#0068b7\", \\\n"
+				"file using 1:%d   t \"predict\"  with lines linewidth 2 lc \"#ff8000\"\n\n";
+
+			fprintf(fp, plot, count*2 + 3, count*2 + 2);
+			count++;
+			if (count >= ydim) break;
+		}
+		fprintf(fp, "unset multiplot\n");
+		fprintf(fp, "pause -1\n");
+		fclose(fp);
+		convf(fname);
+		if (count >= ydim) break;
+	}
+}
 
 class NonLinearRegression
 {
