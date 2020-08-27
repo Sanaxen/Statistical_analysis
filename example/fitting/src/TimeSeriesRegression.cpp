@@ -61,6 +61,7 @@ int main(int argc, char** argv)
 	bool use_differnce_output_only = false;
 	bool use_libtorch = false;
 	std::string device_name = "cpu";
+	int multiplot_step = 3;
 
 	int classification = -1;
 	int read_max = -1;
@@ -93,6 +94,9 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--multiplot_step") {
+			multiplot_step = atoi(argv[count + 1]);
+		}else
 		if (argname == "--device_name") {
 			device_name = std::string(argv[count + 1]);
 		}
@@ -943,6 +947,9 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--multiplot_step") {
+			continue;
+		}
 		if (argname == "--device_name") {
 			continue;
 		}
@@ -1184,7 +1191,7 @@ int main(int argc, char** argv)
 		fclose(fp);
 	}
 
-	multiplot_gnuplot_script_ts(y_var_idx.size(), 3, header_names, y_var_idx, timeformat);
+	multiplot_gnuplot_script_ts(y_var_idx.size(), multiplot_step, header_names, y_var_idx, timeformat, false);
 
 	timeSeries.fit(sequence_length, n_rnn_layers, n_layers, hidden_size);
 	if (layer_graph_only)
@@ -1203,6 +1210,7 @@ int main(int argc, char** argv)
 	//printf("timeSeries.gen_visualize_fit_state start\n"); fflush(stdout);
 	timeSeries.gen_visualize_fit_state();
 	//printf("timeSeries.gen_visualize_fit_state end\n"); fflush(stdout);
+	multiplot_gnuplot_script_ts(y_var_idx.size(), multiplot_step, header_names, y_var_idx, timeformat, true);
 
 	{
 		std::ofstream stream("Time_to_finish.txt");

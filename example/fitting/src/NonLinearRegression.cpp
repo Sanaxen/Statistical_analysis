@@ -61,6 +61,7 @@ int main(int argc, char** argv)
 	
 	int use_libtorch = 0;
 	std::string device_name = "cpu";
+	int multiplot_step = 3;
 
 	std::string csvfile("sample.csv");
 	std::string report_file("NonLinearRegression.txt");
@@ -77,6 +78,9 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--multiplot_step") {
+			multiplot_step = atoi(argv[count + 1]);
+		}
 		if (argname == "--device_name") {
 			device_name = std::string(argv[count + 1]);
 		}
@@ -600,6 +604,9 @@ int main(int argc, char** argv)
 	int input_unit = -1;
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--multiplot_step") {
+			continue;
+		}else
 		if (argname == "--device_name") {
 			continue;
 		}else
@@ -772,7 +779,7 @@ int main(int argc, char** argv)
 		fclose(fp);
 	}
 
-	multiplot_gnuplot_script(regression.y_idx.size(), 3, header_names, y_var_idx);
+	multiplot_gnuplot_script(regression.y_idx.size(), multiplot_step, header_names, y_var_idx, false);
 	regression.fit(n_layers, input_unit);
 	if (layer_graph_only)
 	{
@@ -785,6 +792,7 @@ int main(int argc, char** argv)
 		regression.visualize_observed_predict();
 	}
 	regression.gen_visualize_fit_state();
+	multiplot_gnuplot_script(regression.y_idx.size(), multiplot_step, header_names, y_var_idx, true);
 
 	{
 		std::ofstream stream("Time_to_finish.txt");

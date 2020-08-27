@@ -8,6 +8,7 @@
 
 #ifdef USE_LIBTORCH
 #include "../pytorch_cpp/tiny_dnn2libtorch_dll.h"
+#pragma comment(lib, "../../pytorch_cpp/lib/rnn6.lib")
 #endif
 
 #pragma warning( disable : 4305 ) 
@@ -49,7 +50,7 @@ inline char* timeToStr(dnn_double t, const std::string& format, char* str, size_
 	return str;
 }
 
-inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::string>& names, std::vector<int>& idx, std::string& timeformat)
+inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::string>& names, std::vector<int>& idx, std::string& timeformat, bool putImage)
 {
 	for (int i = 0; 1; i++)
 	{
@@ -59,18 +60,47 @@ inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::str
 		FILE* fp = fopen(fname, "r");
 		if (fp == NULL) break;
 		if (fp) fclose(fp);
-		remove(fname);
+		if ( !putImage )remove(fname);
+
+		sprintf(fname, "multi_data%03d_ts_png.plt", i);
+		fp = fopen(fname, "r");
+		if (fp)
+		{
+			fclose(fp);
+			if ( putImage) remove(fname);
+		}
+
+		sprintf(fname, "multi_data%03d_ts.png", i);
+		fp = fopen(fname, "r");
+		if (fp)
+		{
+			fclose(fp);
+			if (putImage) remove(fname);
+		}
 	}
 
 	int count = 0;
 	for (int i = 0; 1; i++)
 	{
 		char fname[256];
-		sprintf(fname, "multi_data%03d_ts.plt", i);
+		if (!putImage)
+		{
+			sprintf(fname, "multi_data%03d_ts.plt", i);
+		}
+		else
+		{
+			sprintf(fname, "multi_data%03d_ts_png.plt", i);
+		}
 
 		FILE* fp = fopen(fname, "w");
 		if (fp == NULL) return;
 
+		fprintf(fp, "set term windows size %d,%d\n", (int)(640*1.5), (int)(380* 1.5));
+		if (putImage)
+		{
+			fprintf(fp, "set term pngcairo size %d,%d\n", (int)(640 * 1.5), (int)(380 * 1.5));
+			fprintf(fp, "set output \"multi_data%03d_ts.png\"\n", i);
+		}
 		if (ydim <= 2) step = 2;
 		if (ydim >= 2)
 		{
@@ -81,9 +111,9 @@ inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::str
 		char* timex =
 			"x_timefromat=%d\n"
 			"if (x_timefromat != 0) set xdata time\n"
-			"if (x_timefromat != 0) set timefmt \"%Y/ %m/ %d[%H:%M:%S]\"\n"
+			"if (x_timefromat != 0) set timefmt \"%%Y/ %%m/ %%d[%%H:%%M:%%S]\"\n"
 			"if (x_timefromat != 0) set xtics timedate\n"
-			"if (x_timefromat != 0) set xtics format \"%Y/%m/%d\"\n";
+			"if (x_timefromat != 0) set xtics format \"%%Y/%%m/%%d\"\n";
 		fprintf(fp, timex, timeformat!=""?1:0);
 
 		for (int k = 0; k < step; k++)
@@ -105,9 +135,40 @@ inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::str
 			if (count >= ydim) break;
 		}
 		fprintf(fp, "unset multiplot\n");
-		fprintf(fp, "pause -1\n");
+		if (!putImage)
+		{
+			fprintf(fp, "pause -1\n");
+		}
 		fclose(fp);
 		convf(fname);
+
+		if (putImage) 
+		{
+			gnuplot_path_::getGnuplotPath();
+			if (gnuplot_path_::path_ != "")
+			{
+				std::string& gnuplot_exe_path = "\"" + gnuplot_path_::path_ + "\\gnuplot.exe\"";
+#ifdef _WIN32		
+				STARTUPINFO si = { sizeof(STARTUPINFO) };
+				PROCESS_INFORMATION pi = {};
+				::memset(&si, '\0', sizeof(si));
+				si.cb = sizeof(si);
+
+				si.wShowWindow = SW_HIDE;
+				if (CreateProcessA(NULL, (char*)(gnuplot_exe_path + " " + fname).c_str(), NULL, NULL, FALSE, 0, NULL, NULL, (LPSTARTUPINFOA)&si, &pi))
+				{
+					// 不要なスレッドハンドルをクローズする
+					if (!CloseHandle(pi.hThread)) {
+						return;
+					}
+					DWORD r = WaitForSingleObject(pi.hProcess, INFINITE);
+				}
+#else
+				system((gnuplot_exe_path + " " + fname).c_str());
+#endif
+				//printf("%s\n", (gnuplot_exe_path + " " + fname).c_str());
+			}
+		}
 		if (count >= ydim) break;
 	}
 }
@@ -153,6 +214,7 @@ public:
 	std::vector<int> x_idx;
 	std::vector<int> y_idx;
 	std::string timeformat = "";
+	bool fit_best_saved = false;
 private:
 
 	void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
@@ -518,6 +580,7 @@ private:
 			if (accuracy_max < train_result.accuracy())
 			{
 				nn_test.save("fit_best_ts.model");
+				fit_best_saved = true;
 				nn_test.save("fit_best.model_ts.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
 				accuracy_max = train_result.accuracy();
 			}
@@ -1091,6 +1154,7 @@ private:
 #endif
 				{
 					nn_test.save("fit_best_ts.model");
+					fit_best_saved = true;
 					nn_test.save("fit_best.model_ts.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
 				}
 				//printf("!!=========== best model save ============!!\n");
@@ -2453,6 +2517,22 @@ public:
 
 		try
 		{
+			if (!fit_best_saved)
+			{
+#ifdef USE_LIBTORCH
+				if (use_libtorch)
+				{
+					torch_save("fit_best_ts.pt");
+					fit_best_saved = true;
+				}
+				else
+#endif
+				{
+					nn.save("fit_best_ts.model");
+					fit_best_saved = true;
+					nn.save("fit_best.model_ts.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
+				}
+			}
 #ifdef USE_LIBTORCH
 			if (use_libtorch)
 			{
