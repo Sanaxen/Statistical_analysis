@@ -32,32 +32,41 @@ inline void SigHandler_nonlinear_regression(int p_signame)
 
 inline void multiplot_gnuplot_script(int ydim, int step, std::vector<std::string>& names, std::vector<int>& idx, bool putImage)
 {
-	for (int i = 0; 1; i++)
+	if (!putImage)
 	{
-		char fname[256];
-		sprintf(fname, "multi_data%03d.plt", i);
-
-		FILE* fp = fopen(fname, "r");
-		if (fp == NULL) break;
-		if (fp) fclose(fp);
-		if (!putImage) remove(fname);
-
-		sprintf(fname, "multi_data%03d_png.plt", i);
-		fp = fopen(fname, "r");
-		if (fp)
+		for (int i = 0; 1; i++)
 		{
-			fclose(fp);
-			if (putImage) remove(fname);
-		}
+			char fname[256];
+			sprintf(fname, "multi_data%03d.plt", i);
 
-		sprintf(fname, "multi_data%03d.png", i);
-		fp = fopen(fname, "r");
-		if (fp)
-		{
-			fclose(fp);
-			if (putImage) remove(fname);
+			FILE* fp = fopen(fname, "r");
+			if (fp == NULL) break;
+			if (fp) fclose(fp);
+			if (!putImage) remove(fname);
+
+			sprintf(fname, "multi_data%03d_png.plt", i);
+			fp = fopen(fname, "r");
+			if (fp)
+			{
+				fclose(fp);
+				if (putImage) remove(fname);
+			}
+
+			sprintf(fname, "multi_data%03d.png", i);
+			fp = fopen(fname, "r");
+			if (fp)
+			{
+				fclose(fp);
+				if (putImage) remove(fname);
+			}
 		}
 	}
+	FILE* genImg = NULL;
+	if (putImage)
+	{
+		genImg = fopen("gen_multi_data2png.bat", "w");
+	}
+
 	int count = 0;
 	for (int i = 0; 1; i++)
 	{
@@ -87,13 +96,13 @@ inline void multiplot_gnuplot_script(int ydim, int step, std::vector<std::string
 		}
 		fprintf(fp, "set key left top box\n");
 
-		char* timex =
-			"x_timefromat=0\n"
-			"if (x_timefromat != 0) set xdata time\n"
-			"if (x_timefromat != 0) set timefmt \"%%Y/ %%m/ %%d[%%H:%%M:%%S]\"\n"
-			"if (x_timefromat != 0) set xtics timedate\n"
-			"if (x_timefromat != 0) set xtics format \"%%Y/%%m/%%d\"\n";
-		fprintf(fp, timex,  0);
+		//char* timex =
+		//	"x_timefromat=0\n"
+		//	"if (x_timefromat != 0) set xdata time\n"
+		//	"if (x_timefromat != 0) set timefmt \"%%Y/ %%m/ %%d[%%H:%%M:%%S]\"\n"
+		//	"if (x_timefromat != 0) set xtics timedate\n"
+		//	"if (x_timefromat != 0) set xtics format \"%%Y/%%m/%%d\"\n";
+		//fprintf(fp, timex,  0);
 
 		for (int k = 0; k < step; k++)
 		{
@@ -121,29 +130,18 @@ inline void multiplot_gnuplot_script(int ydim, int step, std::vector<std::string
 			if (gnuplot_path_::path_ != "")
 			{
 				std::string& gnuplot_exe_path = "\"" + gnuplot_path_::path_ + "\\gnuplot.exe\"";
-#ifdef _WIN32		
-				STARTUPINFO si = { sizeof(STARTUPINFO) };
-				PROCESS_INFORMATION pi = {};
-				::memset(&si, '\0', sizeof(si));
-				si.cb = sizeof(si);
-
-				si.wShowWindow = SW_HIDE;
-				if (CreateProcessA(NULL, (char*)(gnuplot_exe_path + " " + fname).c_str(), NULL, NULL, FALSE, 0, NULL, NULL, (LPSTARTUPINFOA)&si, &pi))
-				{
-					// 不要なスレッドハンドルをクローズする
-					if (!CloseHandle(pi.hThread)) {
-						return;
-					}
-					DWORD r = WaitForSingleObject(pi.hProcess, INFINITE);
-				}
-#else
 				system((gnuplot_exe_path + " " + fname).c_str());
-#endif
 				//printf("%s\n", (gnuplot_exe_path + " " + fname).c_str());
+				if (genImg) fprintf(genImg, "%s\n", (gnuplot_exe_path + " " + fname).c_str());
 			}
 		}
 
 		if (count >= ydim) break;
+	}
+	if (genImg)
+	{
+		fclose(genImg);
+		system("gen_multi_data2png.bat");
 	}
 }
 

@@ -52,31 +52,40 @@ inline char* timeToStr(dnn_double t, const std::string& format, char* str, size_
 
 inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::string>& names, std::vector<int>& idx, std::string& timeformat, bool putImage)
 {
-	for (int i = 0; 1; i++)
+	if (!putImage)
 	{
-		char fname[256];
-		sprintf(fname, "multi_data%03d_ts.plt", i);
-
-		FILE* fp = fopen(fname, "r");
-		if (fp == NULL) break;
-		if (fp) fclose(fp);
-		if ( !putImage )remove(fname);
-
-		sprintf(fname, "multi_data%03d_ts_png.plt", i);
-		fp = fopen(fname, "r");
-		if (fp)
+		for (int i = 0; 1; i++)
 		{
-			fclose(fp);
-			if ( putImage) remove(fname);
-		}
+			char fname[256];
+			sprintf(fname, "multi_data%03d_ts.plt", i);
 
-		sprintf(fname, "multi_data%03d_ts.png", i);
-		fp = fopen(fname, "r");
-		if (fp)
-		{
-			fclose(fp);
-			if (putImage) remove(fname);
+			FILE* fp = fopen(fname, "r");
+			if (fp == NULL) break;
+			if (fp) fclose(fp);
+			remove(fname);
+
+			sprintf(fname, "multi_data%03d_ts_png.plt", i);
+			fp = fopen(fname, "r");
+			if (fp)
+			{
+				fclose(fp);
+				remove(fname);
+			}
+
+			sprintf(fname, "multi_data%03d_ts.png", i);
+			fp = fopen(fname, "r");
+			if (fp)
+			{
+				fclose(fp);
+				remove(fname);
+			}
 		}
+	}
+
+	FILE* genImg = NULL;
+	if (putImage)
+	{
+		genImg = fopen("gen_multi_data_ts2png.bat", "w");
 	}
 
 	int count = 0;
@@ -111,10 +120,10 @@ inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::str
 		char* timex =
 			"x_timefromat=%d\n"
 			"if (x_timefromat != 0) set xdata time\n"
-			"if (x_timefromat != 0) set timefmt \"%%Y/ %%m/ %%d[%%H:%%M:%%S]\"\n"
+			"if (x_timefromat != 0) set timefmt \"%s\"\n"
 			"if (x_timefromat != 0) set xtics timedate\n"
 			"if (x_timefromat != 0) set xtics format \"%%Y/%%m/%%d\"\n";
-		fprintf(fp, timex, timeformat!=""?1:0);
+		fprintf(fp, timex, timeformat!=""?1:0, timeformat.c_str());
 
 		for (int k = 0; k < step; k++)
 		{
@@ -148,28 +157,17 @@ inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::str
 			if (gnuplot_path_::path_ != "")
 			{
 				std::string& gnuplot_exe_path = "\"" + gnuplot_path_::path_ + "\\gnuplot.exe\"";
-#ifdef _WIN32		
-				STARTUPINFO si = { sizeof(STARTUPINFO) };
-				PROCESS_INFORMATION pi = {};
-				::memset(&si, '\0', sizeof(si));
-				si.cb = sizeof(si);
-
-				si.wShowWindow = SW_HIDE;
-				if (CreateProcessA(NULL, (char*)(gnuplot_exe_path + " " + fname).c_str(), NULL, NULL, FALSE, 0, NULL, NULL, (LPSTARTUPINFOA)&si, &pi))
-				{
-					// 不要なスレッドハンドルをクローズする
-					if (!CloseHandle(pi.hThread)) {
-						return;
-					}
-					DWORD r = WaitForSingleObject(pi.hProcess, INFINITE);
-				}
-#else
-				system((gnuplot_exe_path + " " + fname).c_str());
-#endif
+				//system((gnuplot_exe_path + " " + fname).c_str());
 				//printf("%s\n", (gnuplot_exe_path + " " + fname).c_str());
+				if ( genImg ) fprintf(genImg, "%s\n", (gnuplot_exe_path + " " + fname).c_str());
 			}
 		}
 		if (count >= ydim) break;
+	}
+	if (genImg)
+	{
+		fclose(genImg);
+		system("gen_multi_data_ts2png.bat");
 	}
 }
 
