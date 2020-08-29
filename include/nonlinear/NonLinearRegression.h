@@ -83,10 +83,10 @@ inline void multiplot_gnuplot_script(int ydim, int step, std::vector<std::string
 		FILE* fp = fopen(fname, "w");
 		if (fp == NULL) return;
 
-		fprintf(fp, "set term windows size %d,%d\n", (int)(640 * 1.5), (int)(380 * 1.5));
+		fprintf(fp, "set term windows size %d,%d font \"arial,10\"\n", (int)(640 * 2.8), (int)(380 * 1.5)*step / 2);
 		if (putImage)
 		{
-			fprintf(fp, "set term pngcairo size %d,%d\n", (int)(640 * 1.5), (int)(380 * 1.5));
+			fprintf(fp, "set term pngcairo size %d,%d font \"arial,10\"\n", (int)(640 * 2.8), (int)(380 * 1.5)*step / 2);
 			fprintf(fp, "set output \"multi_data%03d.png\"\n", i);
 		}
 		if (ydim <= 2) step = 2;
