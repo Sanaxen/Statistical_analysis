@@ -417,8 +417,26 @@ public:
 		{
 			sprintf(cmd, "dot.exe -T%s %s -o Digraph.%s", outformat, filename, outformat);
 		}
-		system(cmd);
-		printf("%s\n", cmd);
+
+		if (B.n < 20)
+		{
+			system(cmd);
+			printf("%s\n", cmd);
+		}
+		else
+		{
+			FILE* fp = fopen("Digraph.bat", "r");
+			if (fp)
+			{
+				fclose(fp);
+				remove("Digraph.bat");
+			}
+			if ((fp = fopen("Digraph.bat", "w")) != NULL)
+			{
+				fprintf(fp, "%s\n", cmd);
+				fclose(fp);
+			}
+		}
 #endif
 	}
 
