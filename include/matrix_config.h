@@ -13,7 +13,7 @@
 
 #define USE_LAPACK
 #define USE_BLAS
-//#define USE_MKL
+#define USE_MKL
 //#define USE_CUBLAS
 //#define USE_EIGEN
 
