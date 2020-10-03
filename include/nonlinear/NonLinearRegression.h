@@ -1589,7 +1589,7 @@ public:
 
 			fprintf(fp, "n_layers:%d\n", n_layers);
 			fprintf(fp, "n_hidden_size:%d\n", hidden_size);
-			fprintf(fp, "dropout:%d\n", dropout);
+			fprintf(fp, "dropout:%f\n", dropout);
 			fprintf(fp, "prophecy:%d\n", 0);
 			fprintf(fp, "tolerance:%f\n", tolerance);
 			fprintf(fp, "input_size:%d\n", input_size);
