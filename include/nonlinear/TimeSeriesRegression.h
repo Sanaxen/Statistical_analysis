@@ -104,6 +104,8 @@ inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::str
 		FILE* fp = fopen(fname, "w");
 		if (fp == NULL) return;
 
+		fprintf(fp, "bind \"Close\" \"if (GPVAL_TERM eq \'wxt\') bind \'Close\' \'\'; exit gnuplot; else bind \'Close\' \'\'; exit\"\n");
+
 		fprintf(fp, "set term windows size %d,%d font \"arial,10\"\n", (int)(640 * 2.8), (int)(380 * 1.5)*step / 2);
 		if (putImage)
 		{
