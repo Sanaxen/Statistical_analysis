@@ -454,6 +454,7 @@ private:
 		else
 #endif
 		{
+			nn_test = nn;
 			if (test_mode)
 			{
 				nn_test.load("fit_best_ts.model");
@@ -1348,14 +1349,11 @@ public:
 	void normalize_info_load(std::string& normalize_type)
 	{
 		normalized = false;
-		if (test_mode && !use_trained_scale)
+		if (!use_trained_scale)
 		{
 			return;
 		}
-		if (!test_mode && !use_defined_scale)
-		{
-			return;
-		}
+		if (!test_mode) return;
 
 		//if (!test_mode) return;
 
@@ -2517,7 +2515,7 @@ public:
 
 		try
 		{
-			if (!fit_best_saved)
+			if (!fit_best_saved && !test_mode)
 			{
 #ifdef USE_LIBTORCH
 				if (use_libtorch)
