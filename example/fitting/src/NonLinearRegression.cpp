@@ -677,6 +677,11 @@ int main(int argc, char** argv)
 			regression.weight_init_type = std::string(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--batch_shuffle")
+		{
+			regression.batch_shuffle = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
 		else if (argname == "--capture") {
 			regression.capture = (0 < atoi(argv[count + 1])) ? true : false;
 			continue;
@@ -766,6 +771,7 @@ int main(int argc, char** argv)
 		<< "use_trained_scale: " << regression.use_trained_scale << std::endl
 		<< "device_name: " << regression.device_name << std::endl
 		<< "use_libtorch: " << regression.use_libtorch << std::endl
+		<< "batch_shuffle: " << regression.batch_shuffle << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		<< std::endl;
 

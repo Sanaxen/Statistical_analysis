@@ -179,6 +179,7 @@ public:
 	std::vector<int> x_idx;
 	std::vector<int> y_idx;
 	bool fit_best_saved = false;
+	bool batch_shuffle = true;
 
 private:
 	void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
@@ -1596,6 +1597,7 @@ public:
 			fprintf(fp, "tolerance:%f\n", tolerance);
 			fprintf(fp, "input_size:%d\n", input_size);
 			fprintf(fp, "classification:%d\n", classification);
+			fprintf(fp, "batch_shuffle:%d\n", batch_shuffle);
 			fclose(fp);
 
 			float maxvalue = -999999999.0;
@@ -1768,6 +1770,30 @@ public:
 				std::cout << "\nEpoch " << epoch << "/" << n_train_epochs << " finished. "
 					<< t.elapsed() << "s elapsed." << std::endl;
 			}
+
+			if ( this->batch_shuffle)
+			{
+				tiny_dnn::tensor_t tmp_train_images = train_images;
+				tiny_dnn::tensor_t tmp_train_labels = train_labels;
+
+				std::vector<int> index(train_images.size());
+				for (int i = 0; i < train_images.size(); i++)
+				{
+					index[i] = i;
+				}
+				std::mt19937 mt(epoch);
+				std::shuffle(index.begin(), index.end(), mt);
+
+#pragma omp parallel for
+				for (int i = 0; i < train_images.size(); i++)
+				{
+					tmp_train_images[i] = train_images[index[i]];
+					tmp_train_labels[i] = train_labels[index[i]];
+				}
+				train_labels = tmp_train_labels;
+				tmp_train_images = tmp_train_labels;
+			}
+
 			if (epoch >= 3 && plot && epoch % plot == 0)
 			{
 				gen_visualize_fit_state();

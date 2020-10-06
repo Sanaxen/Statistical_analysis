@@ -11,6 +11,10 @@
 #pragma comment(lib, "../../pytorch_cpp/lib/rnn6.lib")
 #endif
 
+#define TIME_MEASUR
+#ifdef TIME_MEASUR
+#include <chrono>
+#endif
 #pragma warning( disable : 4305 ) 
 
 #define EARLY_STOPPING_	10
@@ -215,6 +219,9 @@ public:
 	std::vector<int> y_idx;
 	std::string timeformat = "";
 	bool fit_best_saved = false;
+	bool state_reset_mode = false;
+	bool batch_shuffle = true;
+
 private:
 
 	void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
@@ -436,6 +443,10 @@ private:
 	{
 		writing lock;
 
+#ifdef TIME_MEASUR
+		std::chrono::system_clock::time_point  start, end;
+		double elapsed;
+#endif
 		tiny_dnn::network2<tiny_dnn::sequential> nn_test;
 
 		void* torch_nn_test = NULL;
@@ -467,6 +478,12 @@ private:
 		//printf("layers:%zd\n", nn_test.depth());
 
 		set_test(nn_test, 1);
+#ifdef USE_LIBTORCH
+		if (use_libtorch)
+		{
+			state_reset(this->rnn_type, torch_nn_test);
+		}
+#endif
 
 		FILE* fp_predict = NULL;
 		if (test_mode)
@@ -672,19 +689,23 @@ private:
 			YY.resize(nY.size() + prophecy + sequence_length + out_sequence_length);
 
 			std::vector<double> timver_tmp(YY.size());
+#ifdef TIME_MEASUR
+			start = std::chrono::system_clock::now();
+#endif
 
 #pragma omp parallel
 			{
+				const size_t sz = nY[0].size();
 #pragma omp for nowait
 				for (int i = nY.size(); i < YY.size(); i++)
 				{
-					YY[i].resize(nY[0].size());
+					YY[i].resize(sz);
 				}
 #pragma omp for nowait
 				for (int i = 0; i < YY.size(); i++)
 				{
-					train[i].resize(nY[0].size());
-					predict[i].resize(nY[0].size());
+					train[i].resize(sz);
+					predict[i].resize(sz);
 				}
 
 #pragma omp for nowait
@@ -697,6 +718,12 @@ private:
 					timver_tmp[i] = timver_tmp[i-1] + timevar(1, 0) - timevar(0, 0);
 				}
 			}
+#ifdef TIME_MEASUR
+			end = std::chrono::system_clock::now();
+			elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+			printf("elapsed1:%f\n", elapsed);
+			start = std::chrono::system_clock::now(); 
+#endif
 
 			//最初のシーケンス分は入力でしか無いのでそのまま
 #pragma omp for
@@ -729,6 +756,7 @@ private:
 				}
 
 				//output sequence_length 
+#pragma omp for
 				for (int j = 0; j < out_sequence_length; j++)
 				{
 					tiny_dnn::vec_t yy(y_dim);
@@ -743,8 +771,9 @@ private:
 				}
 
 				//From the first sequence onwards, all are predicted from predicted values
-				if (!use_latest_observations )
+				if (!use_latest_observations)
 				{
+#pragma omp for
 					for (int j = 0; j < out_sequence_length; j++)
 					{
 						for (int k = 0; k < y_dim; k++)
@@ -757,6 +786,7 @@ private:
 				{
 					if (i >= train_images.size() - sequence_length)
 					{
+#pragma omp for
 						for (int j = 0; j < out_sequence_length; j++)
 						{
 							if (i + sequence_length + j >= train_images.size())
@@ -770,6 +800,12 @@ private:
 					}
 				}
 			}
+#ifdef TIME_MEASUR
+			end = std::chrono::system_clock::now();
+			elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+			printf("elapsed2:%f\n", elapsed);
+			start = std::chrono::system_clock::now();
+#endif
 			{
 				//denormalize
 				const size_t sz = iY.size() + prophecy - use_differnce;
@@ -809,6 +845,12 @@ private:
 					}
 				}
 			}
+#ifdef TIME_MEASUR
+			end = std::chrono::system_clock::now();
+			elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+			printf("elapsed3:%f\n", elapsed);
+			start = std::chrono::system_clock::now();
+#endif
 
 			if (this->test_mode)
 			{
@@ -1032,6 +1074,12 @@ private:
 					fclose(fp_test);
 				}
 			}
+#ifdef TIME_MEASUR
+			end = std::chrono::system_clock::now();
+			elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+			printf("elapsed4:%f\n", elapsed);
+			start = std::chrono::system_clock::now();
+#endif
 
 			Diff.clear();
 			Diff.resize(iY.size());
@@ -1063,6 +1111,12 @@ private:
 				}
 				Diff[i] = diff;
 			}
+#ifdef TIME_MEASUR
+			end = std::chrono::system_clock::now();
+			elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+			printf("elapsed5:%f\n", elapsed);
+			start = std::chrono::system_clock::now();
+#endif
 
 			if (this->test_mode)
 			{
@@ -1139,6 +1193,12 @@ private:
 					fflush(stderr);
 				}
 			}
+#ifdef TIME_MEASUR
+			end = std::chrono::system_clock::now();
+			elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+			printf("elapsed6:%f\n", elapsed);
+			start = std::chrono::system_clock::now();
+#endif
 
 			cost /= (iY.size() - sequence_length);
 			vari_cost /= (iY.size() - train_images.size());
@@ -1208,8 +1268,20 @@ private:
 			}
 			cost_pre = cost_tot;
 
+#ifdef TIME_MEASUR
+			end = std::chrono::system_clock::now();
+			elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+			printf("elapsed7:%f\n", elapsed);
+			start = std::chrono::system_clock::now();
+#endif
 			set_train(nn, sequence_length, n_bptt_max, default_backend_type);
 			visualize_observed_predict();
+#ifdef TIME_MEASUR
+			end = std::chrono::system_clock::now();
+			elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+			printf("elapsed8:%f\n", elapsed);
+			start = std::chrono::system_clock::now();
+#endif
 		}
 #ifdef USE_LIBTORCH
 		torch_delete_load_model(torch_nn_test);
@@ -1220,6 +1292,12 @@ public:
 	void gen_visualize_fit_state()
 	{
 		set_test(nn, 1);
+#ifdef USE_LIBTORCH
+		if (use_libtorch)
+		{
+			state_reset(this->rnn_type, torch_getNet());
+		}
+#endif
 
 #ifdef USE_LIBTORCH
 		if (use_libtorch)
@@ -2069,6 +2147,8 @@ public:
 			fprintf(fp, "prophecy:%d\n", prophecy);
 			fprintf(fp, "tolerance:%f\n", tolerance);
 			fprintf(fp, "rnn_type:%s\n", rnn_type.c_str());
+			fprintf(fp, "state_reset_mode:%d\n", state_reset_mode);
+			fprintf(fp, "batch_shuffle:%d\n", batch_shuffle);
 			fclose(fp);
 			
 			float maxvalue = -999999999.0;
@@ -2244,6 +2324,7 @@ public:
 					<< t.elapsed() << "s elapsed." << std::endl;
 			}
 
+			if (this->batch_shuffle)
 			{
 				tiny_dnn::tensor_t tmp_train_images = train_images;
 				tiny_dnn::tensor_t tmp_train_labels = train_labels;
@@ -2302,7 +2383,16 @@ public:
 			if (progress) disp.restart(nn.get_input_size());
 			t.restart();
 			
-			rnn_state_reset(nn);
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				state_reset(this->rnn_type, torch_getNet());
+			}
+			else
+#endif
+			{
+				rnn_state_reset(nn);
+			}
 			++epoch;
 
 			if (epoch % 5 == 0)
@@ -2787,6 +2877,12 @@ public:
 		}
 
 		set_test(nn, 1);
+#ifdef USE_LIBTORCH
+		if (use_libtorch)
+		{
+			state_reset(this->rnn_type, torch_getNet());
+		}
+#endif
 
 
 		if (classification >= 2)

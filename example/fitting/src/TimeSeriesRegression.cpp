@@ -1028,6 +1028,16 @@ int main(int argc, char** argv)
 		{
 			continue;
 		}
+		else if (argname == "--state_reset_mode")
+		{
+			timeSeries.state_reset_mode = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
+		else if (argname == "--batch_shuffle")
+		{
+			timeSeries.batch_shuffle = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
 		else if (argname == "--use_differnce_auto_inv")
 		{
 			timeSeries.use_differnce_auto_inv = (0 < atoi(argv[count + 1])) ? true : false;
@@ -1180,6 +1190,8 @@ int main(int argc, char** argv)
 		<< "use_differnce_auto_inv: " << timeSeries.use_differnce_auto_inv << std::endl
 		<< "device_name: " << timeSeries.device_name << std::endl
 		<< "use_libtorch: " << timeSeries.use_libtorch << std::endl
+		<< "state_reset_mode: " << timeSeries.state_reset_mode << std::endl
+		<< "batch_shuffle: " << timeSeries.batch_shuffle << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		<< std::endl;
 //
