@@ -1584,123 +1584,166 @@ public:
 			char *param = "train_params.txt";
 			if (test_mode) param = "test_params.txt";
 			FILE* fp = fopen(param, "w");
-			fprintf(fp, "test_mode:%d\n", test_mode);
-			fprintf(fp, "learning_rate:%f\n", learning_rate);
-			fprintf(fp, "opt_type:%s\n", opt_type.c_str());
-			fprintf(fp, "n_train_epochs:%d\n", n_train_epochs);
-			fprintf(fp, "n_minibatch:%d\n", n_minibatch);
+			if (fp)
+			{
+				fprintf(fp, "test_mode:%d\n", test_mode);
+				fprintf(fp, "learning_rate:%f\n", learning_rate);
+				fprintf(fp, "opt_type:%s\n", opt_type.c_str());
+				fprintf(fp, "n_train_epochs:%d\n", n_train_epochs);
+				fprintf(fp, "n_minibatch:%d\n", n_minibatch);
 
-			fprintf(fp, "n_layers:%d\n", n_layers);
-			fprintf(fp, "n_hidden_size:%d\n", hidden_size);
-			fprintf(fp, "dropout:%f\n", dropout);
-			fprintf(fp, "prophecy:%d\n", 0);
-			fprintf(fp, "tolerance:%f\n", tolerance);
-			fprintf(fp, "input_size:%d\n", input_size);
-			fprintf(fp, "classification:%d\n", classification);
-			fprintf(fp, "batch_shuffle:%d\n", batch_shuffle);
-			fclose(fp);
+				fprintf(fp, "n_layers:%d\n", n_layers);
+				fprintf(fp, "n_hidden_size:%d\n", hidden_size);
+				fprintf(fp, "dropout:%f\n", dropout);
+				fprintf(fp, "prophecy:%d\n", 0);
+				fprintf(fp, "tolerance:%f\n", tolerance);
+				fprintf(fp, "input_size:%d\n", input_size);
+				fprintf(fp, "classification:%d\n", classification);
+				fprintf(fp, "batch_shuffle:%d\n", batch_shuffle);
+				fclose(fp);
+			}
+			else
+			{
+				return;
+			}
 
 			float maxvalue = -999999999.0;
 			float minvalue = -maxvalue;
 			char* images_file = "train_images_tr.csv";
 			if (test_mode) images_file = "train_images_ts.csv";
 			fp = fopen(images_file, "w");
-			for (int i = 0; i < train_images.size(); i++)
+			if (fp)
 			{
-				for (int j = 0; j < train_images[i].size(); j++)
+				for (int i = 0; i < train_images.size(); i++)
 				{
-					if (maxvalue < train_images[i][j])
+					for (int j = 0; j < train_images[i].size(); j++)
 					{
-						maxvalue = train_images[i][j];
-					}
-					if (minvalue > train_images[i][j])
-					{
-						minvalue = train_images[i][j];
-					}
-					fprintf(fp, "%f", train_images[i][j]);
-					if (j == train_images[i].size() - 1)
-					{
-						fprintf(fp, "\n");
-					}
-					else
-					{
-						fprintf(fp, ",");
+						if (maxvalue < train_images[i][j])
+						{
+							maxvalue = train_images[i][j];
+						}
+						if (minvalue > train_images[i][j])
+						{
+							minvalue = train_images[i][j];
+						}
+						fprintf(fp, "%f", train_images[i][j]);
+						if (j == train_images[i].size() - 1)
+						{
+							fprintf(fp, "\n");
+						}
+						else
+						{
+							fprintf(fp, ",");
+						}
 					}
 				}
+				fclose(fp);
 			}
-			fclose(fp);
+			else
+			{
+				return;
+			}
 
 			images_file = "test_images_tr.csv";
 			if (test_mode) images_file = "test_images_ts.csv";
 			fp = fopen(images_file, "w");
-			for (int i = 0; i < test_images.size(); i++)
+			if (fp)
 			{
-				for (int j = 0; j < test_images[i].size(); j++)
+				for (int i = 0; i < test_images.size(); i++)
 				{
-					fprintf(fp, "%f", test_images[i][j]);
-					if (j == test_images[i].size() - 1)
+					for (int j = 0; j < test_images[i].size(); j++)
 					{
-						fprintf(fp, "\n");
-					}
-					else
-					{
-						fprintf(fp, ",");
+						fprintf(fp, "%f", test_images[i][j]);
+						if (j == test_images[i].size() - 1)
+						{
+							fprintf(fp, "\n");
+						}
+						else
+						{
+							fprintf(fp, ",");
+						}
 					}
 				}
+				fclose(fp);
 			}
-			fclose(fp);
+			else
+			{
+				return;
+			}
+
 			char* labels_file = "train_labels_tr.csv";
 			if (test_mode) labels_file = "train_labels_ts.csv";
 			fp = fopen(labels_file, "w");
-			for (int i = 0; i < train_labels.size(); i++)
+			if (fp)
 			{
-				for (int j = 0; j < train_labels[i].size(); j++)
+				for (int i = 0; i < train_labels.size(); i++)
 				{
-					if (maxvalue < train_labels[i][j])
+					for (int j = 0; j < train_labels[i].size(); j++)
 					{
-						maxvalue = train_labels[i][j];
-					}
-					if (minvalue > train_labels[i][j])
-					{
-						minvalue = train_labels[i][j];
-					}
-					fprintf(fp, "%f", train_labels[i][j]);
-					if (j == train_labels[i].size() - 1)
-					{
-						fprintf(fp, "\n");
-					}
-					else
-					{
-						fprintf(fp, ",");
+						if (maxvalue < train_labels[i][j])
+						{
+							maxvalue = train_labels[i][j];
+						}
+						if (minvalue > train_labels[i][j])
+						{
+							minvalue = train_labels[i][j];
+						}
+						fprintf(fp, "%f", train_labels[i][j]);
+						if (j == train_labels[i].size() - 1)
+						{
+							fprintf(fp, "\n");
+						}
+						else
+						{
+							fprintf(fp, ",");
+						}
 					}
 				}
+				fclose(fp);
 			}
-			fclose(fp);
+			else
+			{
+				return;
+			}
 
 			labels_file = "test_labels_tr.csv";
 			if (test_mode) labels_file = "test_labels_ts.csv";
 			fp = fopen(labels_file, "w");
-			for (int i = 0; i < test_labels.size(); i++)
+			if (fp)
 			{
-				for (int j = 0; j < test_labels[i].size(); j++)
+				for (int i = 0; i < test_labels.size(); i++)
 				{
-					fprintf(fp, "%f", test_labels[i][j]);
-					if (j == test_labels[i].size() - 1)
+					for (int j = 0; j < test_labels[i].size(); j++)
 					{
-						fprintf(fp, "\n");
-					}
-					else
-					{
-						fprintf(fp, ",");
+						fprintf(fp, "%f", test_labels[i][j]);
+						if (j == test_labels[i].size() - 1)
+						{
+							fprintf(fp, "\n");
+						}
+						else
+						{
+							fprintf(fp, ",");
+						}
 					}
 				}
+				fclose(fp);
 			}
-			fclose(fp);
+			else
+			{
+				return;
+			}
 
 			fp = fopen(param, "a");
-			fprintf(fp, "maxvalue:%f\n", maxvalue);
-			fprintf(fp, "minvalue:%f\n", minvalue);
-			fclose(fp);
+			if (fp)
+			{
+				fprintf(fp, "maxvalue:%f\n", maxvalue);
+				fprintf(fp, "minvalue:%f\n", minvalue);
+				fclose(fp);
+			}
+			else
+			{
+				return;
+			}
 		}
 
 		tiny_dnn::adam				optimizer_adam;

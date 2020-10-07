@@ -15,6 +15,7 @@
 #ifdef TIME_MEASUR
 #include <chrono>
 #endif
+
 #pragma warning( disable : 4305 ) 
 
 #define EARLY_STOPPING_	10
@@ -2156,102 +2157,138 @@ public:
 			char* images_file = "train_images_tr.csv";
 			if (test_mode) images_file = "train_images_ts.csv";
 			fp = fopen(images_file, "w");
-			for (int i = 0; i < train_images.size(); i++)
+			if (fp)
 			{
-				for (int j = 0; j < train_images[i].size(); j++)
+				for (int i = 0; i < train_images.size(); i++)
 				{
-					if (maxvalue < train_images[i][j])
+					for (int j = 0; j < train_images[i].size(); j++)
 					{
-						maxvalue = train_images[i][j];
-					}
-					if (minvalue > train_images[i][j])
-					{
-						minvalue = train_images[i][j];
-					}
-					fprintf(fp, "%f", train_images[i][j]);
-					if (j == train_images[i].size() - 1)
-					{
-						fprintf(fp, "\n");
-					}
-					else
-					{
-						fprintf(fp, ",");
+						if (maxvalue < train_images[i][j])
+						{
+							maxvalue = train_images[i][j];
+						}
+						if (minvalue > train_images[i][j])
+						{
+							minvalue = train_images[i][j];
+						}
+						fprintf(fp, "%f", train_images[i][j]);
+						if (j == train_images[i].size() - 1)
+						{
+							fprintf(fp, "\n");
+						}
+						else
+						{
+							fprintf(fp, ",");
+						}
 					}
 				}
+				fclose(fp);
 			}
-			fclose(fp);
+			else
+			{
+				return;
+			}
 			
 			images_file = "test_images_tr.csv";
 			if (test_mode) images_file = "test_images_ts.csv";
 			fp = fopen(images_file, "w");
-			for (int i = 0; i < test_images.size(); i++)
+			if (fp)
 			{
-				for (int j = 0; j < test_images[i].size(); j++)
+				for (int i = 0; i < test_images.size(); i++)
 				{
-					fprintf(fp, "%f", test_images[i][j]);
-					if (j == test_images[i].size() - 1)
+					for (int j = 0; j < test_images[i].size(); j++)
 					{
-						fprintf(fp, "\n");
-					}
-					else
-					{
-						fprintf(fp, ",");
+						fprintf(fp, "%f", test_images[i][j]);
+						if (j == test_images[i].size() - 1)
+						{
+							fprintf(fp, "\n");
+						}
+						else
+						{
+							fprintf(fp, ",");
+						}
 					}
 				}
+				fclose(fp);
 			}
-			fclose(fp);
+			else
+			{
+				return;
+			}
+
 			char* labels_file = "train_labels_tr.csv";
 			if (test_mode) labels_file = "train_labels_ts.csv";
 			fp = fopen(labels_file, "w");
-			for (int i = 0; i < train_labels.size(); i++)
+			if (fp)
 			{
-				for (int j = 0; j < train_labels[i].size(); j++)
+				for (int i = 0; i < train_labels.size(); i++)
 				{
-					if (maxvalue < train_labels[i][j])
+					for (int j = 0; j < train_labels[i].size(); j++)
 					{
-						maxvalue = train_labels[i][j];
-					}
-					if (minvalue > train_labels[i][j])
-					{
-						minvalue = train_labels[i][j];
-					}
-					fprintf(fp, "%f", train_labels[i][j]);
-					if (j == train_labels[i].size() - 1)
-					{
-						fprintf(fp, "\n");
-					}
-					else
-					{
-						fprintf(fp, ",");
+						if (maxvalue < train_labels[i][j])
+						{
+							maxvalue = train_labels[i][j];
+						}
+						if (minvalue > train_labels[i][j])
+						{
+							minvalue = train_labels[i][j];
+						}
+						fprintf(fp, "%f", train_labels[i][j]);
+						if (j == train_labels[i].size() - 1)
+						{
+							fprintf(fp, "\n");
+						}
+						else
+						{
+							fprintf(fp, ",");
+						}
 					}
 				}
+				fclose(fp);
 			}
-			fclose(fp);
-			
+			else
+			{
+				return;
+			}
+
 			labels_file = "test_labels_tr.csv";
 			if (test_mode) labels_file = "test_labels_ts.csv";
 			fp = fopen(labels_file, "w");
-			for (int i = 0; i < test_labels.size(); i++)
+			if (fp)
 			{
-				for (int j = 0; j < test_labels[i].size(); j++)
+				for (int i = 0; i < test_labels.size(); i++)
 				{
-					fprintf(fp, "%f", test_labels[i][j]);
-					if (j == test_labels[i].size() - 1)
+					for (int j = 0; j < test_labels[i].size(); j++)
 					{
-						fprintf(fp, "\n");
-					}
-					else
-					{
-						fprintf(fp, ",");
+						fprintf(fp, "%f", test_labels[i][j]);
+						if (j == test_labels[i].size() - 1)
+						{
+							fprintf(fp, "\n");
+						}
+						else
+						{
+							fprintf(fp, ",");
+						}
 					}
 				}
+				fclose(fp);
 			}
-			fclose(fp);
-			
+			else
+			{
+				return;
+			}
+
 			fp = fopen(param, "a");
-			fprintf(fp, "maxvalue:%f\n", maxvalue);
-			fprintf(fp, "minvalue:%f\n", minvalue);
-			fclose(fp);
+			if (fp)
+			{
+				fprintf(fp, "maxvalue:%f\n", maxvalue);
+				fprintf(fp, "minvalue:%f\n", minvalue);
+				fclose(fp);
+			}
+			else
+			{
+				return;
+			}
 		}
 
 		tiny_dnn::adam optimizer_adam;
@@ -2602,7 +2639,7 @@ public:
 			}
 		}
 #endif
-
+		
 		try
 		{
 			if (!fit_best_saved && !test_mode)
