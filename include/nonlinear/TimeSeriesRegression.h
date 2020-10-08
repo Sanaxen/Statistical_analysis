@@ -743,7 +743,7 @@ private:
 			{
 				//i...i+sequence_length-1 -> 
 				//  i+sequence_length ... i+sequence_length+out_sequence_length-1
-
+				
 				tiny_dnn::vec_t next_y;
 #ifdef USE_LIBTORCH
 				if (use_libtorch)
@@ -765,6 +765,12 @@ private:
 					for (int k = 0; k < y_dim; k++)
 					{
 						y[k] = YY[i + sequence_length + j][k];
+
+						//need this
+						if (i + sequence_length + j < train_images.size())
+						{
+							y[k] = nY[i + sequence_length + j][k];
+						}
 						yy[k] = next_y[y_dim*j + k];
 					}
 					train[i + sequence_length + j] = y;
@@ -772,7 +778,7 @@ private:
 				}
 
 				//From the first sequence onwards, all are predicted from predicted values
-				if (!use_latest_observations)
+				if (!use_latest_observations && test_mode)
 				{
 #pragma omp for
 					for (int j = 0; j < out_sequence_length; j++)
@@ -783,7 +789,7 @@ private:
 						}
 					}
 				}
-				if (use_latest_observations)
+				if (use_latest_observations || !test_mode)
 				{
 					if (i >= train_images.size() - sequence_length)
 					{

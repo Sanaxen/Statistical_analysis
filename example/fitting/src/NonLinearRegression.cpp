@@ -571,6 +571,14 @@ int main(int argc, char** argv)
 	x = Matrix<dnn_double>(1, 1);
 	y = Matrix<dnn_double>(1, 1);
 
+#ifdef USE_LIBTORCH
+	if (use_libtorch)
+	{
+		torch_train_init();
+		torch_setDevice(device_name.c_str());
+	}
+#endif
+
 	NonLinearRegression regression(X, Y, normalizeskipp, normalization_type, dec_random, fluctuation, regression_type, classification, test_mode, use_trained_scale);
 	if (regression.getStatus() == -1)
 	{
