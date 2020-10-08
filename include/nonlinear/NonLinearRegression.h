@@ -2093,7 +2093,7 @@ public:
 
 		try
 		{
-			if (!fit_best_saved)
+			if (!fit_best_saved && !test_mode)
 			{
 #ifdef USE_LIBTORCH
 				if (use_libtorch)
