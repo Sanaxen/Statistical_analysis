@@ -80,6 +80,7 @@ int main(int argc, char** argv)
 	std::string timeformat = "";
 
 	std::string data_path = "";
+	int xvar_time_sift = 1;
 
 	std::string csvfile("sample.csv");
 	std::string report_file("TimeSeriesRegression.txt");
@@ -94,6 +95,11 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--time_sift") {
+			xvar_time_sift = atoi(argv[count + 1]);
+			printf("xvar_time_sift:%d\n", xvar_time_sift);
+		}
+		else
 		if (argname == "--multiplot_step") {
 			multiplot_step = atoi(argv[count + 1]);
 		}else
@@ -589,29 +595,62 @@ int main(int argc, char** argv)
 			else normalize_skilp.push_back(0);
 		}
 
-		//Shift the explanatory variable by one time ago
-		Matrix<dnn_double> xx = x.Row(1);
-		for (int i = 2; i < x.m - 1; i++)
+		x.print("x(pre_sift)");
+		if (xvar_time_sift > 0)
 		{
-			xx = xx.appendRow(x.Row(i));
+			//Shift the explanatory variable by one time ago
+			Matrix<dnn_double> xx = x.Row(xvar_time_sift);
+			for (int i = xvar_time_sift + 1; i < x.m - 1; i++)
+			{
+				xx = xx.appendRow(x.Row(i));
+			}
+			xx = xx.appendRow(x.Row(x.m - 1));
+			x = xx;
+			x.print("x");
 		}
-		x.print("x");
-		xx = xx.appendRow(x.Row(x.m - 1));
+	}		
+	if (xvar_time_sift < 0)
+	{
+		Matrix<dnn_double> xx = x;
+		for (int i =  0; i < -xvar_time_sift; i++)
+		{
+			xx = xx.removeRow(xx.m - 1);
+		}
 		x = xx;
 		x.print("x");
 	}
 
-	Matrix<dnn_double> y = z.Col(y_var_idx[0]);
+	//Shift the Objective  variable by one time ago
+	z.print("z");
+	Matrix<dnn_double> y;
+	y = z.Col(y_var_idx[0]);
 	for (int i = 1; i < y_dim; i++)
 	{
 		y = y.appendCol(z.Col(y_var_idx[i]));
 	}
-	//Because the explanatory variable is shifted by one unit, 
-	//it is shortened by one unit.
-	y = y.removeRow(y.m - 1);
-	printf("Because the explanatory variable is shifted by 1 unit,\n");
-	printf("it is shortened by 1 unit.\n");
 
+	if (x_dim)
+	{
+		//Because the explanatory variable is shifted by (xvar_time_sift) unit, 
+		//it is shortened by one unit.
+		y.print("y(pre_sift)");
+		if (xvar_time_sift > 0)
+		{
+			for (int i = 1; i <= xvar_time_sift; i++)
+			{
+				y = y.removeRow(y.m - 1);
+			}
+		}
+		if (xvar_time_sift < 0)
+		{
+			for (int i = 1; i <= -xvar_time_sift; i++)
+			{
+				y = y.removeRow(0);
+			}
+		}
+		printf("Because the explanatory variable is shifted by %d unit,\n", xvar_time_sift);
+		printf("it is shortened by %d unit.\n", xvar_time_sift);
+	}
 	y.print("y");
 
 	if (x_var.size())
@@ -622,7 +661,7 @@ int main(int argc, char** argv)
 			y = y.appendCol(x.Col(i));
 		}
 	}
-	//y.print("y+yx");
+	y.print("y+yx");
 
 	std::vector<std::string> timestamp;
 	Matrix<dnn_double> tvar;
@@ -948,6 +987,9 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--time_sift") {
+			continue;
+		}
 		if (argname == "--multiplot_step") {
 			continue;
 		}
@@ -1192,6 +1234,7 @@ int main(int argc, char** argv)
 		<< "use_libtorch: " << timeSeries.use_libtorch << std::endl
 		<< "state_reset_mode: " << timeSeries.state_reset_mode << std::endl
 		<< "batch_shuffle: " << timeSeries.batch_shuffle << std::endl
+		<< "sift_time:" << xvar_time_sift << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		<< std::endl;
 //
