@@ -705,12 +705,23 @@ int main(int argc, char** argv)
 
 	if(dump_input)
 	{
+		std::vector<std::string> hed;
+		hed.push_back("Time");
+		for (int i = 0; i < y_var_idx.size(); i++)
+		{
+			hed.push_back(header_names[y_var_idx[i]]);
+		}
+		for (int i = 0; i < x_var_idx.size(); i++)
+		{
+			hed.push_back(header_names[x_var_idx[i]]);
+		}
+
 		Matrix<dnn_double> tmp_mat;
 		//Matrix<dnn_double>& tvar = Matrix<dnn_double>(y.m, 1);
 		//for (int i = 0; i < y.m; i++) tvar(i, 0) = i;
 		tmp_mat = tvar;
 		tmp_mat = tmp_mat.appendCol(y);
-		tmp_mat.print_csv("ts_input.csv");
+		tmp_mat.print_csv("ts_input.csv", hed);
 		exit(0);
 	}
 
