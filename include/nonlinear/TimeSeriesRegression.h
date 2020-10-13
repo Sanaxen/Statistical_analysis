@@ -20,6 +20,7 @@
 
 #define EARLY_STOPPING_	10
 
+#define MINBATCH_MAX	1024
 
 /* シグナル受信/処理 */
 bool ctr_c_stopping_time_series_regression = false;
@@ -514,14 +515,28 @@ private:
 				}
 			}
 		}
-
+		
 		if (classification >= 2)
 		{
 			float loss_train = 0;
 #ifdef USE_LIBTORCH
 			if (use_libtorch)
 			{
-				loss_train = torch_get_loss_nn(torch_nn_test, train_images, train_labels, 1);
+				int minbatch_max = MINBATCH_MAX;
+				int batch = 1;
+				if (minbatch_max > train_images.size())
+				{
+					minbatch_max = train_images.size();
+				}
+				for (int i = minbatch_max; i >= 2; i--)
+				{
+					if (train_images.size() % i == 0)
+					{
+						batch = i;
+						break;
+					}
+				}
+				loss_train = torch_get_loss_nn(torch_nn_test, train_images, train_labels, batch);
 			}
 			else
 #endif
@@ -547,15 +562,32 @@ private:
 			}
 
 			float loss_test = 0;
+			if (test_images.size())
+			{
 #ifdef USE_LIBTORCH
-			if (use_libtorch)
-			{
-				loss_test = torch_get_loss_nn(torch_nn_test, test_images, test_labels, 1);
-			}
-			else
+				if (use_libtorch)
+				{
+					int minbatch_max = MINBATCH_MAX;
+					int batch = 1;
+					if (minbatch_max > test_images.size())
+					{
+						minbatch_max = test_images.size();
+					}
+					for (int i = minbatch_max; i >= 2; i--)
+					{
+						if (test_images.size() % i == 0)
+						{
+							batch = i;
+							break;
+						}
+					}
+					loss_test = torch_get_loss_nn(torch_nn_test, test_images, test_labels, batch);
+				}
+				else
 #endif
-			{
-				float loss_test = get_loss(nn_test, test_images, test_labels);
+				{
+					float loss_test = get_loss(nn_test, test_images, test_labels);
+				}
 			}
 
 			tiny_dnn::result train_result;
@@ -574,7 +606,10 @@ private:
 #endif
 			{
 				train_result = get_accuracy(nn_test, train_images, train_labels);
-				test_result = get_accuracy(nn_test, test_images, test_labels);
+				if (test_images.size() > 0)
+				{
+					test_result = get_accuracy(nn_test, test_images, test_labels);
+				}
 			}
 			if (fp_accuracy)
 			{
@@ -598,10 +633,22 @@ private:
 
 			if (accuracy_max < train_result.accuracy())
 			{
-				nn_test.save("fit_best_ts.model");
-				fit_best_saved = true;
-				nn_test.save("fit_best.model_ts.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
-				accuracy_max = train_result.accuracy();
+#ifdef USE_LIBTORCH
+				if (use_libtorch)
+				{
+					torch_save_nn(torch_nn_test, "fit_best_ts.pt");
+					fit_best_saved = true;
+					//torch_save_nn(torch_nn_test, "tmp_ts.pt");
+					accuracy_max = train_result.accuracy();
+				}
+				else
+#endif
+				{
+					nn_test.save("fit_best_ts.model");
+					fit_best_saved = true;
+					nn_test.save("fit_best.model_ts.json", tiny_dnn::content_type::weights_and_model, tiny_dnn::file_format::json);
+					accuracy_max = train_result.accuracy();
+				}
 			}
 			if (1.0 - accuracy_max*0.01 < tolerance)
 			{
