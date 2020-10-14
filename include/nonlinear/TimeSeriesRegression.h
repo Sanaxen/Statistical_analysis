@@ -21,6 +21,8 @@
 #define EARLY_STOPPING_	10
 
 #define MINBATCH_MAX	1024
+#define TARGET_POSITON			(target_position-1)
+//#define TARGET_POSITON			100
 
 /* シグナル受信/処理 */
 bool ctr_c_stopping_time_series_regression = false;
@@ -223,6 +225,7 @@ public:
 	bool fit_best_saved = false;
 	bool state_reset_mode = false;
 	bool batch_shuffle = true;
+	int target_position = 1;
 
 private:
 
@@ -731,10 +734,10 @@ private:
 		{
 			const size_t time_str_sz = 80;
 			char time_str[time_str_sz];
-			std::vector<tiny_dnn::vec_t> train(nY.size() + prophecy + sequence_length + out_sequence_length);
-			std::vector<tiny_dnn::vec_t> predict(nY.size() + prophecy + sequence_length + out_sequence_length);
+			std::vector<tiny_dnn::vec_t> train(nY.size() + prophecy + sequence_length + out_sequence_length + TARGET_POSITON);
+			std::vector<tiny_dnn::vec_t> predict(nY.size() + prophecy + sequence_length + out_sequence_length + TARGET_POSITON);
 			std::vector<tiny_dnn::vec_t> YY = nY;
-			YY.resize(nY.size() + prophecy + sequence_length + out_sequence_length);
+			YY.resize(nY.size() + prophecy + sequence_length + out_sequence_length + TARGET_POSITON);
 
 			std::vector<double> timver_tmp(YY.size());
 #ifdef TIME_MEASUR
@@ -775,7 +778,7 @@ private:
 
 			//最初のシーケンス分は入力でしか無いのでそのまま
 #pragma omp for
-			for (int j = 0; j < sequence_length; j++)
+			for (int j = 0; j < sequence_length + TARGET_POSITON; j++)
 			{
 				tiny_dnn::vec_t y(y_dim);
 				for (int k = 0; k < y_dim; k++)
@@ -785,7 +788,7 @@ private:
 				train[j] = predict[j] = y;
 			}
 
-			const int sz = iY.size() + prophecy - use_differnce;
+			const int sz = iY.size() + prophecy - use_differnce - TARGET_POSITON;
 			for (int i = 0; i < sz; i++)
 			{
 				//i...i+sequence_length-1 -> 
@@ -811,17 +814,17 @@ private:
 					tiny_dnn::vec_t y(y_dim);
 					for (int k = 0; k < y_dim; k++)
 					{
-						y[k] = YY[i + sequence_length + j][k];
+						y[k] = YY[i + sequence_length + j + TARGET_POSITON][k];
 
 						//need this
-						if (i + sequence_length + j < train_images.size())
+						if (i + sequence_length + j + TARGET_POSITON < train_images.size())
 						{
-							y[k] = nY[i + sequence_length + j][k];
+							y[k] = nY[i + sequence_length + j + TARGET_POSITON][k];
 						}
 						yy[k] = next_y[y_dim*j + k];
 					}
-					train[i + sequence_length + j] = y;
-					predict[i + sequence_length + j] = yy;
+					train[i + sequence_length + j+ TARGET_POSITON] = y;
+					predict[i + sequence_length + j+ TARGET_POSITON] = yy;
 				}
 
 				//From the first sequence onwards, all are predicted from predicted values
@@ -832,7 +835,7 @@ private:
 					{
 						for (int k = 0; k < y_dim; k++)
 						{
-							YY[i + sequence_length + j][k] = predict[i + sequence_length + j][k];
+							YY[i + sequence_length + j+ TARGET_POSITON][k] = predict[i + sequence_length + j+ TARGET_POSITON][k];
 						}
 					}
 				}
@@ -843,11 +846,11 @@ private:
 #pragma omp for
 						for (int j = 0; j < out_sequence_length; j++)
 						{
-							if (i + sequence_length + j >= train_images.size())
+							if (i + sequence_length + j + TARGET_POSITON >= train_images.size())
 							{
 								for (int k = 0; k < y_dim; k++)
 								{
-									YY[i + sequence_length + j][k] = predict[i + sequence_length + j][k];
+									YY[i + sequence_length + j+ TARGET_POSITON][k] = predict[i + sequence_length + j+ TARGET_POSITON][k];
 								}
 							}
 						}
@@ -971,6 +974,10 @@ private:
 
 						for (int k = 0; k < y_dim - 1; k++)
 						{
+							if (i < sequence_length + TARGET_POSITON)
+							{
+								fprintf(fp_test, "NaN %f ", yy[k]);
+							}else
 							if (i >= iY.size())
 							{
 								fprintf(fp_test, "NaN %f ", yy[k]);
@@ -1002,7 +1009,7 @@ private:
 				FILE* fp_test = fopen("test.dat", "w");
 				if (fp_test)
 				{
-					for (int i = 0; i < sequence_length; i++)
+					for (int i = 0; i < sequence_length+ TARGET_POSITON; i++)
 					{
 						tiny_dnn::vec_t y = train[i];
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
@@ -1836,7 +1843,7 @@ public:
 		printf("n_minibatch:%d sequence_length:%d\n", n_minibatch, sequence_length);
 		printf("out_sequence_length:%d\n", out_sequence_length);
 
-		int dataAll = iY.size() - sequence_length - out_sequence_length - use_differnce;
+		int dataAll = iY.size() - sequence_length - out_sequence_length - use_differnce - TARGET_POSITON;
 		printf("dataset All:%d->", dataAll);
 
 		if (dataAll <= 0 && test_mode)
@@ -1884,7 +1891,7 @@ public:
 			tiny_dnn::vec_t y;
 			for (int j = 0; j < out_sequence_length; j++)
 			{
-				const auto& ny = nY[i + sequence_length + j];
+				const auto& ny = nY[i + sequence_length + j + TARGET_POSITON];
 				for (int k = 0; k < y_dim; k++)
 				{
 					y.push_back(ny[k]);
@@ -1908,7 +1915,7 @@ public:
 			tiny_dnn::vec_t y;
 			for (int j = 0; j < out_sequence_length; j++)
 			{
-				const auto& ny = nY[i + sequence_length + j];
+				const auto& ny = nY[i + sequence_length + j + TARGET_POSITON];
 				for (int k = 0; k < y_dim; k++)
 				{
 					y.push_back(ny[k]);
@@ -3062,7 +3069,7 @@ public:
 				tiny_dnn::vec_t y(y_dim);
 				for (int k = 0; k < y_dim; k++)
 				{
-					z[k] = nY[i + sequence_length + j][k];
+					z[k] = nY[i + sequence_length + j + TARGET_POSITON][k];
 					y[k] = next_y[y_dim*j + k];
 
 					if (zscore_normalization)
@@ -3108,8 +3115,8 @@ public:
 			//output sequence_length 
 			for (int j = 0; j < out_sequence_length; j++)
 			{
-				tiny_dnn::vec_t z = train[i];
-				tiny_dnn::vec_t y = predict[i];
+				tiny_dnn::vec_t z = train[j+ TARGET_POSITON];
+				tiny_dnn::vec_t y = predict[j+ TARGET_POSITON];
 				for (int k = 0; k < y_dim; k++)
 				{
 					double d = (y[k] - z[k]);
