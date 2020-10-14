@@ -81,6 +81,7 @@ int main(int argc, char** argv)
 
 	std::string data_path = "";
 	int xvar_time_sift = 1;
+	int target_position = 1;
 
 	std::string csvfile("sample.csv");
 	std::string report_file("TimeSeriesRegression.txt");
@@ -95,7 +96,11 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
-		if (argname == "--time_sift") {
+		if (argname == "--target_position") {
+			target_position = atoi(argv[count + 1]);
+			printf("target_position:%d\n", target_position);
+		}
+		else if (argname == "--time_sift") {
 			xvar_time_sift = atoi(argv[count + 1]);
 			printf("xvar_time_sift:%d\n", xvar_time_sift);
 		}
@@ -985,6 +990,8 @@ int main(int argc, char** argv)
 	timeSeries.weight_init_type = weight_init_type;
 	timeSeries.normalize_skilp = normalize_skilp;
 	timeSeries.xx_var_scale = xx_var_scale;
+	timeSeries.target_position = target_position;
+	
 
 	int n_layers = -1;
 	int n_rnn_layers = -1;
@@ -994,6 +1001,9 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--target_position") {
+			continue;
+		}
 		if (argname == "--time_sift") {
 			continue;
 		}
@@ -1242,7 +1252,9 @@ int main(int argc, char** argv)
 		<< "state_reset_mode: " << timeSeries.state_reset_mode << std::endl
 		<< "batch_shuffle: " << timeSeries.batch_shuffle << std::endl
 		<< "sift_time:" << xvar_time_sift << std::endl
+		<< "target_position: " << target_position << std::endl
 		<< "dump_input      : " << dump_input << std::endl
+		
 		<< std::endl;
 //
 	{
