@@ -82,6 +82,7 @@ int main(int argc, char** argv)
 	std::string data_path = "";
 	int xvar_time_sift = 1;
 	int target_position = 1;
+	int mean_row = 1;
 
 	std::string csvfile("sample.csv");
 	std::string report_file("TimeSeriesRegression.txt");
@@ -96,6 +97,10 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--mean_row") {
+			mean_row = atoi(argv[count + 1]);
+			printf("mean_row:%d\n", mean_row);
+		}else
 		if (argname == "--target_position") {
 			target_position = atoi(argv[count + 1]);
 			printf("target_position:%d\n", target_position);
@@ -917,6 +922,19 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
+	if (mean_row > 1)
+	{
+		printf("mean_row:%d\n", mean_row);
+		y = MeanRow(mean_row, y);
+		y.print_csv("mean_y.csv");
+
+		if (x_dim >= 1)
+		{
+			x = MeanRow(mean_row, x);
+			x.print_csv("mean_x.csv");
+		}
+
+	}
 	tiny_dnn::tensor_t X, Y;
 	MatrixToTensor(x, X, read_max);
 	MatrixToTensor(y, Y, read_max);
@@ -1001,6 +1019,9 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--mean_row") {
+			continue;
+		}
 		if (argname == "--target_position") {
 			continue;
 		}
