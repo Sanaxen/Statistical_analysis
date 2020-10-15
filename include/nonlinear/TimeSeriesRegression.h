@@ -226,6 +226,7 @@ public:
 	bool state_reset_mode = false;
 	bool batch_shuffle = true;
 	int target_position = 1;
+	int mean_row = 1;
 
 private:
 
