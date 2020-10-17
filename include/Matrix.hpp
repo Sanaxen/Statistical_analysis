@@ -3506,4 +3506,26 @@ inline Matrix<dnn_double> MahalanobisDist_Abnormality(Matrix<dnn_double>& X)
 	return dist;
 }
 
+inline Matrix<dnn_double> MeanRow(int rows, Matrix<dnn_double>& y)
+{
+	if (y.m <= 1) return y;
+	std::vector<dnn_double> new_y;
+	for (int i = 0; i < y.m - rows; i += rows)
+	{
+		for (int k = 0; k < y.n; k++)
+		{
+			double s = 0.0;
+			for (int j = 0; j < rows; j++)
+			{
+				s += y(i + j, k);
+			}
+			new_y.push_back(s / (double)rows);
+		}
+	}
+	Matrix<dnn_double> yy(new_y.size() / y.n, y.n);
+	memcpy(yy.v, &(new_y[0]), sizeof(dnn_double)*new_y.size());
+
+	return yy;
+}
+
 #endif
