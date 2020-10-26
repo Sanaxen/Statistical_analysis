@@ -397,7 +397,10 @@ int main(int argc, char** argv)
 	LiNGAM.B.print_e("B");
 	if (lasso)
 	{
-		LiNGAM.remove_redundancy(lasso);
+		if (LiNGAM.remove_redundancy(lasso) != 0)
+		{
+			printf("ERROR:lasso(remove_redundancy)\n");
+		}
 	}
 	LiNGAM.before_sorting();
 
@@ -511,7 +514,7 @@ int main(int argc, char** argv)
 		plot1.draw();
 #endif
 	}
-
+	
 	if (y_var.size())
 	{
 		LiNGAM.linear_regression_var.push_back(y_var[0]);

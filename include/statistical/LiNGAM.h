@@ -227,6 +227,7 @@ public:
 
 	int remove_redundancy(const dnn_double alpha = 0.01, const size_t max_ica_iteration = 1000000, const dnn_double tolerance = TOLERANCE)
 	{
+		printf("remove_redundancy:lasso start\n"); fflush(stdout);
 		error = 0;
 		Matrix<dnn_double> xs = input;
 		//xs.print();
@@ -250,7 +251,7 @@ public:
 
 				//n_iter *= 2;
 				//lasso.fit(X, Y, n_iter, tolerance);
-				printf("n_iter=%d error_eps=%f\n", lasso.num_iteration,lasso.error_eps);
+				printf("n_iter=%d error_eps=%f\n", lasso.num_iteration, lasso.error_eps);
 				break;
 			}
 
@@ -262,10 +263,18 @@ public:
 				B(i, k) = c.v[k];
 			}
 #else
-			const Matrix<dnn_double>& c = lasso.coef;
-			for (int k = 0; k < i; k++)
+			if (lasso.getStatus() == -2)
 			{
-				B(i, k) = c.v[k] / lasso.sigma(0, k);
+				error = -1;
+				break;
+			}
+			else
+			{
+				const Matrix<dnn_double>& c = lasso.coef;
+				for (int k = 0; k < i; k++)
+				{
+					B(i, k) = c.v[k] / lasso.sigma(0, k);
+				}
 			}
 #endif
 			if (i == B.m-1) break;
@@ -274,6 +283,7 @@ public:
 			Y = xs.Col(replacement[i + 1]);
 		}
 		B.print_e("remove_redundancy");
+		printf("remove_redundancy:lasso end\n\n"); fflush(stdout);
 		return error;
 	}
 

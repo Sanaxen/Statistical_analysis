@@ -1327,7 +1327,7 @@ struct Matrix
 		{
 			for (int j = 0; j < x.n; j++)
 			{
-				x(i, j) = (x(i, j) - means(0, j)) / sigma(0, j);
+				x(i, j) = (x(i, j) - means(0, j)) / (sigma(0, j)+1.e-10);
 			}
 		}
 		return x;

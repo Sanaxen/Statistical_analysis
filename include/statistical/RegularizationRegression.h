@@ -409,6 +409,9 @@ public:
 		Matrix<dnn_double>& train = whitening_(X);
 		Matrix<dnn_double> beta;
 
+		printf("tolerance:%f\n", tolerance);
+		means.print("means");
+		sigma.print("sigma");
 		if (use_bias)
 		{
 			Matrix<dnn_double> bias;
@@ -418,7 +421,7 @@ public:
 
 			//train.print("", "%.3f ");
 		}
-			beta = beta.zeros(1, train.n);
+		beta = beta.zeros(1, train.n);
 		const int N = train.m;
 
 		int varNum = train.n;
@@ -427,8 +430,9 @@ public:
 		{
 			varNum = train.n - 1;
 			beta(0, train.n - 1) = (y - train * beta.transpose()).Sum() / N;
-			//beta.print();
+			//beta.print("beta");
 		}
+		//train.print("train");
 
 		error = -1;
 		for (size_t iter = 0; iter < max_iteration; ++iter)
@@ -461,6 +465,8 @@ public:
 				beta(0, train.n - 1) = 0.0;
 				beta(0, train.n - 1) = (y - train * beta.transpose()).Sum() / N;
 			}
+			//coef.print("coef");
+			//beta.print("beta");
 
 			num_iteration = iter;
 			error_eps = (coef - beta).norm();
@@ -468,6 +474,15 @@ public:
 			{
 				printf("convergence:%f - iter:%d\n", error_eps, iter);
 				error = 0;
+				break;
+			}
+			if (iter % 10 == 0)
+			{
+				printf("iter=%d : %f\n", iter, error_eps); fflush(stdout);
+			}
+			if (_isnan(error_eps))
+			{
+				error = -2;
 				break;
 			}
 		}
