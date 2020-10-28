@@ -2201,6 +2201,10 @@ public:
 			fprintf(fp, "x_dim:%d\n", x_dim);
 			fprintf(fp, "y_dim:%d\n", y_dim);
 			fprintf(fp, "sequence_length:%d\n", sequence_length);
+			fprintf(fp, "out_sequence_length:%d\n", this->out_sequence_length);
+			fprintf(fp, "target_position:%d\n", this->target_position);
+			fprintf(fp, "clip_gradients:%d\n", this->clip_gradients);
+			fprintf(fp, "early_stopping:%d\n", this->early_stopping);
 			fprintf(fp, "rnn_layers:%d\n", rnn_layers);
 			fprintf(fp, "n_layers:%d\n", n_layers);
 			fprintf(fp, "n_hidden_size:%d\n", n_hidden_size);
