@@ -1597,6 +1597,7 @@ public:
 				fprintf(fp, "dropout:%f\n", dropout);
 				fprintf(fp, "prophecy:%d\n", 0);
 				fprintf(fp, "tolerance:%f\n", tolerance);
+				fprintf(fp, "early_stopping:%d\n", this->early_stopping);
 				fprintf(fp, "input_size:%d\n", input_size);
 				fprintf(fp, "classification:%d\n", classification);
 				fprintf(fp, "batch_shuffle:%d\n", batch_shuffle);
