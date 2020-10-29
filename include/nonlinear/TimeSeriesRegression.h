@@ -2214,6 +2214,7 @@ public:
 			fprintf(fp, "tolerance:%f\n", tolerance);
 			fprintf(fp, "rnn_type:%s\n", rnn_type.c_str());
 			fprintf(fp, "state_reset_mode:%d\n", state_reset_mode);
+			fprintf(fp, "classification:%d\n", classification);
 			fprintf(fp, "batch_shuffle:%d\n", batch_shuffle);
 			fclose(fp);
 			
