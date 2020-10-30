@@ -2362,9 +2362,9 @@ public:
 		tiny_dnn::RMSprop optimizer_rmsprop;
 		tiny_dnn::adagrad optimizer_adagrad;
 
-		if (opt_type == "SGD")
+		if (opt_type == "sgd")
 		{
-			std::cout << "optimizer:" << "SGD" << std::endl;
+			std::cout << "optimizer:" << "sgd" << std::endl;
 			optimizer_sgd.alpha *= learning_rate;
 			std::cout << "optimizer.alpha:" << optimizer_sgd.alpha << std::endl;
 
