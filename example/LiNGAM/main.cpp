@@ -93,6 +93,9 @@ int main(int argc, char** argv)
 	char* output_diaglam_type = "png";
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
+	bool ignore_constant_value_columns = true;
+	double lasso_tol = TOLERANCE;
+	int lasso_itr_max = 1000000;
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -151,6 +154,18 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--cor_range_u") {
 					cor_range[1] = atof(argv[count + 1]);
+				}
+				else if (argname == "--ignore_constant_value_columns")
+				{
+					ignore_constant_value_columns = atoi(argv[count + 1]) == 0 ? false : true;
+				}
+				else if (argname == "--lasso_tol")
+				{
+					lasso_tol = atof(argv[count + 1]);
+				}
+				else if (argname == "--lasso_itr_max")
+				{
+					lasso_itr_max = atoi(argv[count + 1]);
 				}
 
 				else {
@@ -365,12 +380,45 @@ int main(int argc, char** argv)
 	}
 
 	std::vector<std::string> headers_tmp;
-	headers_tmp.push_back(header_names[x_var_idx[0]]);
+	std::vector<std::string> error_cols;
 
-	Matrix<dnn_double> xs = T.Col(x_var_idx[0]);
-	for (int i = 1; i < x_var.size(); i++)
+	int index_start = -1;
+	Matrix<dnn_double> col;
+	for (int i = 0; i < x_var.size(); i++)
 	{
-		xs = xs.appendCol(T.Col(x_var_idx[i]));
+		col = T.Col(x_var_idx[i]);
+		//printf("[%s]Max-Min:%f\n", header_names[x_var_idx[i]].c_str(), fabs(col.Max() - col.Min()));
+		if (fabs(col.Max() - col.Min()) < 1.0e-6)
+		{
+			if (ignore_constant_value_columns) continue;
+			error_cols.push_back(header_names[x_var_idx[i]]);
+			col = col + col.RandMT()*0.001;
+			break;
+		}else
+		{
+			headers_tmp.push_back(header_names[x_var_idx[i]]);
+			index_start = i;
+			break;
+		}
+	}
+
+	if (index_start < 0)
+	{
+		printf("ERROR:to many constant value columns.\n");
+		return -1;
+	}
+	Matrix<dnn_double> xs = col;
+	for (int i = index_start + 1; i < x_var.size(); i++)
+	{
+		col = T.Col(x_var_idx[i]);
+		//printf("[%s]Max-Min:%f\n", header_names[x_var_idx[i]].c_str(), fabs(col.Max() - col.Min()));
+		if (fabs(col.Max() - col.Min()) < 1.0e-6)
+		{
+			if (ignore_constant_value_columns) continue;
+			error_cols.push_back(header_names[x_var_idx[i]]);
+			col = col + col.RandMT()*0.001;
+		}
+		xs = xs.appendCol(col);
 		headers_tmp.push_back(header_names[x_var_idx[i]]);
 	}
 	for (int i = 0; i < y_var.size(); i++)
@@ -384,20 +432,47 @@ int main(int argc, char** argv)
 			}
 		}
 		if (dup) continue;
-		xs = xs.appendCol(T.Col(y_var_idx[i]));
+		col = T.Col(x_var_idx[i]);
+		//printf("[%s]Max-Min:%f\n", header_names[y_var_idx[i]].c_str(),fabs(col.Max() - col.Min()));
+		if (fabs(col.Max() - col.Min()) < 1.0e-6)
+		{
+			if (ignore_constant_value_columns) continue;
+			error_cols.push_back(header_names[y_var_idx[i]]);
+			col = col + col.RandMT()*0.001;
+		}
+		xs = xs.appendCol(col);
 		headers_tmp.push_back(header_names[y_var_idx[i]]);
 	}
 	std::vector<std::string> header_names_org = header_names;
 	header_names = headers_tmp;
 #endif
 
+	{
+		FILE* fp = fopen("error_cols.txt", "r");
+		if (fp)
+		{
+			remove("error_cols.txt");
+		}
+	}
+	if (error_cols.size())
+	{
+		FILE* fp = fopen("error_cols.txt", "w");
+		if (fp)
+		{
+			for (int i = 0; i < error_cols.size(); i++)
+			{
+				fprintf(fp, "%s\n", error_cols[i].c_str());
+			}
+			fclose(fp);
+		}
+	}
 	LiNGAM.set(xs.n);
 	LiNGAM.fit(xs);
 
 	LiNGAM.B.print_e("B");
 	if (lasso)
 	{
-		if (LiNGAM.remove_redundancy(lasso) != 0)
+		if (LiNGAM.remove_redundancy(lasso, lasso_itr_max, lasso_tol) != 0)
 		{
 			printf("ERROR:lasso(remove_redundancy)\n");
 		}

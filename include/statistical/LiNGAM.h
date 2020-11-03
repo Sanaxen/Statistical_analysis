@@ -266,7 +266,7 @@ public:
 			if (lasso.getStatus() == -2)
 			{
 				error = -1;
-				break;
+				//break;
 			}
 			else
 			{
@@ -421,6 +421,18 @@ public:
 		std::string path = graphviz_path_::path_;
 		if (path != "")
 		{
+			if (path.c_str()[0] == '\"')
+			{
+				char tmp[1024];
+				char tmp2[1024];
+				strcpy(tmp, path.c_str());
+				strcpy(tmp2, tmp+1);
+				if (tmp2[strlen(tmp2) - 1] == '\"')
+				{
+					tmp2[strlen(tmp2) - 1] = '\0';
+				}
+				path = tmp2;
+			}
 			sprintf(cmd, "\"%s\\dot.exe\" -T%s %s -o Digraph.%s", path.c_str(), outformat, filename, outformat);
 		}
 		else

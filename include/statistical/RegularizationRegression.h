@@ -434,8 +434,9 @@ public:
 		}
 		//train.print("train");
 
+		int max_iteration2 = max_iteration;
 		error = -1;
-		for (size_t iter = 0; iter < max_iteration; ++iter)
+		for (size_t iter = 0; iter < max_iteration2; ++iter)
 		{
 			coef = beta;
 
@@ -468,6 +469,7 @@ public:
 			//coef.print("coef");
 			//beta.print("beta");
 
+			double error_eps_old = error_eps;
 			num_iteration = iter;
 			error_eps = (coef - beta).norm();
 			if (error_eps < tolerance)
@@ -476,6 +478,13 @@ public:
 				error = 0;
 				break;
 			}
+			//if (iter == max_iteration2 - 1)
+			//{
+			//	if (error_eps < error_eps_old)
+			//	{
+			//		max_iteration2 *= 2;
+			//	}
+			//}
 			if (iter % 10 == 0)
 			{
 				printf("iter=%d : %f\n", iter, error_eps); fflush(stdout);
