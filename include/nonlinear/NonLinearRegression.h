@@ -2249,6 +2249,7 @@ public:
 				xx[k] = (x[k] - Mean_x[k]) / (Sigma_x[k] + 1.0e-10);
 			}
 		}
+		else
 		if (minmax_normalization)
 		{
 			for (int k = 0; k < xx.size(); k++)
@@ -2256,6 +2257,7 @@ public:
 				xx[k] = (x[k] - Min_x[k]) / (MaxMin_x[k] + 1.0e-10);
 			}
 		}
+		else
 		if (_11_normalization)
 		{
 			for (int k = 0; k < xx.size(); k++)
@@ -2565,7 +2567,17 @@ public:
 		double rmse = 0.0;
 		for (int i = 0; i < nY.size(); i++)
 		{
-			tiny_dnn::vec_t& predict_y = nn.predict(nX[i]);
+			tiny_dnn::vec_t predict_y;
+#ifdef USE_LIBTORCH
+			if (use_libtorch)
+			{
+				predict_y = torch_predict(nX[i]);
+			}
+			else
+#endif
+			{
+				predict_y = nn.predict(nX[i]);
+			}
 			tiny_dnn::vec_t y(predict_y.size());
 			tiny_dnn::vec_t z(predict_y.size());
 			for (int k = 0; k < predict_y.size(); k++)
@@ -2577,12 +2589,13 @@ public:
 				{
 					y[k] = y[k] * Sigma_y[k] + Mean_y[k];
 					z[k] = z[k] * Sigma_y[k] + Mean_y[k];
-				}
+				}else
 				if (minmax_normalization)
 				{
 					y[k] = y[k] * MaxMin_y[k] + Min_y[k];
 					z[k] = z[k] * MaxMin_y[k] + Min_y[k];
 				}
+				else
 				if (_11_normalization)
 				{
 					y[k] = 0.5*(y[k] + 1) * MaxMin_y[k] + Min_y[k];
@@ -2623,6 +2636,8 @@ public:
 		f_sum = mean_ff;
 		mean_ff /= yy.size();
 		mean_yy /= yy.size();
+		//printf("mean_ff:%f\n", mean_ff);
+		//printf("mean_yy:%f\n", mean_yy);
 
 		double syy = 0.0;
 		double sff = 0.0;
@@ -2631,10 +2646,15 @@ public:
 		{
 			double y_yy = (yy[i] - mean_yy);
 			double f_ff = (ff[i] - mean_ff);
+			//printf("[%03d]:%f-%f=%f, %f-%f=%f\n", i, yy[i] , mean_yy, y_yy, ff[i] , mean_ff, f_ff);
 			y_yy_f_yy += y_yy*f_ff;
 			syy += y_yy*y_yy;
 			sff += f_ff*f_ff;
 		}
+		//printf("se:%f\n", se);
+		//printf("sff:%f\n", sff);
+		//printf("syy:%f\n", syy);
+		//printf("r2:%f\n", sff/syy);
 
 		double r = y_yy_f_yy / sqrt(syy*sff);
 		double R2 = 1.0 - se / sff;
