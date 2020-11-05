@@ -3083,11 +3083,13 @@ public:
 						y[k] = y[k] * Sigma[k] + Mean[k];
 						z[k] = z[k] * Sigma[k] + Mean[k];
 					}
+					else
 					if (minmax_normalization)
 					{
 						y[k] = y[k] * MaxMin[k] + Min[k];
 						z[k] = z[k] * MaxMin[k] + Min[k];
 					}
+					else
 					if (_11_normalization)
 					{
 						y[k] = 0.5*(y[k] + 1) * MaxMin[k] + Min[k];
