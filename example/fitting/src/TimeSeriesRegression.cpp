@@ -582,17 +582,34 @@ int main(int argc, char** argv)
 	if (x_dim > 0)
 	{
 		std::vector<int> flag;
+		int flg_idx = -1;
+		for (int i = 0; i < xx_var_idx.size(); i++)
+		{
+			if (flg_idx < xx_var_idx[i]) flg_idx = xx_var_idx[i];
+		}
+		for (int i = 0; i < x_var_idx.size(); i++)
+		{
+			if (flg_idx < x_var_idx[i]) flg_idx = x_var_idx[i];
+		}
+		for (int i = 0; i < y_var_idx.size(); i++)
+		{
+			if (flg_idx < y_var_idx[i]) flg_idx = y_var_idx[i];
+		}
+		flag.resize(flg_idx + 1, 0);
 		if (xx_var_idx.size())
 		{
-			flag.resize(*std::max_element(xx_var_idx.begin(), xx_var_idx.end()) + 1, 0);
 			for (int k = 0; k < xx_var_idx.size(); k++)
 			{
 				flag[xx_var_idx[k]] = 1;
 			}
 		}
-		else
+
+		if (xx_var_idx.size())
 		{
-			flag.resize(*std::max_element(x_var_idx.begin(), x_var_idx.end()) + 1, 0);
+			for (int k = 0; k < xx_var_idx.size(); k++)
+			{
+				flag[xx_var_idx[k]] = 1;
+			}
 		}
 
 		if (flag[x_var_idx[0]]) normalize_skilp.push_back(1);
@@ -604,7 +621,7 @@ int main(int argc, char** argv)
 			if (flag[x_var_idx[i]]) normalize_skilp.push_back(1);
 			else normalize_skilp.push_back(0);
 		}
-
+		
 		x.print("x(pre_sift)");
 		if (xvar_time_sift > 0)
 		{

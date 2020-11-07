@@ -216,6 +216,7 @@ private:
 			{
 				for (int k = 0; k < X[0].size(); k++)
 				{
+					//printf("[%d] %d\n", k, normalizeskipp[k]);
 					if (normalizeskipp[k])
 					{
 						sigma[k] = xx_var_scale;

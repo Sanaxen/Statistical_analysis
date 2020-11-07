@@ -469,36 +469,66 @@ int main(int argc, char** argv)
 			printf("y_var:%s %d\n", y_var[i].c_str(), y_var_idx[i]);
 		}
 	}
+	for (int i = 0; i < xx_var_idx.size(); i++)
+	{
+		printf("xx_var_idx:%s %d\n", xx_var[i].c_str(), xx_var_idx[i]);
+	}
 
 	std::vector<int> normalizeskipp;
 	std::vector<int> flag;
+	int flg_idx = -1;
+	for (int i = 0; i < xx_var_idx.size(); i++)
+	{
+		if (flg_idx < xx_var_idx[i]) flg_idx = xx_var_idx[i];
+	}
+	for (int i = 0; i < x_var_idx.size(); i++)
+	{
+		if (flg_idx < x_var_idx[i]) flg_idx = x_var_idx[i];
+	}
+	for (int i = 0; i < y_var_idx.size(); i++)
+	{
+		if (flg_idx < y_var_idx[i]) flg_idx = y_var_idx[i];
+	}
+	flag.resize(flg_idx+1, 0);
+
 	if (xx_var_idx.size())
 	{
-		flag.resize(*std::max_element(xx_var_idx.begin(), xx_var_idx.end()) + 1, 0);
 		for (int k = 0; k < xx_var_idx.size(); k++)
 		{
 			flag[xx_var_idx[k]] = 1;
 		}
 	}
-	else
-	{
-		flag.resize(*std::max_element(x_var_idx.begin(), x_var_idx.end()) + 1, 0);
-	}
 
+	//for (int k = 0; k < flg_idx; k++)
+	//{
+	//	printf("flag[%d] %d\n", k, flag[k]);
+	//}
+
+	//printf("0:%d -- %d\n", x_var_idx[0], flag[x_var_idx[0]]);
 	Matrix<dnn_double> x = z.Col(x_var_idx[0]);
 	if (flag[x_var_idx[0]]) normalizeskipp.push_back(1);
 	else  normalizeskipp.push_back(0);
 	for (int i = 1; i < x_dim; i++)
 	{
+		//printf("%d:%d -- %d\n", i, x_var_idx[i], flag[x_var_idx[i]]);
 		x = x.appendCol(z.Col(x_var_idx[i]));
 		if (flag[x_var_idx[i]]) normalizeskipp.push_back(1);
 		else  normalizeskipp.push_back(0);
 	}
+	//for (int k = 0; k < normalizeskipp.size(); k++)
+	//{
+	//	printf("@@[%d] %d\n", k, normalizeskipp[k]);
+	//}
+
 	Matrix<dnn_double> y = z.Col(y_var_idx[0]);
 	for (int i = 1; i < y_dim; i++)
 	{
 		y = y.appendCol(z.Col(y_var_idx[i]));
 	}
+	//for (int k = 0; k < normalizeskipp.size(); k++)
+	//{
+	//	printf("@[%d] %d\n", k, normalizeskipp[k]);
+	//}
 	printf("x_dim:%d y_dim:%d\n", x_dim, y_dim);
 
 	if (dump_input)
