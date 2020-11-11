@@ -2216,6 +2216,7 @@ public:
 			fprintf(fp, "state_reset_mode:%d\n", state_reset_mode);
 			fprintf(fp, "classification:%d\n", classification);
 			fprintf(fp, "batch_shuffle:%d\n", batch_shuffle);
+			fprintf(fp, "weight_init_type:%s\n", this->weight_init_type.c_str());
 			fclose(fp);
 			
 			float maxvalue = -999999999.0;
@@ -2427,6 +2428,8 @@ public:
 					<< t.elapsed() << "s elapsed." << std::endl;
 			}
 
+#ifdef USE_LIBTORCH
+#else
 			if (this->batch_shuffle)
 			{
 				tiny_dnn::tensor_t tmp_train_images = train_images;
@@ -2447,9 +2450,9 @@ public:
 					tmp_train_labels[i] = train_labels[index[i]];
 				}
 				train_labels = tmp_train_labels;
-				tmp_train_images = tmp_train_labels;
+				train_images = tmp_train_images;
 			}
-
+#endif
 			if (plot && epoch % plot == 0)
 			{
 				gen_visualize_fit_state();
