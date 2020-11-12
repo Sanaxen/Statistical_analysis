@@ -1303,7 +1303,7 @@ int main(int argc, char** argv)
 		}
 		fclose(fp);
 	}
-
+	
 	multiplot_gnuplot_script_ts(y_var_idx.size(), multiplot_step, header_names, y_var_idx, timeformat, false);
 
 	timeSeries.fit(sequence_length, n_rnn_layers, n_layers, hidden_size);

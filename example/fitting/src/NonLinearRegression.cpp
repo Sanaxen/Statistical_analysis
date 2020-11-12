@@ -784,7 +784,7 @@ int main(int argc, char** argv)
 
 	}
 	regression.data_set(test_num);
-
+	
 	if (regression.iY.size() < regression.n_minibatch)
 	{
 		printf("ERROR:data %d < minibatch %d\n", regression.iY.size(), regression.n_minibatch);
@@ -822,7 +822,7 @@ int main(int argc, char** argv)
 		}
 		fclose(fp);
 	}
-
+	
 	multiplot_gnuplot_script(regression.y_idx.size(), multiplot_step, header_names, y_var_idx, false);
 	regression.fit(n_layers, input_unit);
 	if (layer_graph_only)
