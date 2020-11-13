@@ -227,6 +227,7 @@ public:
 	bool batch_shuffle = true;
 	int target_position = 1;
 	int mean_row = 1;
+	std::string activation_fnc = "tanh";
 
 private:
 
@@ -1969,7 +1970,8 @@ public:
 
 		size_t usize = input_size * 1;
 		nn << layers.add_fc(usize, false);
-		nn << layers.tanh();
+		if (this->activation_fnc == "tanh") nn << layers.tanh();
+		if (this->activation_fnc == "relu") nn << layers.relu();
 
 		if (use_cnn > 0)
 		{
@@ -1985,7 +1987,8 @@ public:
 				tiny_dnn::network2<tiny_dnn::sequential> tmp_nn;
 
 				tmp_nn << tmp_layers.add_fc(usize);
-				tmp_nn << tmp_layers.tanh();
+				if (this->activation_fnc == "tanh") tmp_nn << tmp_layers.tanh();
+				if (this->activation_fnc == "relu") tmp_nn << tmp_layers.relu();
 
 				error = false;
 				try {
@@ -2012,12 +2015,14 @@ public:
 			printf("////////////////////////\n\n");
 #endif
 			nn << layers.add_fc(usize);
-			nn << layers.tanh();
+			if (this->activation_fnc == "tanh") nn << layers.tanh();
+			if (this->activation_fnc == "relu") nn << layers.relu();
 
 			for (int i = 0; i < use_cnn; i++)
 			{
 				nn << layers.add_cnv(1, cnn_win_size, 1, 1, 1, tiny_dnn::padding::valid);
-				nn << layers.tanh();
+				if (this->activation_fnc == "tanh") nn << layers.tanh();
+				if (this->activation_fnc == "relu") nn << layers.relu();
 				nn << layers.add_maxpool(pool_size, 1, 2, 1, tiny_dnn::padding::valid);
 				//nn << layers.add_dropout(0.25);
 			}
@@ -2026,7 +2031,8 @@ public:
 		else
 		{
 			nn << layers.add_fc(input_size, false);
-			nn << layers.tanh();
+			if (this->activation_fnc == "tanh") nn << layers.tanh();
+			if (this->activation_fnc == "relu") nn << layers.relu();
 		}
 
 #if 0
@@ -2067,18 +2073,19 @@ public:
 			{
 				nn << layers.add_fc(sz);
 			}
-			//nn << layers.relu();
-			nn << layers.tanh();
+			if (this->activation_fnc == "tanh") nn << layers.tanh();
+			if (this->activation_fnc == "relu") nn << layers.relu();
 		}
 		nn << layers.add_fc(sz);
-		nn << layers.tanh();
-		//nn << layers.leaky_relu();	
+		if (this->activation_fnc == "tanh") nn << layers.tanh();
+		if (this->activation_fnc == "relu") nn << layers.relu();
 
 		if (classification >= 2)
 		{
 			if (dropout) nn << layers.add_dropout(dropout);
 			nn << layers.add_fc(std::min((int)input_size, classification * 2));
-			nn << layers.tanh();
+			if (this->activation_fnc == "tanh") nn << layers.tanh();
+			if (this->activation_fnc == "relu") nn << layers.relu();
 			nn << layers.add_fc(classification);
 			nn << layers.softmax(classification);
 		}
@@ -2217,6 +2224,7 @@ public:
 			fprintf(fp, "classification:%d\n", classification);
 			fprintf(fp, "batch_shuffle:%d\n", batch_shuffle);
 			fprintf(fp, "weight_init_type:%s\n", this->weight_init_type.c_str());
+			fprintf(fp, "activation_fnc:%s\n", this->activation_fnc.c_str());
 			fclose(fp);
 			
 			float maxvalue = -999999999.0;

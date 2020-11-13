@@ -63,6 +63,8 @@ int main(int argc, char** argv)
 	std::string device_name = "cpu";
 	int multiplot_step = 3;
 
+	std::string activation_fnc = "tanh";
+
 	std::string csvfile("sample.csv");
 	std::string report_file("NonLinearRegression.txt");
 
@@ -78,9 +80,13 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--activation_fnc") {
+			activation_fnc = std::string(argv[count + 1]);
+		}else
 		if (argname == "--multiplot_step") {
 			multiplot_step = atoi(argv[count + 1]);
 		}
+		else
 		if (argname == "--device_name") {
 			device_name = std::string(argv[count + 1]);
 		}
@@ -631,6 +637,7 @@ int main(int argc, char** argv)
 	regression.y_idx = y_var_idx;
 	regression.weight_init_type = weight_init_type;
 	regression.layer_graph_only = layer_graph_only;
+	regression.activation_fnc = activation_fnc;
 
 #ifdef USE_LIBTORCH
 	regression.use_libtorch = use_libtorch;
@@ -642,6 +649,10 @@ int main(int argc, char** argv)
 	int input_unit = -1;
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--activation_fnc") {
+			continue;
+		}
+		else
 		if (argname == "--multiplot_step") {
 			continue;
 		}else
@@ -784,7 +795,7 @@ int main(int argc, char** argv)
 
 	}
 	regression.data_set(test_num);
-	
+
 	if (regression.iY.size() < regression.n_minibatch)
 	{
 		printf("ERROR:data %d < minibatch %d\n", regression.iY.size(), regression.n_minibatch);
@@ -822,7 +833,7 @@ int main(int argc, char** argv)
 		}
 		fclose(fp);
 	}
-	
+
 	multiplot_gnuplot_script(regression.y_idx.size(), multiplot_step, header_names, y_var_idx, false);
 	regression.fit(n_layers, input_unit);
 	if (layer_graph_only)

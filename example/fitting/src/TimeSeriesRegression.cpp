@@ -62,6 +62,7 @@ int main(int argc, char** argv)
 	bool use_libtorch = false;
 	std::string device_name = "cpu";
 	int multiplot_step = 3;
+	std::string activation_fnc = "tanh";
 
 	int classification = -1;
 	int read_max = -1;
@@ -97,6 +98,10 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--activation_fnc") {
+			activation_fnc = std::string(argv[count + 1]);
+		}
+		else
 		if (argname == "--mean_row") {
 			mean_row = atoi(argv[count + 1]);
 			printf("mean_row:%d\n", mean_row);
@@ -596,6 +601,7 @@ int main(int argc, char** argv)
 			if (flg_idx < y_var_idx[i]) flg_idx = y_var_idx[i];
 		}
 		flag.resize(flg_idx + 1, 0);
+
 		if (xx_var_idx.size())
 		{
 			for (int k = 0; k < xx_var_idx.size(); k++)
@@ -1026,7 +1032,7 @@ int main(int argc, char** argv)
 	timeSeries.normalize_skilp = normalize_skilp;
 	timeSeries.xx_var_scale = xx_var_scale;
 	timeSeries.target_position = target_position;
-	
+	timeSeries.activation_fnc = activation_fnc;
 
 	int n_layers = -1;
 	int n_rnn_layers = -1;
@@ -1036,6 +1042,9 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--activation_fnc") {
+			continue;
+		}
 		if (argname == "--mean_row") {
 			continue;
 		}
@@ -1303,7 +1312,7 @@ int main(int argc, char** argv)
 		}
 		fclose(fp);
 	}
-	
+
 	multiplot_gnuplot_script_ts(y_var_idx.size(), multiplot_step, header_names, y_var_idx, timeformat, false);
 
 	timeSeries.fit(sequence_length, n_rnn_layers, n_layers, hidden_size);

@@ -181,6 +181,8 @@ public:
 	bool fit_best_saved = false;
 	bool batch_shuffle = true;
 
+	std::string activation_fnc = "tanh";
+
 private:
 	void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
 	{
@@ -1466,19 +1468,22 @@ public:
 		else
 		{
 			nn << layers.add_fc(input_size);
-			nn << layers.tanh();
+			if ( this->activation_fnc == "tanh") nn << layers.tanh();
+			if (this->activation_fnc == "relu") nn << layers.relu();
 
 			for (int i = 0; i < n_layers; i++) {
 				if (dropout && i == n_layers-1) nn << layers.add_dropout(dropout);
 				nn << layers.add_fc(input_size);
-				nn << layers.tanh();
+				if (this->activation_fnc == "tanh") nn << layers.tanh();
+				if (this->activation_fnc == "relu") nn << layers.relu();
 			}
 		}
 		if (classification >= 2)
 		{
 			if (dropout ) nn << layers.add_dropout(dropout);
 			nn << layers.add_fc(std::min((int)input_size, classification*2));
-			nn << layers.tanh();
+			if (this->activation_fnc == "tanh") nn << layers.tanh();
+			if (this->activation_fnc == "relu") nn << layers.relu();
 			nn << layers.add_fc(classification);
 		}
 		else
@@ -1603,6 +1608,7 @@ public:
 				fprintf(fp, "classification:%d\n", classification);
 				fprintf(fp, "batch_shuffle:%d\n", batch_shuffle);
 				fprintf(fp, "weight_init_type:%s\n", this->weight_init_type.c_str());
+				fprintf(fp, "activation_fnc:%s\n", this->activation_fnc.c_str());
 				fclose(fp);
 			}
 			else
