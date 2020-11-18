@@ -432,7 +432,7 @@ int main(int argc, char** argv)
 			}
 		}
 		if (dup) continue;
-		col = T.Col(x_var_idx[i]);
+		col = T.Col(y_var_idx[i]);
 		//printf("[%s]Max-Min:%f\n", header_names[y_var_idx[i]].c_str(),fabs(col.Max() - col.Min()));
 		if (fabs(col.Max() - col.Min()) < 1.0e-6)
 		{
