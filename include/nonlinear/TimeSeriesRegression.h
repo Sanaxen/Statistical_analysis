@@ -3129,13 +3129,13 @@ public:
 		std::vector<double> mer;
 		double mse = 0.0;
 		double rmse = 0.0;
-		for (int i = 0; i < train_images.size()-1; i++)
+		for (int i = 0; i < train_images.size()- 1; i++)
 		{
 			//output sequence_length 
 			for (int j = 0; j < out_sequence_length; j++)
 			{
-				tiny_dnn::vec_t z = train[j+ TARGET_POSITON];
-				tiny_dnn::vec_t y = predict[j+ TARGET_POSITON];
+				tiny_dnn::vec_t z = train[i + j + TARGET_POSITON];
+				tiny_dnn::vec_t y = predict[i + j + TARGET_POSITON];
 				for (int k = 0; k < y_dim; k++)
 				{
 					double d = (y[k] - z[k]);
