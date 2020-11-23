@@ -63,6 +63,7 @@ int main(int argc, char** argv)
 	std::string device_name = "cpu";
 	int multiplot_step = 3;
 	std::string activation_fnc = "tanh";
+	bool use_attention = true;
 
 	int classification = -1;
 	int read_max = -1;
@@ -98,6 +99,9 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--use_attention") {
+			use_attention = (atoi(argv[count + 1]) != 0) ? true : false;
+		}else
 		if (argname == "--activation_fnc") {
 			activation_fnc = std::string(argv[count + 1]);
 		}
@@ -1042,6 +1046,9 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--use_attention") {
+			continue;
+		}
 		if (argname == "--activation_fnc") {
 			continue;
 		}
@@ -1300,6 +1307,7 @@ int main(int argc, char** argv)
 		<< "batch_shuffle: " << timeSeries.batch_shuffle << std::endl
 		<< "sift_time:" << xvar_time_sift << std::endl
 		<< "target_position: " << target_position << std::endl
+		<< "use_attention: " << use_attention << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		
 		<< std::endl;

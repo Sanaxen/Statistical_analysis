@@ -228,6 +228,7 @@ public:
 	int target_position = 1;
 	int mean_row = 1;
 	std::string activation_fnc = "tanh";
+	bool use_attention = true;
 
 private:
 
@@ -2225,6 +2226,7 @@ public:
 			fprintf(fp, "batch_shuffle:%d\n", batch_shuffle);
 			fprintf(fp, "weight_init_type:%s\n", this->weight_init_type.c_str());
 			fprintf(fp, "activation_fnc:%s\n", this->activation_fnc.c_str());
+			fprintf(fp, "use_attention:%d\n", this->use_attention?1:0);
 			fclose(fp);
 			
 			float maxvalue = -999999999.0;
@@ -2365,7 +2367,7 @@ public:
 				return;
 			}
 		}
-
+ 
 		tiny_dnn::adam optimizer_adam;
 		tiny_dnn::gradient_descent optimizer_sgd;
 		tiny_dnn::RMSprop optimizer_rmsprop;
