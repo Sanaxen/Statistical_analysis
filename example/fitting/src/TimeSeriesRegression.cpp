@@ -1037,6 +1037,7 @@ int main(int argc, char** argv)
 	timeSeries.xx_var_scale = xx_var_scale;
 	timeSeries.target_position = target_position;
 	timeSeries.activation_fnc = activation_fnc;
+	timeSeries.use_attention = use_attention;
 
 	int n_layers = -1;
 	int n_rnn_layers = -1;
