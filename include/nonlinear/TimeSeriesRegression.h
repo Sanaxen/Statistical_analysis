@@ -1424,6 +1424,7 @@ public:
 	bool progress = true;
 	float tolerance = 1.0e-6;
 	int use_cnn = 1;
+	int use_cnn_add_bn = 1;
 	int fc_hidden_size = -1;
 	std::string weight_init_type = "xavier";
 	bool layer_graph_only = false;
@@ -2006,7 +2007,10 @@ public:
 							error = true;
 							break;
 						}
-						tmp_nn << tmp_layers.add_maxpool(pool_size, 1, 2, 1, tiny_dnn::padding::valid);
+						////Aliasing occurs in downsampling and high frequency components are impaired
+						////Anomaly Detection in Control Valves by 1d CNN-LSTM
+
+						//tmp_nn << tmp_layers.add_maxpool(pool_size, 1, 2, 1, tiny_dnn::padding::valid);
 					}
 					sz = tmp_nn.out_data_size();
 				}catch(...)
@@ -2024,7 +2028,11 @@ public:
 				nn << layers.add_cnv(1, cnn_win_size, 1, 1, 1, tiny_dnn::padding::valid);
 				if (this->activation_fnc == "tanh") nn << layers.tanh();
 				if (this->activation_fnc == "relu") nn << layers.relu();
-				nn << layers.add_maxpool(pool_size, 1, 2, 1, tiny_dnn::padding::valid);
+				
+				////Aliasing occurs in downsampling and high frequency components are impaired
+				////Anomaly Detection in Control Valves by 1d CNN-LSTM
+				
+				//nn << layers.add_maxpool(pool_size, 1, 2, 1, tiny_dnn::padding::valid);
 				//nn << layers.add_dropout(0.25);
 			}
 			nn << layers.add_fc(input_size, false);
@@ -2227,6 +2235,8 @@ public:
 			fprintf(fp, "weight_init_type:%s\n", this->weight_init_type.c_str());
 			fprintf(fp, "activation_fnc:%s\n", this->activation_fnc.c_str());
 			fprintf(fp, "use_attention:%d\n", this->use_attention?1:0);
+			fprintf(fp, "use_cnn:%d\n", this->use_cnn);
+			fprintf(fp, "use_cnn_add_bn:%d\n", this->use_cnn_add_bn);
 			fclose(fp);
 			
 			float maxvalue = -999999999.0;
