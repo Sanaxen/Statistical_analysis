@@ -6,6 +6,8 @@
 #define M_PI       3.14159265358979323846   // pi
 #endif
 
+#include <filesystem>
+
 inline void test_function(tiny_dnn::vec_t& x, tiny_dnn::vec_t& y)
 {
 	float y1 = sin(x[0]);
@@ -86,6 +88,92 @@ inline int filelist_to_csv(std::string& csvfilename, std::string& dir, bool is_t
 
 	printf("unsupport file format!\n");
 	return 1;
+}
+
+std::string get_dirname(std::string& filename)
+{
+#if 10
+	std::filesystem::path p = filename;
+	return p.parent_path().generic_string();
+#else
+	const std::string::size_type pos = std::max<signed>(path.find_last_of('/'), path.find_last_of('\\'));
+	return (pos == std::string::npos) ? std::string()
+		: path.substr(0, pos + 1);
+#endif
+
+}
+std::string get_extension(std::string& filename)
+{
+#if 10
+	std::filesystem::path p = filename;
+	return p.extension().generic_string();
+#else
+	const std::string::size_type pos = std::max<signed>(path.find_last_of('/'), path.find_last_of('\\'));
+	return (pos == std::string::npos) ? std::string()
+		: path.substr(0, pos + 1);
+#endif
+}
+
+bool getFileNames(std::string folderPath, std::vector<std::string> &file_names)
+{
+	using namespace std::filesystem;
+	directory_iterator iter(folderPath), end;
+	std::error_code err;
+
+	for (; iter != end && !err; iter.increment(err)) {
+		const directory_entry entry = *iter;
+
+		if (get_extension(entry.path().string()) != std::string(".csv"))
+		{
+			continue;
+		}
+		file_names.push_back(entry.path().string());
+		printf("%s\n", file_names.back().c_str());
+	}
+
+	if (err) {
+		std::cout << err.value() << std::endl;
+		std::cout << err.message() << std::endl;
+		file_names.clear();
+		return false;
+	}
+	return true;
+}
+
+
+Matrix<dnn_double> concat_csv(std::vector<std::string>& filelist, bool header, int start_col, int padding = 0)
+{
+	Matrix<dnn_double> mat;
+	for (int k = 0; k < filelist.size(); k++)
+	{
+		CSVReader csv1(filelist[k], ',', header);
+		Matrix<dnn_double> z = csv1.toMat();
+		z = csv1.toMat_removeEmptyRow();
+		if (start_col)
+		{
+			for (int i = 0; i < start_col; i++)
+			{
+				z = z.removeCol(0);
+			}
+		}
+		if (k == 0)
+		{
+			mat = z;
+		}
+		else
+		{
+			if (padding > 0)
+			{
+				auto x = z.Row(0)*0.0;
+				for (int i = 0; i < padding; i++)
+				{
+					mat = mat.appendRow(x);
+				}
+			}
+			mat = mat.appendRow(z);
+		}
+	}
+	return mat;
 }
 
 #endif

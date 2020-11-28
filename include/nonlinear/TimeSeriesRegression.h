@@ -3046,7 +3046,16 @@ public:
 
 				if (!stream.bad())
 				{
-					stream << "ConfusionMatrix(train):" << std::endl;
+					stream << "ConfusionMatrix(";
+					if (test_mode)
+					{
+						stream << "test" ;
+					}
+					else
+					{
+						stream << "train";
+					}
+					stream <<  "):" << std::endl;
 					train_result.print_detail(stream);
 					stream << train_result.num_success << "/" << train_result.num_total << std::endl;
 					stream << "accuracy:" << train_result.accuracy() << "%" << std::endl;

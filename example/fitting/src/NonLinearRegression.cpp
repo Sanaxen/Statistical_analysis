@@ -58,7 +58,8 @@ int main(int argc, char** argv)
 	bool dump_input = false;
 	std::string weight_init_type = "xavier";
 	bool layer_graph_only = false;
-	
+	std::string multi_files = "";
+
 	int use_libtorch = 0;
 	std::string device_name = "cpu";
 	int multiplot_step = 3;
@@ -80,6 +81,9 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--multi_files") {
+			multi_files = std::string(argv[count + 1]);
+		}else
 		if (argname == "--activation_fnc") {
 			activation_fnc = std::string(argv[count + 1]);
 		}else
@@ -207,6 +211,32 @@ int main(int argc, char** argv)
 		fclose(fp);
 	}
 
+	std::string multi_files_dir = "";
+	std::vector<std::string> multi_files_list;
+	if (multi_files != "")
+	{
+		char tmp[640];
+		char filename[640];
+		strcpy(tmp, multi_files.c_str());
+		char* p = tmp;
+		if (p[0] == '\"' || p[0] == '\'')
+		{
+			strcpy(filename, p + 1);
+		}
+		p = filename;
+		if (p[strlen(p) - 1] == '\"' || p[strlen(p) - 1] == '\'')
+		{
+			p[strlen(p) - 1] = '\0';
+		}
+		multi_files_dir = get_dirname(std::string(filename));
+		getFileNames(multi_files_dir, multi_files_list);
+	}
+
+	if (multi_files_list.size() > 1)
+	{
+		csvfile = multi_files_list[0];
+	}
+
 
 	CSVReader csv1(csvfile, ',', header);
 	Matrix<dnn_double> z = csv1.toMat();
@@ -242,6 +272,13 @@ int main(int argc, char** argv)
 		std::replace(header_names[i].begin(), header_names[i].end(), ' ', '_');
 	}
 	csv1.clear();
+	if (multi_files_list.size() > 1)
+	{
+		z = concat_csv(multi_files_list, header, start_col, 0);
+
+		z.print_csv((char*)(multi_files_dir + std::string("\\concat.csv")).c_str(), header_names);
+		return 0;
+	}
 
 	std::vector<int> xx_var_idx;
 	std::vector<int> x_var_idx;
@@ -649,6 +686,9 @@ int main(int argc, char** argv)
 	int input_unit = -1;
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--multi_files") {
+			continue;
+		}
 		if (argname == "--activation_fnc") {
 			continue;
 		}

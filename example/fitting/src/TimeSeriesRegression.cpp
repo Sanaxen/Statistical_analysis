@@ -64,6 +64,7 @@ int main(int argc, char** argv)
 	int multiplot_step = 3;
 	std::string activation_fnc = "tanh";
 	bool use_attention = true;
+	std::string multi_files = "";
 
 	int classification = -1;
 	int read_max = -1;
@@ -99,7 +100,11 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
-		if (argname == "--use_attention") {
+		if (argname == "--multi_files") {
+			multi_files = std::string(argv[count + 1]);
+		}
+		else
+			if (argname == "--use_attention") {
 			use_attention = (atoi(argv[count + 1]) != 0) ? true : false;
 		}else
 		if (argname == "--activation_fnc") {
@@ -268,6 +273,32 @@ int main(int argc, char** argv)
 		fclose(fp);
 	}
 
+	std::string multi_files_dir = "";
+	std::vector<std::string> multi_files_list;
+	if (multi_files != "")
+	{
+		char tmp[640];
+		char filename[640];
+		strcpy(tmp, multi_files.c_str());
+		char* p = tmp;
+		if (p[0] == '\"' || p[0] == '\'')
+		{
+			strcpy(filename, p + 1);
+		}
+		p = filename;
+		if (p[strlen(p) - 1] == '\"' || p[strlen(p) - 1] == '\'')
+		{
+			p[strlen(p) - 1] = '\0';
+		}
+		multi_files_dir = get_dirname(std::string(filename));
+		getFileNames(multi_files_dir, multi_files_list);
+	}
+
+	if (multi_files_list.size() > 1)
+	{
+		csvfile = multi_files_list[0];
+	}
+
 	CSVReader csv1(csvfile, ',', header);
 	Matrix<dnn_double> z = csv1.toMat();
 	z = csv1.toMat_removeEmptyRow();
@@ -298,6 +329,14 @@ int main(int argc, char** argv)
 		}
 	}
 	csv1.clear();
+	if (multi_files_list.size() > 1)
+	{
+		z = concat_csv(multi_files_list, header, start_col, sequence_length);
+
+		z.print_csv((char*)(multi_files_dir+std::string("\\concat.csv")).c_str(), header_names);
+		return 0;
+	}
+
 
 	std::vector<int> xx_var_idx;
 	std::vector<int> x_var_idx;
@@ -1047,6 +1086,9 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--multi_files") {
+			continue;
+		}
 		if (argname == "--use_attention") {
 			continue;
 		}
