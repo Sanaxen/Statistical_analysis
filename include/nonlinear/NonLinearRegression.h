@@ -183,6 +183,7 @@ public:
 
 	std::string activation_fnc = "tanh";
 
+
 private:
 	void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
 	{
@@ -466,7 +467,7 @@ private:
 #ifdef USE_LIBTORCH
 			if (use_libtorch)
 			{
-				loss_train = torch_get_loss_nn(torch_nn_test, train_images, train_labels, 1);
+				loss_train = torch_get_loss_nn(torch_nn_test, train_images, train_labels, n_eval_minibatch);
 			}
 			else
 #endif
@@ -495,7 +496,7 @@ private:
 #ifdef USE_LIBTORCH
 				if (use_libtorch)
 				{
-					loss_test = torch_get_loss_nn(torch_nn_test, test_images, test_labels, 1);
+					loss_test = torch_get_loss_nn(torch_nn_test, test_images, test_labels, n_eval_minibatch);
 				}
 				else
 #endif
@@ -510,10 +511,10 @@ private:
 #ifdef USE_LIBTORCH
 			if (use_libtorch)
 			{
-				train_result = torch_get_accuracy_nn(torch_nn_test, train_images, train_labels, 1);
+				train_result = torch_get_accuracy_nn(torch_nn_test, train_images, train_labels, n_eval_minibatch);
 				if (test_images.size() > 0)
 				{
-					test_result = torch_get_accuracy_nn(torch_nn_test, test_images, test_labels, 1);
+					test_result = torch_get_accuracy_nn(torch_nn_test, test_images, test_labels, n_eval_minibatch);
 				}
 			}
 			else
@@ -579,6 +580,10 @@ private:
 			}
 			accuracy_pre = train_result.accuracy();
 
+			std::vector< tiny_dnn::vec_t> y_predict_n;
+#ifdef USE_LIBTORCH
+			y_predict_n = torch_model_predict_batch(torch_nn_test, nX, n_eval_minibatch);
+#endif
 			if (fp_predict)
 			{
 				for (int i = 0; i < nX.size(); i++)
@@ -588,7 +593,8 @@ private:
 #ifdef USE_LIBTORCH
 					if (use_libtorch)
 					{
-						y_predict = torch_model_predict(torch_nn_test, x);
+						//y_predict = torch_model_predict(torch_nn_test, x);
+						y_predict = y_predict_n[i];
 					}
 					else
 #endif
@@ -629,6 +635,11 @@ private:
 
 		//////////////////////////////////////////////////
 		std::vector<tiny_dnn::vec_t> Y_predict(nX.size());
+
+#ifdef USE_LIBTORCH
+		Y_predict = torch_model_predict_batch(torch_nn_test, nX, n_eval_minibatch);
+#endif
+
 //#pragma omp parallel for
 		for (int i = 0; i < nX.size(); i++)
 		{
@@ -636,7 +647,7 @@ private:
 #ifdef USE_LIBTORCH
 			if (use_libtorch)
 			{
-				Y_predict[i] = torch_model_predict(torch_nn_test, x);
+				//Y_predict[i] = torch_model_predict(torch_nn_test, x);
 			}
 			else
 #endif
@@ -683,7 +694,8 @@ private:
 #ifdef USE_LIBTORCH
 				if (use_libtorch)
 				{
-					y_predict = torch_model_predict(torch_nn_test, x);
+					//y_predict = torch_model_predict(torch_nn_test, x);
+					y_predict = Y_predict[i];
 				}
 				else
 #endif
@@ -937,6 +949,7 @@ public:
 	std::string opt_type = "adam";
 	size_t input_size = 32;
 	size_t n_minibatch = 10;
+	size_t n_eval_minibatch = 10;
 	size_t n_train_epochs = 2000;
 	float_t learning_rate = 1.0;
 	int plot = 1;
@@ -1597,6 +1610,7 @@ public:
 				fprintf(fp, "opt_type:%s\n", opt_type.c_str());
 				fprintf(fp, "n_train_epochs:%d\n", n_train_epochs);
 				fprintf(fp, "n_minibatch:%d\n", n_minibatch);
+				fprintf(fp, "n_eval_minibatch:%d\n", n_eval_minibatch);
 
 				fprintf(fp, "n_layers:%d\n", n_layers);
 				fprintf(fp, "n_hidden_size:%d\n", hidden_size);
@@ -1615,6 +1629,7 @@ public:
 			{
 				return;
 			}
+
 
 			float maxvalue = -999999999.0;
 			float minvalue = -maxvalue;

@@ -34,6 +34,7 @@
 
 //#define IN_SEQ_LEN	15
 
+
 int main(int argc, char** argv)
 {
 	int resp = commandline_args(&argc, &argv);
@@ -1238,6 +1239,10 @@ int main(int argc, char** argv)
 			timeSeries.n_minibatch = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--eval_minibatch_size") {
+			timeSeries.n_eval_minibatch = atoi(argv[count + 1]);
+			continue;
+		}
 		else if (argname == "--plot") {
 			timeSeries.plot = atoi(argv[count + 1]);
 			continue;
@@ -1321,6 +1326,10 @@ int main(int argc, char** argv)
 	if (sequence_length > timeSeries.n_minibatch)
 	{
 		printf("!!Warning!! sequence_length:%d > Minibatch:%d\n", sequence_length, timeSeries.n_minibatch);
+	}
+	if (sequence_length > timeSeries.n_eval_minibatch)
+	{
+		printf("!!Warning!! sequence_length:%d > Minibatch:%d\n", sequence_length, timeSeries.n_eval_minibatch);
 	}
 	std::cout << "Running with the following parameters:" << std::endl
 		<< "Learning rate   :   " << timeSeries.learning_rate << std::endl

@@ -799,6 +799,10 @@ int main(int argc, char** argv)
 			regression.n_minibatch = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--eval_minibatch_size") {
+			regression.n_eval_minibatch = atoi(argv[count + 1]);
+			continue;
+		}
 		else if (argname == "--plot") {
 			regression.plot = atoi(argv[count + 1]);
 			continue;

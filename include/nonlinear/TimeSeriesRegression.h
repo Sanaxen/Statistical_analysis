@@ -528,21 +528,7 @@ private:
 #ifdef USE_LIBTORCH
 			if (use_libtorch)
 			{
-				int minbatch_max = MINBATCH_MAX;
-				int batch = 1;
-				if (minbatch_max > train_images.size())
-				{
-					minbatch_max = train_images.size();
-				}
-				for (int i = minbatch_max; i >= 2; i--)
-				{
-					if (train_images.size() % i == 0)
-					{
-						batch = i;
-						break;
-					}
-				}
-				loss_train = torch_get_loss_nn(torch_nn_test, train_images, train_labels, batch);
+				loss_train = torch_get_loss_nn(torch_nn_test, train_images, train_labels, n_eval_minibatch);
 			}
 			else
 #endif
@@ -573,21 +559,7 @@ private:
 #ifdef USE_LIBTORCH
 				if (use_libtorch)
 				{
-					int minbatch_max = MINBATCH_MAX;
-					int batch = 1;
-					if (minbatch_max > test_images.size())
-					{
-						minbatch_max = test_images.size();
-					}
-					for (int i = minbatch_max; i >= 2; i--)
-					{
-						if (test_images.size() % i == 0)
-						{
-							batch = i;
-							break;
-						}
-					}
-					loss_test = torch_get_loss_nn(torch_nn_test, test_images, test_labels, batch);
+					loss_test = torch_get_loss_nn(torch_nn_test, test_images, test_labels, n_eval_minibatch);
 				}
 				else
 #endif
@@ -602,10 +574,10 @@ private:
 #ifdef USE_LIBTORCH
 			if (use_libtorch)
 			{
-				train_result = torch_get_accuracy_nn(torch_nn_test, train_images, train_labels, 1);
+				train_result = torch_get_accuracy_nn(torch_nn_test, train_images, train_labels, n_eval_minibatch);
 				if (test_images.size() > 0)
 				{
-					test_result = torch_get_accuracy_nn(torch_nn_test, test_images, test_labels, 1);
+					test_result = torch_get_accuracy_nn(torch_nn_test, test_images, test_labels, n_eval_minibatch);
 				}
 			}
 			else
@@ -684,13 +656,23 @@ private:
 					YY[i].resize(nY[0].size());
 				}
 
+				std::vector<tiny_dnn::vec_t> y_predict_n;
+				std::vector<tiny_dnn::vec_t> seq;
+#ifdef USE_LIBTORCH
+				for (int i = 0; i < iX.size(); i++)
+				{
+					seq.push_back(seq_vec(YY, i));
+				}
+				y_predict_n = torch_model_predict_batch(torch_nn_test, seq, n_eval_minibatch);
+#endif
 				for (int i = 0; i < iX.size(); i++)
 				{
 					tiny_dnn::vec_t y_predict;
 #ifdef USE_LIBTORCH
 					if (use_libtorch)
 					{
-						y_predict = torch_model_predict(torch_nn_test, seq_vec(YY, i));
+						//y_predict = torch_model_predict(torch_nn_test, seq_vec(YY, i));
+						y_predict = y_predict_n[i];
 					}
 					else
 #endif
@@ -1452,6 +1434,7 @@ public:
 	size_t out_sequence_length = 1;
 
 	size_t n_minibatch = 30;
+	size_t n_eval_minibatch = 30;
 	size_t n_train_epochs = 3000;
 	float_t learning_rate = 1.0;
 	size_t n_bptt_max = 1e9;
@@ -2214,6 +2197,7 @@ public:
 			fprintf(fp, "opt_type:%s\n", opt_type.c_str());
 			fprintf(fp, "n_train_epochs:%d\n", n_train_epochs);
 			fprintf(fp, "n_minibatch:%d\n", n_minibatch);
+			fprintf(fp, "n_eval_minibatch:%d\n", n_eval_minibatch);
 			fprintf(fp, "x_dim:%d\n", x_dim);
 			fprintf(fp, "y_dim:%d\n", y_dim);
 			fprintf(fp, "sequence_length:%d\n", sequence_length);
