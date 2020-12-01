@@ -774,6 +774,13 @@ private:
 			}
 
 			const int sz = iY.size() + prophecy - use_differnce - TARGET_POSITON;
+#ifdef USE_LIBTORCH
+			for (int i = 0; i < iX.size(); i++)
+			{
+				seq.emplace_back(seq_vec(YY, i));
+			}
+			y_predict_n = torch_model_predict_batch(torch_nn_test, seq, n_eval_minibatch);
+#endif
 			for (int i = 0; i < sz; i++)
 			{
 				//i...i+sequence_length-1 -> 
@@ -783,7 +790,8 @@ private:
 #ifdef USE_LIBTORCH
 				if (use_libtorch)
 				{
-					next_y = torch_model_predict(torch_nn_test, seq_vec(YY, i));
+					//next_y = torch_model_predict(torch_nn_test, seq_vec(YY, i));
+					next_y = y_predict_n[i];
 				}
 				else
 #endif
