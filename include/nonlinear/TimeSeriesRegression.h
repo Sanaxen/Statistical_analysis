@@ -657,15 +657,16 @@ private:
 				}
 
 				std::vector<tiny_dnn::vec_t> y_predict_n;
-				std::vector<tiny_dnn::vec_t> seq;
+				std::vector<tiny_dnn::vec_t> seq(iX.size());
 #ifdef USE_LIBTORCH
-				for (int i = 0; i < iX.size(); i++)
+#pragma omp parallel for
+				for (int i = 0; i < nY.size(); i++)
 				{
-					seq.push_back(seq_vec(YY, i));
+					seq[i] = seq_vec(YY, i);
 				}
 				y_predict_n = torch_model_predict_batch(torch_nn_test, seq, n_eval_minibatch);
 #endif
-				for (int i = 0; i < iX.size(); i++)
+				for (int i = 0; i < iY.size(); i++)
 				{
 					tiny_dnn::vec_t y_predict;
 #ifdef USE_LIBTORCH
@@ -762,7 +763,6 @@ private:
 #endif
 
 			//最初のシーケンス分は入力でしか無いのでそのまま
-#pragma omp for
 			for (int j = 0; j < sequence_length + TARGET_POSITON; j++)
 			{
 				tiny_dnn::vec_t y(y_dim);
@@ -774,13 +774,9 @@ private:
 			}
 
 			const int sz = iY.size() + prophecy - use_differnce - TARGET_POSITON;
-#ifdef USE_LIBTORCH
-			for (int i = 0; i < iX.size(); i++)
-			{
-				seq.emplace_back(seq_vec(YY, i));
-			}
-			y_predict_n = torch_model_predict_batch(torch_nn_test, seq, n_eval_minibatch);
-#endif
+
+			std::vector<tiny_dnn::vec_t> y_predict_n;
+			std::vector<tiny_dnn::vec_t> seq(sz);
 			for (int i = 0; i < sz; i++)
 			{
 				//i...i+sequence_length-1 -> 
@@ -790,8 +786,7 @@ private:
 #ifdef USE_LIBTORCH
 				if (use_libtorch)
 				{
-					//next_y = torch_model_predict(torch_nn_test, seq_vec(YY, i));
-					next_y = y_predict_n[i];
+					next_y = torch_model_predict(torch_nn_test, seq_vec(YY, i));
 				}
 				else
 #endif
@@ -800,7 +795,6 @@ private:
 				}
 
 				//output sequence_length 
-#pragma omp for
 				for (int j = 0; j < out_sequence_length; j++)
 				{
 					tiny_dnn::vec_t yy(y_dim);
@@ -823,7 +817,6 @@ private:
 				//From the first sequence onwards, all are predicted from predicted values
 				if (!use_latest_observations && test_mode)
 				{
-#pragma omp for
 					for (int j = 0; j < out_sequence_length; j++)
 					{
 						for (int k = 0; k < y_dim; k++)
@@ -836,7 +829,6 @@ private:
 				{
 					if (i >= train_images.size() - sequence_length)
 					{
-#pragma omp for
 						for (int j = 0; j < out_sequence_length; j++)
 						{
 							if (i + sequence_length + j + TARGET_POSITON >= train_images.size())
@@ -1692,13 +1684,13 @@ public:
 
 				if (class_max > class_num)
 				{
-					printf("classification:%d < class_max:%d\n", class_num, (int)class_max);
+					printf("WARNING:classification:%d < class_max:%d\n", class_num, (int)class_max);
 					fflush(stdout);
 					error = -1;
 				}
 				if (class_min < 0)
 				{
-					printf("ERROR:class_min:%f\n", class_min);
+					printf("WARNING:class_min:%f\n", class_min);
 					fflush(stdout);
 					error = -1;
 				}
@@ -1813,17 +1805,23 @@ public:
 #endif
 
 	}
-	tiny_dnn::vec_t seq_vec(tiny_dnn::tensor_t& ny, int start)
+	tiny_dnn::vec_t seq_vec(tiny_dnn::tensor_t& ny, const int start)
 	{
+		const int dim = ny[0].size();
 
-		tiny_dnn::vec_t seq;
+		tiny_dnn::vec_t seq(sequence_length*dim);
 		for (int k = 0; k < sequence_length; k++)
 		{
 			if (ny.size() <= start + k)
 			{
 				printf("range over");
+				throw tiny_dnn::nn_error("seq_vec:range over");
 			}
-			add_seq(ny[start + k], seq);
+			//add_seq(ny[start + k], seq);
+			for (int i = 0; i < dim; i++)
+			{
+				seq[k*dim + i] = ny[start + k][i];
+			}
 		}
 		return seq;
 	}
@@ -1889,7 +1887,7 @@ public:
 				const auto& ny = nY[i + sequence_length + j + TARGET_POSITON];
 				for (int k = 0; k < y_dim; k++)
 				{
-					y.push_back(ny[k]);
+					y.emplace_back(ny[k]);
 				}
 			}
 
@@ -1913,7 +1911,7 @@ public:
 				const auto& ny = nY[i + sequence_length + j + TARGET_POSITON];
 				for (int k = 0; k < y_dim; k++)
 				{
-					y.push_back(ny[k]);
+					y.emplace_back(ny[k]);
 				}
 			}
 
