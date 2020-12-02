@@ -1200,13 +1200,13 @@ public:
 
 			if (class_max > class_num)
 			{
-				printf("ERROR:classification:%d < class_max:%d\n", class_num, (int)class_max);
+				printf("WARNING:classification:%d < class_max:%d\n", class_num, (int)class_max);
 				fflush(stdout);
 				error = -1;
 			}
 			if (class_min < 0)
 			{
-				printf("ERROR:class_min:%f\n", class_min);
+				printf("WARNING:class_min:%f\n", class_min);
 				fflush(stdout);
 				error = -1;
 			}
@@ -2549,7 +2549,16 @@ public:
 
 				if (!stream.bad())
 				{
-					stream << "ConfusionMatrix(train):" << std::endl;
+					stream << "ConfusionMatrix(";
+					if (test_mode)
+					{
+						stream << "test";
+					}
+					else
+					{
+						stream << "train";
+					}
+					stream << "):" << std::endl;
 					train_result.print_detail(stream);
 					stream << train_result.num_success << "/" << train_result.num_total << std::endl;
 					stream << "accuracy:" << train_result.accuracy() << "%" << std::endl;
