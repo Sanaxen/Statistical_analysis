@@ -752,14 +752,14 @@ private:
 				}
 				for (int i = iY.size(); i < YY.size(); i++)
 				{
-					timver_tmp[i] = timver_tmp[i-1] + timevar(1, 0) - timevar(0, 0);
+					timver_tmp[i] = timver_tmp[i - 1] + timevar(1, 0) - timevar(0, 0);
 				}
 			}
 #ifdef TIME_MEASUR
 			end = std::chrono::system_clock::now();
 			elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 			printf("elapsed1:%f\n", elapsed);
-			start = std::chrono::system_clock::now(); 
+			start = std::chrono::system_clock::now();
 #endif
 
 			//最初のシーケンス分は入力でしか無いのでそのまま
@@ -776,17 +776,41 @@ private:
 			const int sz = iY.size() + prophecy - use_differnce - TARGET_POSITON;
 
 			std::vector<tiny_dnn::vec_t> y_predict_n;
-			std::vector<tiny_dnn::vec_t> seq(sz);
+			std::vector<tiny_dnn::vec_t> seq(train_images.size());
+#ifdef USE_LIBTORCH
+			if (use_latest_observations || !test_mode)
+			{
+
+#pragma omp parallel for
+				for (int i = 0; i < train_images.size(); i++)
+				{
+					seq[i] = seq_vec(YY, i);
+				}
+				y_predict_n = torch_model_predict_batch(torch_nn_test, seq, n_eval_minibatch);
+			}
+			else
+			{
+				y_predict_n.clear();
+			}
+#endif
 			for (int i = 0; i < sz; i++)
 			{
 				//i...i+sequence_length-1 -> 
 				//  i+sequence_length ... i+sequence_length+out_sequence_length-1
-				
+
+
 				tiny_dnn::vec_t next_y;
 #ifdef USE_LIBTORCH
 				if (use_libtorch)
 				{
-					next_y = torch_model_predict(torch_nn_test, seq_vec(YY, i));
+					if (i >= train_images.size() - sequence_length || y_predict_n.size() == 0)
+					{
+						next_y = torch_model_predict(torch_nn_test, seq_vec(YY, i));
+					}
+					else
+					{
+						next_y = y_predict_n[i];
+					}
 				}
 				else
 #endif
