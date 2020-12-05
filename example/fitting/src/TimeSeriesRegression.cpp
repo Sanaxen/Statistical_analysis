@@ -1384,7 +1384,7 @@ int main(int argc, char** argv)
 	{
 		goto end;
 	}
-
+	
 	//printf("timeSeries.report start\n"); fflush(stdout);
 	timeSeries.report(0.05, report_file);
 	if (classification < 2)
