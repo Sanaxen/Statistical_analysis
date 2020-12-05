@@ -33,9 +33,10 @@ inline void SigHandler_time_series_regression(int p_signame)
 	{
 		printf("Š„‚èž‚Ý‚Å‚·BI—¹‚µ‚Ü‚·\n");
 		ctr_c_stopping_time_series_regression = true;
+		fflush(stdout);
+		exit(0);
 	}
 	sig_catch++;
-	//exit(0);
 	return;
 }
 
@@ -3038,10 +3039,10 @@ public:
 			if (use_libtorch)
 			{
 				torch_nn_test = torch_load_new("fit_best_ts.pt");
-				train_result = torch_get_accuracy_nn(torch_nn_test, train_images, train_labels, 1);
+				train_result = torch_get_accuracy_nn(torch_nn_test, train_images, train_labels, n_eval_minibatch);
 				if (test_images.size() > 0)
 				{
-					test_result = torch_get_accuracy_nn(torch_nn_test, test_images, test_labels, 1);
+					test_result = torch_get_accuracy_nn(torch_nn_test, test_images, test_labels, n_eval_minibatch);
 				}
 			}
 			else
@@ -3056,6 +3057,8 @@ public:
 			}
 			
 			{
+				if (fp) fclose(fp);
+				fp = NULL;
 				std::ofstream stream(filename);
 
 				if (!stream.bad())
@@ -3100,13 +3103,26 @@ public:
 		
 		tiny_dnn::tensor_t train, predict;
 
+		std::vector<tiny_dnn::vec_t> y_predict_n;
+
+#ifdef USE_LIBTORCH
+		y_predict_n = torch_predict_batch(train_images, n_eval_minibatch);
+#endif
+
 		for (int i = 0; i < train_images.size() - 1; i++)
 		{
 			tiny_dnn::vec_t next_y;
 #ifdef USE_LIBTORCH
 			if (use_libtorch)
 			{
-				next_y = torch_predict(seq_vec(nY, i));
+				if (y_predict_n.size() > 0)
+				{
+					next_y = y_predict_n[i];
+				}
+				else
+				{
+					next_y = torch_predict(seq_vec(nY, i));
+				}
 			}
 			else
 #endif
