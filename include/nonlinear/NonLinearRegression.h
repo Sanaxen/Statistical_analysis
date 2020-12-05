@@ -24,9 +24,10 @@ inline void SigHandler_nonlinear_regression(int p_signame)
 	{
 		printf("Š„‚è‚İ‚Å‚·BI—¹‚µ‚Ü‚·\n");
 		ctr_c_stopping_nonlinear_regression = true;
+		fflush(stdout);
+		exit(0);
 	}
 	sig_catch++;
-	//exit(0);
 	return;
 }
 
@@ -2545,6 +2546,8 @@ public:
 				test_result = get_accuracy(nn_test, test_images, test_labels);
 			}
 			{
+				if (fp) fclose(fp);
+				fp = NULL;
 				std::ofstream stream(filename);
 
 				if (!stream.bad())
