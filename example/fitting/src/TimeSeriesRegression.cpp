@@ -20,6 +20,7 @@
 #endif
 #define CNN_USE_TBB
 
+#include "../../../include/nonlinear/break_solver.h"
 #include "../../../include/util/dnn_util.hpp"
 #include "../../../include/nonlinear/TimeSeriesRegression.h"
 #include "../../../include/nonlinear/MatrixToTensor.h"
@@ -44,6 +45,7 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
+	clear_stopping_solver();
 
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
@@ -1185,6 +1187,11 @@ int main(int argc, char** argv)
 		{
 			continue;
 		}
+		else if (argname == "--n_sampling")
+		{
+			timeSeries.n_sampling = atoi(argv[count + 1]);
+			continue;
+		}
 		else if (argname == "--state_reset_mode")
 		{
 			timeSeries.state_reset_mode = (0 < atoi(argv[count + 1])) ? true : false;
@@ -1331,6 +1338,11 @@ int main(int argc, char** argv)
 	{
 		printf("!!Warning!! sequence_length:%d > Minibatch:%d\n", sequence_length, timeSeries.n_eval_minibatch);
 	}
+	if (timeSeries.classification > 1)
+	{
+		printf("!!Warning!! classification:%d > 1 , n_sampling:%d -> 0\n", classification, timeSeries.n_sampling);
+		timeSeries.n_sampling = 0;
+	}
 	std::cout << "Running with the following parameters:" << std::endl
 		<< "Learning rate   :   " << timeSeries.learning_rate << std::endl
 		<< "Minibatch size  :   " << timeSeries.n_minibatch << std::endl
@@ -1364,6 +1376,7 @@ int main(int argc, char** argv)
 		<< "sift_time:" << xvar_time_sift << std::endl
 		<< "target_position: " << target_position << std::endl
 		<< "use_attention: " << use_attention << std::endl
+		<< "n_sampling: " << timeSeries.n_sampling << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		
 		<< std::endl;
@@ -1377,7 +1390,7 @@ int main(int argc, char** argv)
 		fclose(fp);
 	}
 
-	multiplot_gnuplot_script_ts(y_var_idx.size(), multiplot_step, header_names, y_var_idx, timeformat, false);
+	multiplot_gnuplot_script_ts(y_var_idx.size(), multiplot_step, header_names, y_var_idx, timeformat, false, timeSeries.n_sampling);
 
 	timeSeries.fit(sequence_length, n_rnn_layers, n_layers, hidden_size);
 	if (layer_graph_only)
@@ -1395,8 +1408,22 @@ int main(int argc, char** argv)
 	//printf("timeSeries.report end\n"); fflush(stdout);
 	//printf("timeSeries.gen_visualize_fit_state start\n"); fflush(stdout);
 	timeSeries.gen_visualize_fit_state();
+#ifdef USE_LIBTORCH
+	if (timeSeries.n_sampling > 0)
+	{
+		std::mt19937 mt(timeSeries.n_sampling);
+		std::uniform_real_distribution r(0.1, 0.7);
+		for (int i = 0; i < timeSeries.n_sampling; i++)
+		{
+			set_sampling(r(mt));
+			timeSeries.gen_visualize_fit_state(true);
+		}
+		reset_sampling();
+	}
+#endif
+
 	//printf("timeSeries.gen_visualize_fit_state end\n"); fflush(stdout);
-	multiplot_gnuplot_script_ts(y_var_idx.size(), multiplot_step, header_names, y_var_idx, timeformat, true);
+	multiplot_gnuplot_script_ts(y_var_idx.size(), multiplot_step, header_names, y_var_idx, timeformat, true, timeSeries.n_sampling);
 
 	{
 		std::ofstream stream("Time_to_finish.txt");

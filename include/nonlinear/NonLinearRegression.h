@@ -31,7 +31,7 @@ inline void SigHandler_nonlinear_regression(int p_signame)
 	return;
 }
 
-inline void multiplot_gnuplot_script(int ydim, int step, std::vector<std::string>& names, std::vector<int>& idx, bool putImage)
+inline void multiplot_gnuplot_script(int ydim, int step, std::vector<std::string>& names, std::vector<int>& idx, bool putImage, int confidence)
 {
 	if (!putImage)
 	{
@@ -98,6 +98,10 @@ inline void multiplot_gnuplot_script(int ydim, int step, std::vector<std::string
 			fprintf(fp, "set multiplot layout %d,%d\n", step, 1);
 		}
 		fprintf(fp, "set key left top box\n");
+		if (confidence)
+		{
+			fprintf(fp, "set style fill transparent solid 0.4 noborder\n");
+		}
 
 		//char* timex =
 		//	"x_timefromat=0\n"
@@ -110,12 +114,22 @@ inline void multiplot_gnuplot_script(int ydim, int step, std::vector<std::string
 		for (int k = 0; k < step; k++)
 		{
 			fprintf(fp, "set title %s\n", names[idx[count]].c_str());
-			char* plot =
+			std::string  plot =
 				"file = \"test.dat\"\n"
 				"plot file using 1:%d   t \"observation\"  with lines linewidth 2 lc \"#0068b7\", \\\n"
-				"file using 1:%d   t \"predict\"  with lines linewidth 2 lc \"#ff8000\"\n\n";
+				"file using 1:%d   t \"predict\"  with lines linewidth 2 lc \"#ff8000\"";
 
-			fprintf(fp, plot, count*2 + 3, count*2 + 2);
+			if (confidence)
+			{
+				plot = plot + ",\\\n\"confidence.dat\" using 1:%d:%d  with filledcurves fc \"#5f9ea0\" t \"95%% confidence\"\n\n";
+				fprintf(fp, plot.c_str(), count * 2 + 3, count * 2 + 2,
+					count*ydim + 3, count*ydim + 4);
+			}
+			else
+			{
+				plot = plot + "\n\n";
+				fprintf(fp, plot.c_str(), count * 2 + 3, count * 2 + 2);
+			}
 			count++;
 			if (count >= ydim) break;
 		}
@@ -183,6 +197,7 @@ public:
 	bool batch_shuffle = true;
 
 	std::string activation_fnc = "tanh";
+	int n_sampling = 10;
 
 
 private:
@@ -399,8 +414,12 @@ private:
 	float accuracy_max = std::numeric_limits<float>::min();
 	float accuracy_pre = 0;
 
+	tiny_dnn::tensor_t st_mean;
+	tiny_dnn::tensor_t st_sigma2;
+	int n_samples_cnt = 0;
+
 	size_t net_test_no_Improvement_count = 0;
-	void net_test()
+	void net_test(bool sampling_only = false)
 	{
 		writing lock;
 
@@ -437,27 +456,30 @@ private:
 		set_test(nn_test, 1);
 
 		FILE* fp_predict = NULL;
-		if (test_mode)
+		if (!sampling_only)
 		{
-			fp_predict = fopen("predict_dnn.csv", "w");
-			if (fp_predict)
+			if (test_mode)
 			{
-				for (int i = 0; i < nX[0].size(); i++)
+				fp_predict = fopen("predict_dnn.csv", "w");
+				if (fp_predict)
 				{
-					fprintf(fp_predict, "%s,", header[x_idx[i]].c_str());
-				}
-				if (classification >= 2)
-				{
-					fprintf(fp_predict, "predict[%s],", header[y_idx[0]].c_str());
-					fprintf(fp_predict, "probability\n");
-				}
-				else
-				{
-					for (int i = 0; i < nY[0].size() - 1; i++)
+					for (int i = 0; i < nX[0].size(); i++)
 					{
-						fprintf(fp_predict, "predict[%s], %s,dy,", header[y_idx[i]].c_str(), header[y_idx[i]].c_str());
+						fprintf(fp_predict, "%s,", header[x_idx[i]].c_str());
 					}
-					fprintf(fp_predict, "predict[%s], %s, dy\n", header[y_idx[nY[0].size() - 1]].c_str(), header[y_idx[nY[0].size() - 1]].c_str());
+					if (classification >= 2)
+					{
+						fprintf(fp_predict, "predict[%s],", header[y_idx[0]].c_str());
+						fprintf(fp_predict, "probability\n");
+					}
+					else
+					{
+						for (int i = 0; i < nY[0].size() - 1; i++)
+						{
+							fprintf(fp_predict, "predict[%s], %s,dy,", header[y_idx[i]].c_str(), header[y_idx[i]].c_str());
+						}
+						fprintf(fp_predict, "predict[%s], %s, dy\n", header[y_idx[nY[0].size() - 1]].c_str(), header[y_idx[nY[0].size() - 1]].c_str());
+					}
 				}
 			}
 		}
@@ -672,6 +694,114 @@ private:
 				}
 			}
 		}
+
+		//distribution_ts
+		if (/*this->n_sampling > 0*/ sampling_only)
+		{
+			if (test_mode)
+			{
+				tiny_dnn::vec_t dmy1(Y_predict[0].size());
+				tiny_dnn::vec_t dmy2(Y_predict[0].size());
+
+				char buf[256];
+				FILE* fp = fopen("distribution.txt", "r");
+				if (fp)
+				{
+					fgets(buf, 256, fp);
+					fgets(buf, 256, fp);
+					for (int k = 0; k < Y_predict[0].size(); k++)
+					{
+						fgets(buf, 256, fp);
+						double x, y;
+						sscanf(buf, "%lf %lf", &x, &y);
+						dmy1[k] = x;
+						dmy2[k] = y;
+					}
+					fclose(fp);
+				}
+
+				fp = fopen("confidence.dat", "w");
+				if (fp)
+				{
+					for (int j = 0; j < nX.size(); j++)
+					{
+						fprintf(fp, "%d", j);
+						for (int k = 0; k < Y_predict[0].size(); k++)
+						{
+							fprintf(fp, " %f %f %f",
+								Y_predict[j][k],
+								Y_predict[j][k] - dmy2[k],
+								Y_predict[j][k] + dmy2[k]);
+						}
+						fprintf(fp, "\n");
+					}
+					fclose(fp);
+				}
+			}
+			if (!test_mode)
+			{
+				//printf("n_samples_cnt:%d\n", n_samples_cnt); fflush(stdout);
+				if (n_samples_cnt == 0)
+				{
+					st_mean.resize(nX.size(), tiny_dnn::vec_t(Y_predict[0].size(), 0));
+				}
+
+				for (int i = 0; i < nX.size(); i++)
+				{
+					for (int k = 0; k < Y_predict[0].size(); k++)
+					{
+						st_mean[i][k] += Y_predict[i][k];
+					}
+				}
+
+				if (n_samples_cnt > 1)
+				{
+					st_sigma2.resize(nX.size(), tiny_dnn::vec_t(Y_predict[0].size(), 0));
+					for (int i = 0; i < nX.size(); i++)
+					{
+						for (int k = 0; k < Y_predict[0].size(); k++)
+						{
+							auto d = (train_labels[i][k] - st_mean[i][k] / n_samples_cnt);
+							st_sigma2[i][k] += d*d / n_samples_cnt;
+						}
+					}
+
+					FILE* fp = fopen("confidence.dat", "w");
+					if (fp)
+					{
+						for (int j = 0; j < nX.size(); j++)
+						{
+							fprintf(fp, "%d", j);
+							for (int k = 0; k < Y_predict[0].size(); k++)
+							{
+								fprintf(fp, " %f %f %f",
+									Y_predict[j][k],
+									Y_predict[j][k] - 1.96*sqrt(st_sigma2[j][k] / n_samples_cnt),
+									Y_predict[j][k] + 1.96*sqrt(st_sigma2[j][k] / n_samples_cnt));
+							}
+							fprintf(fp, "\n");
+						}
+						fclose(fp);
+
+						fp = fopen("distribution.txt", "w");
+						if (fp)
+						{
+							fprintf(fp, "%d\n", n_samples_cnt);
+							int sz = train_images.size() - 1;
+							fprintf(fp, "%d\n", Y_predict[0].size());
+							for (int k = 0; k < Y_predict[0].size(); k++)
+							{
+								fprintf(fp, "%f %f\n", st_mean[sz][k] / n_samples_cnt, 1.96*sqrt(st_sigma2[sz][k] / n_samples_cnt));
+							}
+							fclose(fp);
+						}
+					}
+				}
+				n_samples_cnt++;
+			}
+			if (sampling_only) return;
+		}
+
 		//////////////////////////////////////////////////
 
 		char plotName[256];
@@ -866,7 +996,7 @@ private:
 	}
 
 public:
-	void gen_visualize_fit_state()
+	void gen_visualize_fit_state(bool sampling_only = false)
 	{
 		set_test(nn, 1);
 #ifdef USE_LIBTORCH
@@ -878,7 +1008,7 @@ public:
 		{
 			nn.save("tmp.model");
 		}
-		net_test();
+		net_test(sampling_only);
 		set_train(nn, 1, 0, default_backend_type);
 
 
@@ -1868,6 +1998,19 @@ public:
 			if (epoch >= 3 && plot && epoch % plot == 0)
 			{
 				gen_visualize_fit_state();
+#ifdef USE_LIBTORCH
+				//if (this->n_sampling > 0)
+				//{
+				//	std::mt19937 mt(epoch);
+				//	std::uniform_real_distribution r(0.01, 0.6);
+				//	for (int i = 0; i < this->n_sampling; i++)
+				//	{
+				//		set_sampling(r(mt));
+				//		gen_visualize_fit_state(true);
+				//	}
+				//	reset_sampling();
+				//}
+#endif
 			}
 			if (convergence)
 			{
@@ -1899,6 +2042,20 @@ public:
 				}
 				error = 1;
 				printf("early_stopp!!\n");
+			}
+			if (is_stopping_solver())
+			{
+#ifdef USE_LIBTORCH
+				if (use_libtorch)
+				{
+					torch_stop_ongoing_training();
+				}
+				else
+#endif
+				{
+					nn.stop_ongoing_training();
+				}
+				printf("stop_ongoing_training!!\n");
 			}
 
 			if (progress) disp.restart(nn.get_input_size());
@@ -1958,6 +2115,21 @@ public:
 				error = 1;
 				printf("early_stopp!!\n");
 			}
+			if (is_stopping_solver())
+			{
+#ifdef USE_LIBTORCH
+				if (use_libtorch)
+				{
+					torch_stop_ongoing_training();
+				}
+				else
+#endif
+				{
+					nn.stop_ongoing_training();
+				}
+				printf("stop_ongoing_training!!\n");
+			}
+
 			if (ctr_c_stopping_nonlinear_regression)
 			{
 #ifdef USE_LIBTORCH
@@ -2128,7 +2300,7 @@ public:
 				{
 					torch_save("fit_best.pt");
 					fit_best_saved = true;
-		}
+				}
 				else
 #endif
 				{
@@ -2149,6 +2321,20 @@ public:
 				nn.load("fit_best.model");
 			}
 			gen_visualize_fit_state();
+#ifdef USE_LIBTORCH
+			//if (this->n_sampling > 0)
+			//{
+			//	std::mt19937 mt(epoch);
+			//	std::uniform_real_distribution r(0.01, 0.6);
+			//	for (int i = 0; i < this->n_sampling; i++)
+			//	{
+			//		set_sampling(r(mt));
+			//		gen_visualize_fit_state(true);
+			//	}
+			//	reset_sampling();
+			//}
+#endif
+
 		}
 		catch (tiny_dnn::nn_error& msg)
 		{

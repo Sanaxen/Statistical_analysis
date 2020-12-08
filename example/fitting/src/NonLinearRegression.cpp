@@ -19,6 +19,7 @@
 #define CNN_USE_INTEL_MKL
 #endif
 
+#include "../../../include/nonlinear/break_solver.h"
 #include "../../../include/util/dnn_util.hpp"
 #include "../../../include/nonlinear/NonLinearRegression.h"
 #include "../../../include/nonlinear/MatrixToTensor.h"
@@ -36,6 +37,7 @@ int main(int argc, char** argv)
 		printf("ERROR:command line error.\n");
 		return -1;
 	}
+	clear_stopping_solver();
 
 	std::vector<std::string> xx_var;	//non normalize var
 	double xx_var_scale = 1.0;			// non normalize var scaling
@@ -762,6 +764,11 @@ int main(int argc, char** argv)
 		{
 			continue;
 		}
+		else if (argname == "--n_sampling")
+		{
+			regression.n_sampling = atoi(argv[count + 1]);
+			continue;
+		}
 		else if (argname == "--weight_init_type") {
 			regression.weight_init_type = std::string(argv[count + 1]);
 			continue;
@@ -845,6 +852,11 @@ int main(int argc, char** argv)
 		printf("ERROR:data %d < minibatch %d\n", regression.iY.size(), regression.n_minibatch);
 		return -1;
 	}
+	if (regression.classification > 1)
+	{
+		printf("!!Warning!! classification:%d > 1 , n_sampling:%d -> 0\n", classification, regression.n_sampling);
+		regression.n_sampling = 0;
+	}
 	std::cout << "Running with the following parameters:" << std::endl
 		<< "Learning rate   : " << regression.learning_rate << std::endl
 		<< "Minibatch size  : " << regression.n_minibatch << std::endl
@@ -865,6 +877,7 @@ int main(int argc, char** argv)
 		<< "device_name: " << regression.device_name << std::endl
 		<< "use_libtorch: " << regression.use_libtorch << std::endl
 		<< "batch_shuffle: " << regression.batch_shuffle << std::endl
+		<< "n_sampling: " << regression.n_sampling << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		<< std::endl;
 
@@ -878,7 +891,7 @@ int main(int argc, char** argv)
 		fclose(fp);
 	}
 
-	multiplot_gnuplot_script(regression.y_idx.size(), multiplot_step, header_names, y_var_idx, false);
+	multiplot_gnuplot_script(regression.y_idx.size(), multiplot_step, header_names, y_var_idx, false, regression.n_sampling);
 	regression.fit(n_layers, input_unit);
 	if (layer_graph_only)
 	{
@@ -891,7 +904,21 @@ int main(int argc, char** argv)
 		regression.visualize_observed_predict();
 	}
 	regression.gen_visualize_fit_state();
-	multiplot_gnuplot_script(regression.y_idx.size(), multiplot_step, header_names, y_var_idx, true);
+
+#ifdef USE_LIBTORCH
+	if (regression.n_sampling > 0)
+	{
+		std::mt19937 mt(regression.n_sampling);
+		std::uniform_real_distribution r(0.1, 0.7);
+		for (int i = 0; i < regression.n_sampling; i++)
+		{
+			set_sampling(r(mt));
+			regression.gen_visualize_fit_state(true);
+		}
+		reset_sampling();
+	}
+#endif
+	multiplot_gnuplot_script(regression.y_idx.size(), multiplot_step, header_names, y_var_idx, true, regression.n_sampling);
 
 	{
 		std::ofstream stream("Time_to_finish.txt");

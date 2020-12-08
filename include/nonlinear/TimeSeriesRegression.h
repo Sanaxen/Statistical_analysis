@@ -34,6 +34,7 @@ inline void SigHandler_time_series_regression(int p_signame)
 		printf("äÑÇËçûÇ›Ç≈Ç∑ÅBèIóπÇµÇ‹Ç∑\n");
 		ctr_c_stopping_time_series_regression = true;
 		fflush(stdout);
+		//return;
 		exit(0);
 	}
 	sig_catch++;
@@ -59,7 +60,7 @@ inline char* timeToStr(dnn_double t, const std::string& format, char* str, size_
 	return str;
 }
 
-inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::string>& names, std::vector<int>& idx, std::string& timeformat, bool putImage)
+inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::string>& names, std::vector<int>& idx, std::string& timeformat, bool putImage, int confidence)
 {
 	if (!putImage)
 	{
@@ -127,6 +128,10 @@ inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::str
 			fprintf(fp, "set multiplot layout %d,%d\n", step, 1);
 		}
 		fprintf(fp, "set key left top box\n");
+		if (confidence)
+		{
+			fprintf(fp, "set style fill transparent solid 0.4 noborder\n");
+		}
 
 		char* timex =
 			"x_timefromat=%d\n"
@@ -139,7 +144,7 @@ inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::str
 		for (int k = 0; k < step; k++)
 		{
 			fprintf(fp, "set title %s\n", names[idx[count]].c_str());
-			char* plot =
+			std::string plot =
 				"file = \"test.dat\"\n"
 				"plot file using 1:%d   t \"observation\"  with lines linewidth 2 lc \"#0068b7\", \\\n"
 				"\"predict1.dat\" using 1:%d   t \"observation\"  with lines linewidth 2 lc \"#0080ff\", \\\n"
@@ -148,9 +153,19 @@ inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::str
 				"file using 1:%d   t \"predict\"  with lines linewidth 2 lc \"#009944\", \\\n"
 				"\"predict1.dat\" using 1:%d   t \"predict\"  with lines linewidth 2 lc \"#ff8000\", \\\n"
 				"\"predict2.dat\" using 1:%d   t \"predict\"  with lines linewidth 2 lc \"plum\", \\\n"
-				"\"prophecy.dat\" using 1:%d   t \"prophecy\"  with lines linewidth 2 lc \"#e4007f\"\n\n";
-
-			fprintf(fp, plot, count * 2 + 2, count * 2 + 2, count * 2 + 2, count * 2 + 2, count * 2 + 3, count * 2 + 3, count * 2 + 3, count * 2 + 3);
+				"\"prophecy.dat\" using 1:%d   t \"prophecy\"  with lines linewidth 2 lc \"#e4007f\"";
+			
+			if (confidence)
+			{
+				plot = plot + ",\\\n\"confidence.dat\" using 1:%d:%d  with filledcurves fc \"#5f9ea0\" t \"95%% confidence\"\n\n";
+				fprintf(fp, plot.c_str(), count * 2 + 2, count * 2 + 2, count * 2 + 2, count * 2 + 2, count * 2 + 3, count * 2 + 3, count * 2 + 3, count * 2 + 3,
+					count*ydim +3, count*ydim +4 );
+			}
+			else
+			{
+				plot = plot + "\n\n";
+				fprintf(fp, plot.c_str(), count * 2 + 2, count * 2 + 2, count * 2 + 2, count * 2 + 2, count * 2 + 3, count * 2 + 3, count * 2 + 3, count * 2 + 3);
+			}
 			count++;
 			if (count >= ydim) break;
 		}
@@ -230,6 +245,7 @@ public:
 	int mean_row = 1;
 	std::string activation_fnc = "tanh";
 	bool use_attention = true;
+	int n_sampling = 10;
 
 private:
 
@@ -447,8 +463,12 @@ private:
 	float accuracy_max = std::numeric_limits<float>::min();
 	float accuracy_pre = 0;
 
+	tiny_dnn::tensor_t st_mean;
+	tiny_dnn::tensor_t st_sigma2;
+	int n_samples_cnt = 0;
+
 	size_t net_test_no_Improvement_count = 0;
-	void net_test()
+	void net_test(bool sampling_only = false)
 	{
 		writing lock;
 
@@ -495,30 +515,33 @@ private:
 #endif
 
 		FILE* fp_predict = NULL;
-		if (test_mode)
+		if (!sampling_only)
 		{
-			fp_predict = fopen("predict_dnn.csv", "w");
-			if (fp_predict)
+			if (test_mode)
 			{
-				if (iX.size())
+				fp_predict = fopen("predict_dnn.csv", "w");
+				if (fp_predict)
 				{
-					for (int i = 0; i < iX[0].size(); i++)
+					if (iX.size())
 					{
-						fprintf(fp_predict, "%s,", header[x_idx[i]].c_str());
+						for (int i = 0; i < iX[0].size(); i++)
+						{
+							fprintf(fp_predict, "%s,", header[x_idx[i]].c_str());
+						}
 					}
-				}
-				if (classification >= 2)
-				{
-					fprintf(fp_predict, "predict[%s],", header[y_idx[0]].c_str());
-					fprintf(fp_predict, "probability\n");
-				}
-				else
-				{
-					for (int i = 0; i < y_dim - 1; i++)
+					if (classification >= 2)
 					{
-						fprintf(fp_predict, "predict[%s],%s,dy,", header[y_idx[i]].c_str(), header[y_idx[i]].c_str());
+						fprintf(fp_predict, "predict[%s],", header[y_idx[0]].c_str());
+						fprintf(fp_predict, "probability\n");
 					}
-					fprintf(fp_predict, "predict[%s],%s,dy\n", header[y_idx[y_dim-1]].c_str(), header[y_idx[y_dim - 1]].c_str());
+					else
+					{
+						for (int i = 0; i < y_dim - 1; i++)
+						{
+							fprintf(fp_predict, "predict[%s],%s,dy,", header[y_idx[i]].c_str(), header[y_idx[i]].c_str());
+						}
+						fprintf(fp_predict, "predict[%s],%s,dy\n", header[y_idx[y_dim - 1]].c_str(), header[y_idx[y_dim - 1]].c_str());
+					}
 				}
 			}
 		}
@@ -911,7 +934,145 @@ private:
 						train = exp(train, this->normalize_skilp);
 					}
 				}
+				
+				//distribution_ts
+				if (/*this->n_sampling > 0*/ sampling_only)
+				{
+					if (test_mode)
+					{
+						tiny_dnn::vec_t dmy1(y_dim);
+						tiny_dnn::vec_t dmy2(y_dim);
+
+						char buf[256];
+						FILE* fp = fopen("distribution_ts.txt", "r");
+						if (fp)
+						{
+							fgets(buf, 256, fp);
+							fgets(buf, 256, fp);
+							for (int k = 0; k < y_dim; k++)
+							{
+								fgets(buf, 256, fp);
+								double x, y;
+								sscanf(buf, "%lf %lf", &x, &y);
+								dmy1[k] = x;
+								dmy2[k] = y;
+							}
+							fclose(fp);
+						}
+
+						fp = fopen("confidence.dat", "w");
+						if (fp)
+						{
+							for (int j = 0; j < sz; j++)
+							{
+								fprintf(fp, "%d", j);
+								for (int k = 0; k < y_dim; k++)
+								{
+									if (j < sequence_length)
+									{
+										fprintf(fp, " %f %f %f",
+											train[j][k],
+											train[j][k],
+											train[j][k]);
+									}
+									else
+									{
+										if (j < train_images.size())
+										{
+											fprintf(fp, " %f %f %f",
+												train[j][k],
+												train[j][k] - dmy2[k],
+												train[j][k] + dmy2[k]);
+										}
+										else
+										{
+											fprintf(fp, " %f %f %f",
+												predict[j][k],
+												predict[j][k] - dmy2[k],
+												predict[j][k] + dmy2[k]);
+										}
+									}
+								}
+								fprintf(fp, "\n");
+							}
+							fclose(fp);
+						}
+					}
+					if (!test_mode )
+					{
+						//printf("n_samples_cnt:%d\n", n_samples_cnt); fflush(stdout);
+						if (n_samples_cnt == 0)
+						{
+							st_mean.resize(sz, tiny_dnn::vec_t(y_dim, 0));
+						}
+						for (int i = 0; i < sz; i++)
+						{
+							for (int k = 0; k < y_dim; k++)
+							{
+								st_mean[i][k] += predict[i][k];
+							}
+						}
+
+						if (n_samples_cnt > 1)
+						{
+							st_sigma2.resize(sz, tiny_dnn::vec_t(y_dim, 0));
+							for (int j = 0; j < sz; j++)
+							{
+								for (int k = 0; k < y_dim; k++)
+								{
+									auto d = (train[j][k] - st_mean[j][k] / n_samples_cnt);
+									st_sigma2[j][k] += d * d / n_samples_cnt;
+								}
+							}
+
+							FILE* fp = fopen("confidence.dat", "w");
+							if (fp)
+							{
+								for (int j = 0; j < sz; j++)
+								{
+									fprintf(fp, "%d", j);
+									for (int k = 0; k < y_dim; k++)
+									{
+										if (j < sequence_length)
+										{
+											fprintf(fp, " %f %f %f",
+												train[j][k],
+												train[j][k],
+												train[j][k]);
+										}
+										else
+										{
+											fprintf(fp, " %f %f %f",
+												predict[j][k],
+												predict[j][k] - 1.96*sqrt(st_sigma2[j][k] / n_samples_cnt),
+												predict[j][k] + 1.96*sqrt(st_sigma2[j][k] / n_samples_cnt));
+										}
+									}
+									fprintf(fp, "\n");
+								}
+								fclose(fp);
+
+								fp = fopen("distribution_ts.txt", "w");
+								if (fp)
+								{
+									fprintf(fp, "%d\n", n_samples_cnt);
+									int sz = train_images.size() - 1;
+									fprintf(fp, "%d\n", y_dim);
+									for (int k = 0; k < y_dim; k++)
+									{
+										fprintf(fp, "%f %f\n", st_mean[sz][k]/ n_samples_cnt, 1.96*sqrt(st_sigma2[sz][k] / n_samples_cnt));
+									}
+									fclose(fp);
+								}
+							}
+						}
+						n_samples_cnt++;
+					}
+					printf("n_samples_cnt:%d\n", n_samples_cnt);
+					if (sampling_only) return;
+				}
 			}
+
 #ifdef TIME_MEASUR
 			end = std::chrono::system_clock::now();
 			elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -1360,7 +1521,7 @@ private:
 	}
 
 public:
-	void gen_visualize_fit_state()
+	void gen_visualize_fit_state(bool sampling_only = false)
 	{
 		set_test(nn, 1);
 #ifdef USE_LIBTORCH
@@ -1381,7 +1542,7 @@ public:
 			nn.save("tmp_ts.model");
 		}
 
-		net_test();
+		net_test(sampling_only);
 		set_train(nn, sequence_length, n_bptt_max, default_backend_type);
 
 #ifdef USE_GNUPLOT
@@ -2491,7 +2652,22 @@ public:
 			if (plot && epoch % plot == 0)
 			{
 				gen_visualize_fit_state();
-			}
+#ifdef USE_LIBTORCH
+			//	if (this->n_sampling > 0)
+			//	{
+			//		std::mt19937 mt(epoch);
+			//		std::uniform_real_distribution r(0.01, 0.6);
+			//		for (int i = 0; i < this->n_sampling; i++)
+			//		{
+			//			set_sampling(r(mt));
+			//			gen_visualize_fit_state(true);
+			//		}
+			//		reset_sampling();
+			//}
+#endif
+		}
+
+
 			if (convergence)
 			{
 #ifdef USE_LIBTORCH
@@ -2520,6 +2696,21 @@ public:
 				}
 				error = 1;
 				printf("early_stopp!!\n");
+			}
+
+			if (is_stopping_solver())
+			{
+#ifdef USE_LIBTORCH
+				if (use_libtorch)
+				{
+					torch_stop_ongoing_training();
+				}
+				else
+#endif
+				{
+					nn.stop_ongoing_training();
+				}
+				printf("stop_ongoing_training!!\n");
 			}
 			if (progress) disp.restart(nn.get_input_size());
 			t.restart();
@@ -2586,6 +2777,20 @@ public:
 				}
 				error = 1;
 				printf("early_stopp!!\n");
+			}
+			if (is_stopping_solver())
+			{
+#ifdef USE_LIBTORCH
+				if (use_libtorch)
+				{
+					torch_stop_ongoing_training();
+				}
+				else
+#endif
+				{
+					nn.stop_ongoing_training();
+				}
+				printf("stop_ongoing_training!!\n");
 			}
 			if (ctr_c_stopping_time_series_regression)
 			{
@@ -2773,6 +2978,22 @@ public:
 				nn.load("fit_best_ts.model");
 			}
 			gen_visualize_fit_state();
+			if (test_mode)
+			{
+#ifdef USE_LIBTORCH
+				//if (this->n_sampling > 0)
+				//{
+				//	std::mt19937 mt(epoch);
+				//	std::uniform_real_distribution r(0.01, 0.6);
+				//	for (int i = 0; i < this->n_sampling; i++)
+				//	{
+				//		set_sampling(r(mt));
+				//		gen_visualize_fit_state(true);
+				//	}
+				//	reset_sampling();
+				//}
+#endif
+			}
 		}
 		catch (tiny_dnn::nn_error& msg)
 		{
