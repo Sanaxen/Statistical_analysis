@@ -38,6 +38,7 @@ int main(int argc, char** argv)
 		return -1;
 	}
 	clear_stopping_solver();
+	clear_distribution_dat();
 
 	std::vector<std::string> xx_var;	//non normalize var
 	double xx_var_scale = 1.0;			// non normalize var scaling
@@ -908,11 +909,10 @@ int main(int argc, char** argv)
 #ifdef USE_LIBTORCH
 	if (regression.n_sampling > 0)
 	{
-		std::mt19937 mt(regression.n_sampling);
-		std::uniform_real_distribution r(0.1, 0.7);
+		std::uniform_real_distribution r(SAMPLING_RANGE_MIN, SAMPLING_RANGE_MAX);
 		for (int i = 0; i < regression.n_sampling; i++)
 		{
-			set_sampling(r(mt));
+			set_sampling(r(regression.mt_distribution));
 			regression.gen_visualize_fit_state(true);
 		}
 		reset_sampling();

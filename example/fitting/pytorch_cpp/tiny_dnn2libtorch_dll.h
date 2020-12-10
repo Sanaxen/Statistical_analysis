@@ -42,6 +42,8 @@ etc ..
 #endif
 
 extern "C" _LIBRARY_EXPORTS int cuda_is_available();
+extern "C" _LIBRARY_EXPORTS void  set_sampling(float rate);
+extern "C" _LIBRARY_EXPORTS void  reset_sampling();
 
 extern "C" _LIBRARY_EXPORTS void read_mnist_dataset(const std::string &data_dir_path);
 
@@ -135,6 +137,7 @@ extern "C" _LIBRARY_EXPORTS void* torch_load_new(const char* name);
 extern  _LIBRARY_EXPORTS tiny_dnn::vec_t torch_model_predict(const void* nn, tiny_dnn::vec_t x);
 extern  _LIBRARY_EXPORTS tiny_dnn::vec_t torch_predict(tiny_dnn::vec_t x);
 extern	_LIBRARY_EXPORTS std::vector<tiny_dnn::vec_t> torch_model_predict_batch(const void* nn, std::vector<tiny_dnn::vec_t>& x, int batch);
+extern  _LIBRARY_EXPORTS std::vector<tiny_dnn::vec_t> torch_predict_batch(std::vector<tiny_dnn::vec_t>& x, int bacth);
 
 extern "C" _LIBRARY_EXPORTS void torch_stop_ongoing_training();
 extern "C" _LIBRARY_EXPORTS void state_reset(std::string& rnn_type, void* nn);

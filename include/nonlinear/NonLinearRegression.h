@@ -13,7 +13,12 @@
 #pragma comment(lib, "../../pytorch_cpp/lib/rnn6.lib")
 #endif
 
+#include "../../include/nonlinear/f_distribution.h"
+
 #define EARLY_STOPPING_	10
+
+#define SAMPLING_RANGE_MIN 0.01
+#define SAMPLING_RANGE_MAX 0.5
 
 /* シグナル受信/処理 */
 bool ctr_c_stopping_nonlinear_regression = false;
@@ -101,6 +106,7 @@ inline void multiplot_gnuplot_script(int ydim, int step, std::vector<std::string
 		if (confidence)
 		{
 			fprintf(fp, "set style fill transparent solid 0.4 noborder\n");
+			fprintf(fp, "set style circle radius 0.7\n");
 		}
 
 		//char* timex =
@@ -121,9 +127,10 @@ inline void multiplot_gnuplot_script(int ydim, int step, std::vector<std::string
 
 			if (confidence)
 			{
-				plot = plot + ",\\\n\"confidence.dat\" using 1:%d:%d  with filledcurves fc \"#5f9ea0\" t \"95%% confidence\"\n\n";
+				plot = plot + ",\\\n\"confidence.dat\" using 1:%d:%d  with filledcurves fc \"#5f9ea0\" t \"95%% confidence\""
+					",\\\n\"distribution.dat\"  using 1:%d with circles lc \"#5f9ea0\" fs transparent  solid 0.2  noborder\n\n";
 				fprintf(fp, plot.c_str(), count * 2 + 3, count * 2 + 2,
-					count*ydim + 3, count*ydim + 4);
+					count*ydim + 3, count*ydim + 4, count + 2);
 			}
 			else
 			{
@@ -198,7 +205,7 @@ public:
 
 	std::string activation_fnc = "tanh";
 	int n_sampling = 10;
-
+	std::mt19937 mt_distribution;
 
 private:
 	void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
@@ -414,9 +421,10 @@ private:
 	float accuracy_max = std::numeric_limits<float>::min();
 	float accuracy_pre = 0;
 
-	tiny_dnn::tensor_t st_mean;
+	tiny_dnn::tensor_t st_sum;
 	tiny_dnn::tensor_t st_sigma2;
 	int n_samples_cnt = 0;
+	bool distribution_only = false;
 
 	size_t net_test_no_Improvement_count = 0;
 	void net_test(bool sampling_only = false)
@@ -695,110 +703,80 @@ private:
 			}
 		}
 
+		if (distribution_only || sampling_only)
+		{
+			try
+			{
+				std::ofstream ofs_distri("distribution.dat", std::ios::app);;
+				for (int i = 0; i < nX.size(); i++)
+				{
+					ofs_distri << i << " ";
+					for (int k = 0; k < Y_predict[0].size(); k++)
+					{
+						ofs_distri << Y_predict[i][k] << " ";
+					}
+					ofs_distri << std::endl;
+				}
+				ofs_distri.close();
+			}
+			catch (...)
+			{
+			}
+			if (distribution_only && !sampling_only) return;
+		}
+
 		//distribution_ts
 		if (/*this->n_sampling > 0*/ sampling_only)
 		{
-			if (test_mode)
+			//printf("n_samples_cnt:%d\n", n_samples_cnt); fflush(stdout);
+			if (n_samples_cnt == 0)
 			{
-				tiny_dnn::vec_t dmy1(Y_predict[0].size());
-				tiny_dnn::vec_t dmy2(Y_predict[0].size());
+				st_sum.resize(nX.size(), tiny_dnn::vec_t(Y_predict[0].size(), 0));
+			}
 
-				char buf[256];
-				FILE* fp = fopen("distribution.txt", "r");
-				if (fp)
+			for (int i = 0; i < nX.size(); i++)
+			{
+				for (int k = 0; k < Y_predict[0].size(); k++)
 				{
-					fgets(buf, 256, fp);
-					fgets(buf, 256, fp);
+					st_sum[i][k] += Y_predict[i][k];
+				}
+			}
+
+			if (n_samples_cnt > 1)
+			{
+				st_sigma2.resize(nX.size(), tiny_dnn::vec_t(Y_predict[0].size(), 0));
+				for (int i = 0; i < nX.size(); i++)
+				{
 					for (int k = 0; k < Y_predict[0].size(); k++)
 					{
-						fgets(buf, 256, fp);
-						double x, y;
-						sscanf(buf, "%lf %lf", &x, &y);
-						dmy1[k] = x;
-						dmy2[k] = y;
+						auto d = (Y_predict[i][k] - st_sum[i][k] / n_samples_cnt);
+						st_sigma2[i][k] += d * d / (n_samples_cnt - 1);
 					}
-					fclose(fp);
 				}
 
-				fp = fopen("confidence.dat", "w");
+				FILE* fp = fopen("confidence.dat", "w");
 				if (fp)
 				{
+					//片側p = 0.05, 0.025, 0.005, 0.0005-> 0 1 2 3 4
+					const float alp = stats_t_ppf(1, n_samples_cnt);
+
 					for (int j = 0; j < nX.size(); j++)
 					{
 						fprintf(fp, "%d", j);
 						for (int k = 0; k < Y_predict[0].size(); k++)
 						{
 							fprintf(fp, " %f %f %f",
-								Y_predict[j][k],
-								Y_predict[j][k] - dmy2[k],
-								Y_predict[j][k] + dmy2[k]);
+								st_sum[j][k] / n_samples_cnt,
+								st_sum[j][k] / n_samples_cnt - alp *sqrt(st_sigma2[j][k] / n_samples_cnt),
+								st_sum[j][k] / n_samples_cnt + alp *sqrt(st_sigma2[j][k] / n_samples_cnt));
 						}
 						fprintf(fp, "\n");
 					}
 					fclose(fp);
 				}
 			}
-			if (!test_mode)
-			{
-				//printf("n_samples_cnt:%d\n", n_samples_cnt); fflush(stdout);
-				if (n_samples_cnt == 0)
-				{
-					st_mean.resize(nX.size(), tiny_dnn::vec_t(Y_predict[0].size(), 0));
-				}
-
-				for (int i = 0; i < nX.size(); i++)
-				{
-					for (int k = 0; k < Y_predict[0].size(); k++)
-					{
-						st_mean[i][k] += Y_predict[i][k];
-					}
-				}
-
-				if (n_samples_cnt > 1)
-				{
-					st_sigma2.resize(nX.size(), tiny_dnn::vec_t(Y_predict[0].size(), 0));
-					for (int i = 0; i < nX.size(); i++)
-					{
-						for (int k = 0; k < Y_predict[0].size(); k++)
-						{
-							auto d = (train_labels[i][k] - st_mean[i][k] / n_samples_cnt);
-							st_sigma2[i][k] += d*d / n_samples_cnt;
-						}
-					}
-
-					FILE* fp = fopen("confidence.dat", "w");
-					if (fp)
-					{
-						for (int j = 0; j < nX.size(); j++)
-						{
-							fprintf(fp, "%d", j);
-							for (int k = 0; k < Y_predict[0].size(); k++)
-							{
-								fprintf(fp, " %f %f %f",
-									Y_predict[j][k],
-									Y_predict[j][k] - 1.96*sqrt(st_sigma2[j][k] / n_samples_cnt),
-									Y_predict[j][k] + 1.96*sqrt(st_sigma2[j][k] / n_samples_cnt));
-							}
-							fprintf(fp, "\n");
-						}
-						fclose(fp);
-
-						fp = fopen("distribution.txt", "w");
-						if (fp)
-						{
-							fprintf(fp, "%d\n", n_samples_cnt);
-							int sz = train_images.size() - 1;
-							fprintf(fp, "%d\n", Y_predict[0].size());
-							for (int k = 0; k < Y_predict[0].size(); k++)
-							{
-								fprintf(fp, "%f %f\n", st_mean[sz][k] / n_samples_cnt, 1.96*sqrt(st_sigma2[sz][k] / n_samples_cnt));
-							}
-							fclose(fp);
-						}
-					}
-				}
-				n_samples_cnt++;
-			}
+			n_samples_cnt++;
+			printf("n_samples_cnt:%d\n", n_samples_cnt);
 			if (sampling_only) return;
 		}
 
@@ -1723,6 +1701,8 @@ public:
 		if (n_layers < 0) n_layers = 5;
 		if (input_unit < 0) input_unit = 32;
 		
+		mt_distribution = std::mt19937(1234);
+
 		input_size = input_unit;
 
 		nn.set_input_size(train_images.size());
@@ -1999,17 +1979,17 @@ public:
 			{
 				gen_visualize_fit_state();
 #ifdef USE_LIBTORCH
-				//if (this->n_sampling > 0)
-				//{
-				//	std::mt19937 mt(epoch);
-				//	std::uniform_real_distribution r(0.01, 0.6);
-				//	for (int i = 0; i < this->n_sampling; i++)
-				//	{
-				//		set_sampling(r(mt));
-				//		gen_visualize_fit_state(true);
-				//	}
-				//	reset_sampling();
-				//}
+				if (this->n_sampling > 0)
+				{
+					distribution_only = true;
+
+					std::uniform_real_distribution r(SAMPLING_RANGE_MIN, SAMPLING_RANGE_MAX);
+					set_sampling(r(mt_distribution));
+					gen_visualize_fit_state(true);
+					reset_sampling();
+
+					distribution_only = false;
+				}
 #endif
 			}
 			if (convergence)

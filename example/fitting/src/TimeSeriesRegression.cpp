@@ -46,6 +46,7 @@ int main(int argc, char** argv)
 	}
 
 	clear_stopping_solver();
+	clear_distribution_dat();
 
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
@@ -1411,11 +1412,10 @@ int main(int argc, char** argv)
 #ifdef USE_LIBTORCH
 	if (timeSeries.n_sampling > 0)
 	{
-		std::mt19937 mt(timeSeries.n_sampling);
-		std::uniform_real_distribution r(0.1, 0.7);
+		std::uniform_real_distribution r(SAMPLING_RANGE_MIN, SAMPLING_RANGE_MAX);
 		for (int i = 0; i < timeSeries.n_sampling; i++)
 		{
-			set_sampling(r(mt));
+			set_sampling(r(timeSeries.mt_distribution));
 			timeSeries.gen_visualize_fit_state(true);
 		}
 		reset_sampling();

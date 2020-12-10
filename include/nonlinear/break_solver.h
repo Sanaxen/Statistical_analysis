@@ -15,5 +15,14 @@ inline void clear_stopping_solver()
 		remove("_stopping_solver_");
 	}
 }
+inline void clear_distribution_dat()
+{
+	std::ifstream ifs("distribution.dat");
+	if (ifs.is_open())
+	{
+		ifs.close();
+		remove("distribution.dat");
+	}
+}
 
 #endif
