@@ -57,6 +57,7 @@ int main(int argc, char** argv)
 	int x_dim = 0, y_dim = 0;
 	int x_s = 0;
 	int y_s = 0;
+	int use_cnn = 1;
 	bool test_mode = false;
 	bool dump_input = false;
 	std::string weight_init_type = "xavier";
@@ -765,6 +766,14 @@ int main(int argc, char** argv)
 		{
 			continue;
 		}
+		else if (argname == "--use_cnn") {
+			regression.use_cnn = atoi(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--use_cnn_add_bn") {
+			regression.use_cnn_add_bn = atoi(argv[count + 1]);
+			continue;
+		}
 		else if (argname == "--n_sampling")
 		{
 			regression.n_sampling = atoi(argv[count + 1]);
@@ -879,6 +888,7 @@ int main(int argc, char** argv)
 		<< "use_libtorch: " << regression.use_libtorch << std::endl
 		<< "batch_shuffle: " << regression.batch_shuffle << std::endl
 		<< "n_sampling: " << regression.n_sampling << std::endl
+		<< "use_cnn      : " << regression.use_cnn << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		<< std::endl;
 

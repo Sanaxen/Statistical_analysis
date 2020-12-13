@@ -202,6 +202,8 @@ public:
 	std::vector<int> y_idx;
 	bool fit_best_saved = false;
 	bool batch_shuffle = true;
+	int use_cnn = 0;
+	int use_cnn_add_bn = 0;
 
 	std::string activation_fnc = "tanh";
 	int n_sampling = 10;
@@ -1738,6 +1740,8 @@ public:
 				fprintf(fp, "batch_shuffle:%d\n", batch_shuffle);
 				fprintf(fp, "weight_init_type:%s\n", this->weight_init_type.c_str());
 				fprintf(fp, "activation_fnc:%s\n", this->activation_fnc.c_str());
+				fprintf(fp, "use_cnn:%d\n", use_cnn);
+				fprintf(fp, "use_cnn_add_bn:%d\n", this->use_cnn_add_bn);
 				fclose(fp);
 			}
 			else
