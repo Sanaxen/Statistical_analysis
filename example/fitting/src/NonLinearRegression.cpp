@@ -903,7 +903,9 @@ int main(int argc, char** argv)
 	}
 
 	multiplot_gnuplot_script(regression.y_idx.size(), multiplot_step, header_names, y_var_idx, false, regression.n_sampling);
+	
 	regression.fit(n_layers, input_unit);
+	
 	if (layer_graph_only)
 	{
 		goto end;

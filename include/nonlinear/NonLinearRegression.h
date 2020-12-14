@@ -206,7 +206,7 @@ public:
 	int use_cnn_add_bn = 0;
 
 	std::string activation_fnc = "tanh";
-	int n_sampling = 10;
+	int n_sampling = 0;
 	std::mt19937 mt_distribution;
 
 private:

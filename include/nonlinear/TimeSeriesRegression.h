@@ -254,7 +254,7 @@ public:
 	int mean_row = 1;
 	std::string activation_fnc = "tanh";
 	bool use_attention = true;
-	int n_sampling = 10;
+	int n_sampling = 0;
 	std::mt19937 mt_distribution;
 
 private:
@@ -2359,7 +2359,7 @@ public:
 			fprintf(fp, "sequence_length:%d\n", sequence_length);
 			fprintf(fp, "out_sequence_length:%d\n", this->out_sequence_length);
 			fprintf(fp, "target_position:%d\n", this->target_position);
-			fprintf(fp, "clip_gradients:%d\n", this->clip_gradients);
+			fprintf(fp, "clip_gradients:%f\n", this->clip_gradients);
 			fprintf(fp, "early_stopping:%d\n", this->early_stopping);
 			fprintf(fp, "rnn_layers:%d\n", rnn_layers);
 			fprintf(fp, "n_layers:%d\n", n_layers);

@@ -94,16 +94,27 @@ public:
 		{
 			return mat;
 		}
+		Matrix<dnn_double> mat_sv = mat;
 		int m = mat.m;
 
+		int count_max = m / 10;
+		int count = 0;
 		do
 		{
 			m--;
 			empty.clear();
 			nan.clear();
 			mat = toMat(m, empty, nan);
+			count++;
+			if (count == count_max) break;
 		} while (empty.size() && m >= 1);
 
+		if (count == count_max)
+		{
+			printf("Failed to delete lines containing non-numeric values.\n");
+			printf("You may have a non - numeric column.\n");
+			return mat_sv;
+		}
 		return mat;
 	}
 
