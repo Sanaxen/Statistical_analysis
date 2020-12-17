@@ -257,6 +257,9 @@ public:
 	int n_sampling = 0;
 	std::mt19937 mt_distribution;
 
+	int padding_prm = 0;
+	int residual = 0;
+
 private:
 
 	void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
@@ -694,7 +697,7 @@ private:
 				}
 
 				std::vector<tiny_dnn::vec_t> y_predict_n;
-				std::vector<tiny_dnn::vec_t> seq(iX.size());
+				std::vector<tiny_dnn::vec_t> seq(nY.size());
 #ifdef USE_LIBTORCH
 #pragma omp parallel for
 				for (int i = 0; i < nY.size(); i++)
@@ -721,9 +724,12 @@ private:
 
 					if (fp_predict)
 					{
-						for (int k = 0; k < iX[0].size(); k++)
+						if (iX.size())
 						{
-							fprintf(fp_predict, "%.3f,", iX[i][k]);
+							for (int k = 0; k < iX[0].size(); k++)
+							{
+								fprintf(fp_predict, "%.3f,", iX[i][k]);
+							}
 						}
 
 						int idx = -1;
@@ -2377,6 +2383,8 @@ public:
 			fprintf(fp, "use_attention:%d\n", this->use_attention?1:0);
 			fprintf(fp, "use_cnn:%d\n", this->use_cnn);
 			fprintf(fp, "use_cnn_add_bn:%d\n", this->use_cnn_add_bn);
+			fprintf(fp, "padding_prm:%d\n", this->padding_prm);
+			fprintf(fp, "residual:%d\n", this->residual);
 			fclose(fp);
 			
 			float maxvalue = -999999999.0;

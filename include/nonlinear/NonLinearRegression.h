@@ -209,6 +209,9 @@ public:
 	int n_sampling = 0;
 	std::mt19937 mt_distribution;
 
+	int padding_prm = 0;
+	int residual = 0;
+
 private:
 	void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
 	{
@@ -1742,6 +1745,8 @@ public:
 				fprintf(fp, "activation_fnc:%s\n", this->activation_fnc.c_str());
 				fprintf(fp, "use_cnn:%d\n", use_cnn);
 				fprintf(fp, "use_cnn_add_bn:%d\n", this->use_cnn_add_bn);
+				fprintf(fp, "padding_prm:%d\n", this->padding_prm);
+				fprintf(fp, "residual:%d\n", this->residual);
 				fclose(fp);
 			}
 			else

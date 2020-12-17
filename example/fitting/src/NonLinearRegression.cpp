@@ -766,6 +766,16 @@ int main(int argc, char** argv)
 		{
 			continue;
 		}
+		else if (argname == "--residual")
+		{
+			regression.residual = atoi(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--padding_prm")
+		{
+			regression.padding_prm = atoi(argv[count + 1]);
+			continue;
+		}
 		else if (argname == "--use_cnn") {
 			regression.use_cnn = atoi(argv[count + 1]);
 			continue;
@@ -889,6 +899,8 @@ int main(int argc, char** argv)
 		<< "batch_shuffle: " << regression.batch_shuffle << std::endl
 		<< "n_sampling: " << regression.n_sampling << std::endl
 		<< "use_cnn      : " << regression.use_cnn << std::endl
+		<< "padding_prm      : " << regression.padding_prm << std::endl
+		<< "residual      : " << regression.residual << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		<< std::endl;
 

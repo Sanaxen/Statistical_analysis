@@ -1188,6 +1188,16 @@ int main(int argc, char** argv)
 		{
 			continue;
 		}
+		else if (argname == "--residual")
+		{
+			timeSeries.residual = atoi(argv[count + 1]);
+			continue;
+		}
+		else if (argname == "--padding_prm")
+		{
+			timeSeries.padding_prm = atoi(argv[count + 1]);
+			continue;
+		}
 		else if (argname == "--n_sampling")
 		{
 			timeSeries.n_sampling = atoi(argv[count + 1]);
@@ -1378,6 +1388,9 @@ int main(int argc, char** argv)
 		<< "target_position: " << target_position << std::endl
 		<< "use_attention: " << use_attention << std::endl
 		<< "n_sampling: " << timeSeries.n_sampling << std::endl
+		<< "use_cnn      : " << timeSeries.use_cnn << std::endl
+		<< "padding_prm      : " << timeSeries.padding_prm << std::endl
+		<< "residual      : " << timeSeries.residual << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		
 		<< std::endl;
