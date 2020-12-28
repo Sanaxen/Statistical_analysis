@@ -1361,31 +1361,35 @@ private:
 						}
 						fclose(fp_test);
 					}
-					gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6);
 
-					int win_size[] = { 640,480 };
-					if (capture)
+					if (0)
 					{
-						plot1.set_capture(win_size, std::string("timeSeries_scatter.png"));
-					}
-					int grid = 30;
-					float pointsize = 1.0;
-					char* palette = NULL;
-					std::vector<std::string> header_names(2);
-					header_names[0] = "train";
-					header_names[1] = "predict";
-					plot1.scatter(xx, 0, 1, pointsize, grid, header_names, 5, palette);
-					if (palette != NULL)
-					{
-						plot1.set_palette(palette);
-					}
-					{
-						for (float t = 0.05; t < 0.5; t += 0.1)
+						gnuPlot plot1 = gnuPlot(std::string(GNUPLOT_PATH), 6);
+
+						int win_size[] = { 640,480 };
+						if (capture)
 						{
-							plot1.probability_ellipse(xx, 0, 1, t);
+							plot1.set_capture(win_size, std::string("timeSeries_scatter.png"));
 						}
+						int grid = 30;
+						float pointsize = 1.0;
+						char* palette = NULL;
+						std::vector<std::string> header_names(2);
+						header_names[0] = "train";
+						header_names[1] = "predict";
+						plot1.scatter(xx, 0, 1, pointsize, grid, header_names, 5, palette);
+						if (palette != NULL)
+						{
+							plot1.set_palette(palette);
+						}
+						{
+							for (float t = 0.05; t < 0.5; t += 0.1)
+							{
+								plot1.probability_ellipse(xx, 0, 1, t);
+							}
+						}
+						plot1.draw();
 					}
-					plot1.draw();
 				}
 				catch (...)
 				{
@@ -1689,7 +1693,7 @@ public:
 				Mean[i] = a;
 				Sigma[i] = b;
 				fgets(buf, 256, fp);
-				sscanf(buf, "à–¾•Ï”(%d)Min.Max:Min.Max:%lf %lf\n", &tmp, &a, &b);
+				sscanf(buf, "à–¾•Ï”(%d)Min.Max:%lf %lf\n", &tmp, &a, &b);
 				printf(buf);
 				Min[i] = a;
 				MaxMin[i] = b - a;
@@ -2366,7 +2370,7 @@ public:
 			fprintf(fp, "out_sequence_length:%d\n", this->out_sequence_length);
 			fprintf(fp, "target_position:%d\n", this->target_position);
 			fprintf(fp, "clip_gradients:%f\n", this->clip_gradients);
-			fprintf(fp, "early_stopping:%d\n", this->early_stopping);
+			fprintf(fp, "early_stopping:%d\n", this->early_stopping?1:0);
 			fprintf(fp, "rnn_layers:%d\n", rnn_layers);
 			fprintf(fp, "n_layers:%d\n", n_layers);
 			fprintf(fp, "n_hidden_size:%d\n", n_hidden_size);
