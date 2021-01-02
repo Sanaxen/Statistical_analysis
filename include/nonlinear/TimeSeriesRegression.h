@@ -882,7 +882,7 @@ private:
 				}
 
 				//From the first sequence onwards, all are predicted from predicted values
-				if (!use_latest_observations && test_mode)
+				if (!use_latest_observations /*&& test_mode*/)
 				{
 					for (int j = 0; j < out_sequence_length; j++)
 					{
@@ -892,7 +892,7 @@ private:
 						}
 					}
 				}
-				if (use_latest_observations || !test_mode)
+				if (use_latest_observations/* || !test_mode*/)
 				{
 					if (i >= train_images.size() - sequence_length)
 					{
