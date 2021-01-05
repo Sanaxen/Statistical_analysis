@@ -204,6 +204,7 @@ public:
 	bool batch_shuffle = true;
 	int use_cnn = 0;
 	int use_cnn_add_bn = 0;
+	int use_add_bn = 0;
 
 	std::string activation_fnc = "tanh";
 	int n_sampling = 0;
@@ -1745,6 +1746,7 @@ public:
 				fprintf(fp, "activation_fnc:%s\n", this->activation_fnc.c_str());
 				fprintf(fp, "use_cnn:%d\n", use_cnn);
 				fprintf(fp, "use_cnn_add_bn:%d\n", this->use_cnn_add_bn);
+				fprintf(fp, "use_add_bn:%d\n", this->use_add_bn);
 				fprintf(fp, "padding_prm:%d\n", this->padding_prm);
 				fprintf(fp, "residual:%d\n", this->residual);
 				fclose(fp);

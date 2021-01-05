@@ -1566,6 +1566,7 @@ public:
 	float tolerance = 1.0e-6;
 	int use_cnn = 1;
 	int use_cnn_add_bn = 1;
+	int use_add_bn = 0;
 	int fc_hidden_size = -1;
 	std::string weight_init_type = "xavier";
 	bool layer_graph_only = false;
@@ -2387,6 +2388,7 @@ public:
 			fprintf(fp, "use_attention:%d\n", this->use_attention?1:0);
 			fprintf(fp, "use_cnn:%d\n", this->use_cnn);
 			fprintf(fp, "use_cnn_add_bn:%d\n", this->use_cnn_add_bn);
+			fprintf(fp, "use_add_bn:%d\n", this->use_add_bn);
 			fprintf(fp, "padding_prm:%d\n", this->padding_prm);
 			fprintf(fp, "residual:%d\n", this->residual);
 			fclose(fp);

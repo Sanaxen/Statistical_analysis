@@ -784,6 +784,10 @@ int main(int argc, char** argv)
 			regression.use_cnn_add_bn = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--use_add_bn") {
+			regression.use_add_bn = atoi(argv[count + 1]);
+			continue;
+		}
 		else if (argname == "--n_sampling")
 		{
 			regression.n_sampling = atoi(argv[count + 1]);

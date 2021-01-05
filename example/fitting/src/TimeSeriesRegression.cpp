@@ -1309,6 +1309,10 @@ int main(int argc, char** argv)
 			timeSeries.use_cnn_add_bn = atoi(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--use_add_bn") {
+			timeSeries.use_add_bn = atoi(argv[count + 1]);
+			continue;
+		}
 		else if (argname == "--dropout") {
 			timeSeries.dropout = atof(argv[count + 1]);
 			continue;
