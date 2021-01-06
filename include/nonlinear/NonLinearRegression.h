@@ -127,10 +127,19 @@ inline void multiplot_gnuplot_script(int ydim, int step, std::vector<std::string
 
 			if (confidence)
 			{
-				plot = plot + ",\\\n\"confidence.dat\" using 1:%d:%d  with filledcurves fc \"#5f9ea0\" t \"95%% confidence\""
-					",\\\n\"distribution.dat\"  using 1:%d with circles lc \"#5f9ea0\" fs transparent  solid 0.2  noborder\n\n";
-				fprintf(fp, plot.c_str(), count * 2 + 3, count * 2 + 2,
-					count*ydim + 3, count*ydim + 4, count + 2);
+				if (0)
+				{
+					plot = plot + ",\\\n\"confidence.dat\" using 1:%d:%d  with filledcurves fc \"#5f9ea0\" t \"95%% confidence\""
+						",\\\n\"distribution.dat\"  using 1:%d with circles lc \"#5f9ea0\" fs transparent  solid 0.2  noborder\n\n";
+					fprintf(fp, plot.c_str(), count * 2 + 3, count * 2 + 2,
+						count*ydim + 3, count*ydim + 4, count + 2);
+				}
+				else
+				{
+					plot = plot + ",\\\n\"confidence.dat\" using 1:%d:%d  with filledcurves fc \"#5f9ea0\" t \"95%% confidence\"\n",
+					fprintf(fp, plot.c_str(), count * 2 + 3, count * 2 + 2,
+						count*ydim + 3, count*ydim + 4);
+				}
 			}
 			else
 			{
