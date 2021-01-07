@@ -248,7 +248,7 @@ public:
 	bool use_differnce_auto_inv = false;
 	bool use_defined_scale = false;
 	bool use_trained_scale = true;
-	bool use_latest_observations = true;	//Always use the latest observations
+	double use_latest_observations = 1.0;	//Always use the latest observations
 	bool normalized = false;
 	std::vector<std::string> header;
 	std::vector<int> normalize_skilp;		// non normalize var
@@ -830,7 +830,7 @@ private:
 			std::vector<tiny_dnn::vec_t> y_predict_n;
 			std::vector<tiny_dnn::vec_t> seq(train_images.size());
 #ifdef USE_LIBTORCH
-			if (use_latest_observations || !test_mode)
+			if (use_latest_observations == 1.0 || !test_mode)
 			{
 
 #pragma omp parallel for
@@ -891,7 +891,7 @@ private:
 				}
 
 				//From the first sequence onwards, all are predicted from predicted values
-				if (!use_latest_observations /*&& test_mode*/)
+				if (!use_latest_observations)
 				{
 					for (int j = 0; j < out_sequence_length; j++)
 					{
@@ -901,13 +901,13 @@ private:
 						}
 					}
 				}
-				if (use_latest_observations/* || !test_mode*/)
+				if (use_latest_observations)
 				{
-					if (i >= train_images.size() - sequence_length)
+					if (i >= use_latest_observations* train_images.size() ||i >= train_images.size() - sequence_length)
 					{
 						for (int j = 0; j < out_sequence_length; j++)
 						{
-							if (i + sequence_length + j + TARGET_POSITON >= train_images.size())
+							if (i + sequence_length + j + TARGET_POSITON >= train_images.size()*use_latest_observations)
 							{
 								for (int k = 0; k < y_dim; k++)
 								{
