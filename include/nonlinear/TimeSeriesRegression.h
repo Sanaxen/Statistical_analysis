@@ -21,7 +21,7 @@
 #include "../../include/nonlinear/f_distribution.h"
 
 #define SAMPLING_RANGE_MIN 0.01
-#define SAMPLING_RANGE_MAX 0.5
+#define SAMPLING_RANGE_MAX 0.25
 
 #define EARLY_STOPPING_	10
 
@@ -1021,7 +1021,16 @@ private:
 
 							for (int j = 0; j < sz; j++)
 							{
-								fprintf(fp, "%d", j);
+								//fprintf(fp, "%d", j);
+								if (timestamp.size() > j)
+								{
+									fprintf(fp, "%s ", timestamp[j].c_str());
+								}
+								else
+								{
+									fprintf(fp, "%.3f ", timver_tmp[j]);
+								}
+
 								for (int k = 0; k < y_dim; k++)
 								{
 									if (j < sequence_length)
