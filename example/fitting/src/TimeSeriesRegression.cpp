@@ -1323,7 +1323,7 @@ int main(int argc, char** argv)
 		}
 		else if (argname == "--use_latest_observations")
 		{
-			timeSeries.use_latest_observations = (0 < atoi(argv[count + 1])) ? true : false;
+			timeSeries.use_latest_observations = atof(argv[count + 1]);
 			continue;
 		}
 		else {
