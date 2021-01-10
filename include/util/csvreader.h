@@ -2,6 +2,7 @@
 #define _CSVREADER_H
 
 #include "../../third_party/CSVparser/CSVparser_single.hpp"
+#include <regex>
 
 #define XXXXXX	-1
 #define YYYMMDD			0
@@ -234,176 +235,246 @@ public:
 #if 10				
 				if(no_number)
 				{
-					float t[6];
-					char buf[256];
+					//printf("[%s]\n", value);
 					bool match = false;
-					int stat = -1;
-					stat = sscanf(value, "%f/%f/%f %f:%f:%f", t, t + 1, t + 2, t + 3, t + 4, t + 5);
-					if (stat == 6)
+					if (std::regex_match(value, std::regex("^\"\\d{2,4}/\\d{1,2}/\\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2}\"")))
 					{
-						time_form_type = YYYMMDDHHMMSS;
-						time_form_delimiter = '/';
 						match = true;
 					}
-					if (!match)
+					if (std::regex_match(value, std::regex("^\"\\d{2,4}/\\d{1,2}/\\d{1,2}\"")))
 					{
-						stat = sscanf(value, "\"%f/%f/%f %f:%f:%f\"", t, t + 1, t + 2, t + 3, t + 4, t + 5);
-						if (stat == 6)
-						{
-							time_form_type = YYYMMDDHHMMSS;
-							time_form_delimiter = '/';
-							match = true;
-						}
+						match = true;
 					}
-					if (!match)
+					if (std::regex_match(value, std::regex("^\"\\d{1,4}/\\d{1,2}\"")))
 					{
-						stat = sscanf(value, "%f/%f/%f", t, t + 1, t + 2);
-						if (stat == 3)
-						{
-							time_form_type = YYYMMDD;
-							time_form_delimiter = '/';
-							match = true;
-						}
+						match = true;
 					}
-					if (!match)
+					if (std::regex_match(value, std::regex("^\"\\d{1,2}:\\d{1,2}:\\d{1,2}\"")))
 					{
-						stat = sscanf(value, "\"%f/%f/%f\"", t, t + 1, t + 2);
-						if (stat == 3)
-						{
-							time_form_type = YYYMMDD;
-							time_form_delimiter = '/';
-							match = true;
-						}
+						match = true;
 					}
-					if (!match)
+					if (std::regex_match(value, std::regex("^\"\\d{1,2}:\\d{1,2}\"")))
 					{
-						stat = sscanf(value, "%f-%f-%f %f:%f:%f", t, t + 1, t + 2, t + 3, t + 4, t + 5);
-						if (stat == 6)
-						{
-							time_form_type = YYYMMDDHHMMSS;
-							time_form_delimiter = '-';
-							match = true;
-						}
-					}
-					if (!match)
-					{
-						stat = sscanf(value, "\"%f-%f-%f %f:%f:%f\"", t, t + 1, t + 2, t + 3, t + 4, t + 5);
-						if (stat == 6)
-						{
-							time_form_type = YYYMMDDHHMMSS;
-							time_form_delimiter = '-';
-							match = true;
-						}
-					}
-					if (!match)
-					{
-						stat = sscanf(value, "%f-%f-%f", t, t + 1, t + 2);
-						if (stat == 3)
-						{
-							time_form_type = YYYMMDD;
-							time_form_delimiter = '-';
-							match = true;
-						}
-					}
-					if (!match)
-					{
-						stat = sscanf(value, "\"%f-%f-%f\"", t, t + 1, t + 2);
-						if (stat == 3)
-						{
-							time_form_type = YYYMMDD;
-							time_form_delimiter = '-';
-							match = true;
-						}
-					}
-					if (!match)
-					{
-						stat = sscanf(value, "\"%f:%f:%f\"", t, t + 1, t + 2);
-						if (stat == 3)
-						{
-							time_form_type = _______HHMMSS;
-							time_form_delimiter = ':';
-							match = true;
-						}
-					}
-					if (!match)
-					{
-						stat = sscanf(value, "%f:%f:%f", t, t + 1, t + 2);
-						if (stat == 3)
-						{
-							time_form_type = _______HHMMSS;
-							time_form_delimiter = ':';
-							match = true;
-						}
-					}
-					if (!match)
-					{
-						stat = sscanf(value, "\"%f:%f\"", t, t + 1);
-						if (stat == 2)
-						{
-							time_form_type = _________MMSS;
-							time_form_delimiter = ':';
-							match = true;
-						}
-					}
-					if (!match)
-					{
-						stat = sscanf(value, "%f:%f", t, t + 1);
-						if (stat == 2)
-						{
-							time_form_type = _________MMSS;
-							time_form_delimiter = ':';
-							match = true;
-						}
+						match = true;
 					}
 
-					/////////////
-					stat = sscanf(value, "%f年%f月%f日 %f:%f:%f", t, t + 1, t + 2, t + 3, t + 4, t + 5);
-					if (stat == 6)
+					if (std::regex_match(value, std::regex("^\"\\d{2,4}-\\d{1,2}-\\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2}\"")))
 					{
-						time_form_type = YYYMMDDHHMMSS;
-						time_form_delimiter = '/';
 						match = true;
 					}
-					if (!match)
+					if (std::regex_match(value, std::regex("^\"\\d{2,4}-\\d{1,2}-\\d{1,2}\"")))
 					{
-						stat = sscanf(value, "\"%f年%f月%f日 %f:%f:%f\"", t, t + 1, t + 2, t + 3, t + 4, t + 5);
-						if (stat == 6)
-						{
-							time_form_type = YYYMMDDHHMMSS;
-							time_form_delimiter = '/';
-							match = true;
-						}
+						match = true;
 					}
-					if (!match)
+					if (std::regex_match(value, std::regex("^\"\\d{1,4}-\\d{1,2}\"")))
 					{
-						stat = sscanf(value, "%f年%f月%f日", t, t + 1, t + 2);
-						if (stat == 3)
-						{
-							time_form_type = YYYMMDD;
-							time_form_delimiter = '/';
-							match = true;
-						}
+						match = true;
 					}
-					if (!match)
+
+					///////////////
+					if (std::regex_match(value, std::regex("^\\d{2,4}/\\d{1,2}/\\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2}")))
 					{
-						stat = sscanf(value, "\"%f年%f月%f日\"", t, t + 1, t + 2);
-						if (stat == 3)
-						{
-							time_form_type = YYYMMDD;
-							time_form_delimiter = '/';
-							match = true;
-						}
+						match = true;
 					}
-					if (!match)
+					if (std::regex_match(value, std::regex("^\\d{2,4}/\\d{1,2}/\\d{1,2}")))
 					{
-						stat = sscanf(value, "\"%f時%f分%f秒\"", t, t + 1, t + 2);
-						if (stat == 3)
-						{
-							time_form_type = _______HHMMSS;
-							time_form_delimiter = ':';
-							match = true;
-						}
+						match = true;
 					}
+					if (std::regex_match(value, std::regex("^\\d{1,4}/\\d{1,2}")))
+					{
+						match = true;
+					}
+					if (std::regex_match(value, std::regex("^\\d{1,2}:\\d{1,2}:\\d{1,2}")))
+					{
+						match = true;
+					}
+					if (std::regex_match(value, std::regex("^\\d{1,2}:\\d{1,2}")))
+					{
+						match = true;
+					}
+
+					if (std::regex_match(value, std::regex("^\\d{2,4}-\\d{1,2}-\\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2}")))
+					{
+						match = true;
+					}
+					if (std::regex_match(value, std::regex("^\\d{2,4}-\\d{1,2}-\\d{1,2}")))
+					{
+						match = true;
+					}
+					if (std::regex_match(value, std::regex("^\\d{1,4}-\\d{1,2}")))
+					{
+						match = true;
+					}
+
+					//float t[6];
+					//char buf[256];
+					//int stat = -1;
+					//stat = sscanf(value, "%f/%f/%f %f:%f:%f", t, t + 1, t + 2, t + 3, t + 4, t + 5);
+					//if (stat == 6)
+					//{
+					//	time_form_type = YYYMMDDHHMMSS;
+					//	time_form_delimiter = '/';
+					//	match = true;
+					//}
+					//if (!match)
+					//{
+					//	stat = sscanf(value, "\"%f/%f/%f %f:%f:%f\"", t, t + 1, t + 2, t + 3, t + 4, t + 5);
+					//	if (stat == 6)
+					//	{
+					//		time_form_type = YYYMMDDHHMMSS;
+					//		time_form_delimiter = '/';
+					//		match = true;
+					//	}
+					//}
+					//if (!match)
+					//{
+					//	stat = sscanf(value, "%f/%f/%f", t, t + 1, t + 2);
+					//	if (stat == 3)
+					//	{
+					//		time_form_type = YYYMMDD;
+					//		time_form_delimiter = '/';
+					//		match = true;
+					//	}
+					//}
+					//if (!match)
+					//{
+					//	stat = sscanf(value, "\"%f/%f/%f\"", t, t + 1, t + 2);
+					//	if (stat == 3)
+					//	{
+					//		time_form_type = YYYMMDD;
+					//		time_form_delimiter = '/';
+					//		match = true;
+					//	}
+					//}
+					//if (!match)
+					//{
+					//	stat = sscanf(value, "%f-%f-%f %f:%f:%f", t, t + 1, t + 2, t + 3, t + 4, t + 5);
+					//	if (stat == 6)
+					//	{
+					//		time_form_type = YYYMMDDHHMMSS;
+					//		time_form_delimiter = '-';
+					//		match = true;
+					//	}
+					//}
+					//if (!match)
+					//{
+					//	stat = sscanf(value, "\"%f-%f-%f %f:%f:%f\"", t, t + 1, t + 2, t + 3, t + 4, t + 5);
+					//	if (stat == 6)
+					//	{
+					//		time_form_type = YYYMMDDHHMMSS;
+					//		time_form_delimiter = '-';
+					//		match = true;
+					//	}
+					//}
+					//if (!match)
+					//{
+					//	stat = sscanf(value, "%f-%f-%f", t, t + 1, t + 2);
+					//	if (stat == 3)
+					//	{
+					//		time_form_type = YYYMMDD;
+					//		time_form_delimiter = '-';
+					//		match = true;
+					//	}
+					//}
+					//if (!match)
+					//{
+					//	stat = sscanf(value, "\"%f-%f-%f\"", t, t + 1, t + 2);
+					//	if (stat == 3)
+					//	{
+					//		time_form_type = YYYMMDD;
+					//		time_form_delimiter = '-';
+					//		match = true;
+					//	}
+					//}
+					//if (!match)
+					//{
+					//	stat = sscanf(value, "\"%f:%f:%f\"", t, t + 1, t + 2);
+					//	if (stat == 3)
+					//	{
+					//		time_form_type = _______HHMMSS;
+					//		time_form_delimiter = ':';
+					//		match = true;
+					//	}
+					//}
+					//if (!match)
+					//{
+					//	stat = sscanf(value, "%f:%f:%f", t, t + 1, t + 2);
+					//	if (stat == 3)
+					//	{
+					//		time_form_type = _______HHMMSS;
+					//		time_form_delimiter = ':';
+					//		match = true;
+					//	}
+					//}
+					//if (!match)
+					//{
+					//	stat = sscanf(value, "\"%f:%f\"", t, t + 1);
+					//	if (stat == 2)
+					//	{
+					//		time_form_type = _________MMSS;
+					//		time_form_delimiter = ':';
+					//		match = true;
+					//	}
+					//}
+					//if (!match)
+					//{
+					//	stat = sscanf(value, "%f:%f", t, t + 1);
+					//	if (stat == 2)
+					//	{
+					//		time_form_type = _________MMSS;
+					//		time_form_delimiter = ':';
+					//		match = true;
+					//	}
+					//}
+
+					///////////////
+					//stat = sscanf(value, "%f年%f月%f日 %f:%f:%f", t, t + 1, t + 2, t + 3, t + 4, t + 5);
+					//if (stat == 6)
+					//{
+					//	time_form_type = YYYMMDDHHMMSS;
+					//	time_form_delimiter = '/';
+					//	match = true;
+					//}
+					//if (!match)
+					//{
+					//	stat = sscanf(value, "\"%f年%f月%f日 %f:%f:%f\"", t, t + 1, t + 2, t + 3, t + 4, t + 5);
+					//	if (stat == 6)
+					//	{
+					//		time_form_type = YYYMMDDHHMMSS;
+					//		time_form_delimiter = '/';
+					//		match = true;
+					//	}
+					//}
+					//if (!match)
+					//{
+					//	stat = sscanf(value, "%f年%f月%f日", t, t + 1, t + 2);
+					//	if (stat == 3)
+					//	{
+					//		time_form_type = YYYMMDD;
+					//		time_form_delimiter = '/';
+					//		match = true;
+					//	}
+					//}
+					//if (!match)
+					//{
+					//	stat = sscanf(value, "\"%f年%f月%f日\"", t, t + 1, t + 2);
+					//	if (stat == 3)
+					//	{
+					//		time_form_type = YYYMMDD;
+					//		time_form_delimiter = '/';
+					//		match = true;
+					//	}
+					//}
+					//if (!match)
+					//{
+					//	stat = sscanf(value, "\"%f時%f分%f秒\"", t, t + 1, t + 2);
+					//	if (stat == 3)
+					//	{
+					//		time_form_type = _______HHMMSS;
+					//		time_form_delimiter = ':';
+					//		match = true;
+					//	}
+					//}
 
 					/////////////
 					if (match)
