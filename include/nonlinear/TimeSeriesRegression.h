@@ -65,6 +65,61 @@ inline char* timeToStr(dnn_double t, const std::string& format, char* str, size_
 	//strftime(str, sz, "%Y/%m/%d[%H:%M:%S]", timeptr);
 	return str;
 }
+extern "C" char* strptime(const char* s,
+	const char* f,
+	struct tm* tm);
+inline std::string timeStr(const char* time1, const char*time2, int n = 1)
+{
+	struct tm tm1, tm2, tm3;
+	memset(&tm1, '\0', sizeof(struct tm));
+	memset(&tm2, '\0', sizeof(struct tm));
+	memset(&tm3, '\0', sizeof(struct tm));
+
+	//printf("%s\n", time1);
+	//printf("%s\n", time2);
+	tm1.tm_isdst = -1;
+	tm2.tm_isdst = -1;
+	tm3.tm_isdst = -1;
+
+	strptime(time1, "%Y-%m-%d %H:%M:%S", &tm1);
+	strptime(time2, "%Y-%m-%d %H:%M:%S", &tm2);
+	//int n1 = sprintf((char*)time1, "%d-%0d-%0d %0d:%0d:%0d", &tm1.tm_year, &tm1.tm_mon, &tm1.tm_mday, &tm1.tm_hour, &tm1.tm_min, &tm1.tm_sec);
+	//int n2 = sprintf((char*)time2, "%d-%0d-%0d %0d:%0d:%0d", &tm2.tm_year, &tm2.tm_mon, &tm2.tm_mday, &tm2.tm_hour, &tm2.tm_min, &tm2.tm_sec);
+
+	//printf("%d %d\n", n1, n2);
+	//if (n1 != 6)
+	//{
+	//	tm1.tm_year = 1900;
+	//	tm2.tm_year = 1900;
+	//	tm1.tm_mon = 1;
+	//	tm2.tm_mon = 1;
+	//	n1 = sprintf((char*)time1, "%d:%d:%d", &tm1.tm_hour, &tm1.tm_min, &tm1.tm_sec);
+	//	n2 = sprintf((char*)time2, "%d:%d:%d", &tm2.tm_hour, &tm2.tm_min, &tm2.tm_sec);
+	//}
+	//if (n1 != 6)
+	//{
+	//	n1 = sprintf((char*)time1, "%d-%d-%d", &tm1.tm_year, &tm1.tm_mon, &tm1.tm_mday);
+	//	n2 = sprintf((char*)time2, "%d-%d-%d", &tm2.tm_year, &tm2.tm_mon, &tm2.tm_mday);
+	//}
+	//printf("%d %d\n", n1, n2);
+	//tm1.tm_year -= 1900;
+	//tm2.tm_year -= 1900;
+	//tm1.tm_mon -= 1;
+	//tm2.tm_mon -= 1;
+
+	time_t t1 = mktime(&tm1);
+	time_t t2 = mktime(&tm2);
+
+	auto diff = difftime(t2, t1);
+
+
+	time_t t3 = t2 + diff * n;
+	tm3 = *localtime(&t3);
+	char str[80];
+	strftime(str, sizeof(str), "%Y-%m-%d %H:%M:%S", &tm3);
+
+	return std::string(str);
+}
 
 inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::string>& names, std::vector<int>& idx, std::string& timeformat, bool putImage, int confidence)
 {
@@ -782,6 +837,17 @@ private:
 			start = std::chrono::system_clock::now();
 #endif
 
+			if (this->timeformat != "" && timestamp.size() > 0 && timestamp.size() < YY.size())
+			{
+				int sz = timestamp.size();
+				int add = YY.size() - sz;
+				for (int i = 0; i < add; i++)
+				{
+					auto x = timeStr(timestamp[sz - 2].c_str(), timestamp[sz - 1].c_str(), 1);
+					timestamp.push_back(x);
+					sz = timestamp.size();
+				}
+			}
 #pragma omp parallel
 			{
 				const size_t sz = nY[0].size();
@@ -1125,7 +1191,7 @@ private:
 							fprintf(fp_test, "%s ", timestamp[i].c_str());
 						}
 						else
-						{
+						{					
 							fprintf(fp_test, "%.3f ",timver_tmp[i]);
 						}
 
@@ -1269,6 +1335,9 @@ private:
 						}
 						else
 						{
+							//timestamp.push_back(timeStr(timestamp[i - 2].c_str(), timestamp[i - 1].c_str(), 1));
+							//fprintf(fp_test, "%s ", timestamp[i].c_str());
+
 							fprintf(fp_test, "%.3f ", timver_tmp[i]);
 						}
 
@@ -1373,6 +1442,9 @@ private:
 							}
 							else
 							{
+								//timestamp.push_back(timeStr(timestamp[i - 2].c_str(), timestamp[i - 1].c_str(), 1));
+								//fprintf(fp_test, "%s ", timestamp[i].c_str());
+								
 								fprintf(fp_test, "%.3f, ", timver_tmp[i]);
 							}
 							fprintf(fp_test, "%f,%f,%f\n", xx(i, 0), y(i, 0), x(i, 0));
