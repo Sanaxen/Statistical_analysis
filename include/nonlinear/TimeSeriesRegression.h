@@ -68,7 +68,7 @@ inline char* timeToStr(dnn_double t, const std::string& format, char* str, size_
 extern "C" char* strptime(const char* s,
 	const char* f,
 	struct tm* tm);
-inline std::string timeStr(const char* time1, const char*time2, int n = 1)
+inline std::string timeStr(std::string& time1, std::string& time2, std::string& format = std::string(""), int n = 1)
 {
 	struct tm tm1, tm2, tm3;
 	memset(&tm1, '\0', sizeof(struct tm));
@@ -81,8 +81,16 @@ inline std::string timeStr(const char* time1, const char*time2, int n = 1)
 	tm2.tm_isdst = -1;
 	tm3.tm_isdst = -1;
 
-	strptime(time1, "%Y-%m-%d %H:%M:%S", &tm1);
-	strptime(time2, "%Y-%m-%d %H:%M:%S", &tm2);
+	if (format == "")
+	{
+		strptime(time1.c_str(), "%Y-%m-%d %H:%M:%S", &tm1);
+		strptime(time2.c_str(), "%Y-%m-%d %H:%M:%S", &tm2);
+	}
+	else
+	{
+		strptime(time1.c_str(), format.c_str(), &tm1);
+		strptime(time2.c_str(), format.c_str(), &tm2);
+	}
 	//int n1 = sprintf((char*)time1, "%d-%0d-%0d %0d:%0d:%0d", &tm1.tm_year, &tm1.tm_mon, &tm1.tm_mday, &tm1.tm_hour, &tm1.tm_min, &tm1.tm_sec);
 	//int n2 = sprintf((char*)time2, "%d-%0d-%0d %0d:%0d:%0d", &tm2.tm_year, &tm2.tm_mon, &tm2.tm_mday, &tm2.tm_hour, &tm2.tm_min, &tm2.tm_sec);
 
@@ -110,14 +118,24 @@ inline std::string timeStr(const char* time1, const char*time2, int n = 1)
 	time_t t1 = mktime(&tm1);
 	time_t t2 = mktime(&tm2);
 
+	if (t1 > t2 || t1 < 0 || t2 < 0)
+	{
+		return "";
+	}
 	auto diff = difftime(t2, t1);
 
 
 	time_t t3 = t2 + diff * n;
 	tm3 = *localtime(&t3);
 	char str[80];
-	strftime(str, sizeof(str), "%Y-%m-%d %H:%M:%S", &tm3);
-
+	if (format == "")
+	{
+		strftime(str, sizeof(str), "%Y-%m-%d %H:%M:%S", &tm3);
+	}
+	else
+	{
+		strftime(str, sizeof(str), format.c_str(), &tm3);
+	}
 	return std::string(str);
 }
 
@@ -176,6 +194,7 @@ inline void multiplot_gnuplot_script_ts(int ydim, int step, std::vector<std::str
 		if (fp == NULL) return;
 
 		fprintf(fp, "bind \"Close\" \"if (GPVAL_TERM eq \'wxt\') bind \'Close\' \'\'; exit gnuplot; else bind \'Close\' \'\'; exit\"\n");
+		fprintf(fp, "set datafile separator \",\"\n");
 
 		fprintf(fp, "set term windows size %d,%d font \"arial,10\"\n", (int)(640 * 2.8), (int)(380 * 1.5)*step / 2);
 		if (putImage)
@@ -841,9 +860,15 @@ private:
 			{
 				int sz = timestamp.size();
 				int add = YY.size() - sz;
+				
 				for (int i = 0; i < add; i++)
 				{
-					auto x = timeStr(timestamp[sz - 2].c_str(), timestamp[sz - 1].c_str(), 1);
+					auto x = timeStr(timestamp[sz - 2], timestamp[sz - 1], this->timeformat, 1);
+					if (x == "")
+					{
+						printf("ERROR:y < 1970\n");
+						break;
+					}
 					timestamp.push_back(x);
 					sz = timestamp.size();
 				}
@@ -1101,14 +1126,14 @@ private:
 								{
 									if (j < sequence_length)
 									{
-										fprintf(fp, " %f %f %f",
+										fprintf(fp, ", %f, %f, %f",
 											train[j][k],
 											train[j][k],
 											train[j][k]);
 									}
 									else
 									{
-										fprintf(fp, " %f %f %f",
+										fprintf(fp, ", %f, %f, %f",
 											st_sum[j][k] / n_samples_cnt,
 											st_sum[j][k] / n_samples_cnt - alp * sqrt(st_sigma2[j][k] / n_samples_cnt),
 											st_sum[j][k] / n_samples_cnt + alp * sqrt(st_sigma2[j][k] / n_samples_cnt));
@@ -1199,15 +1224,15 @@ private:
 						{
 							if (i < sequence_length + TARGET_POSITON)
 							{
-								fprintf(fp_test, "NaN %f ", yy[k]);
+								fprintf(fp_test, ",NaN, %f ", yy[k]);
 							}else
 							if (i >= iY.size())
 							{
-								fprintf(fp_test, "NaN %f ", yy[k]);
+								fprintf(fp_test, ",NaN, %f ", yy[k]);
 							}
 							else
 							{
-								fprintf(fp_test, "%f %f ", y[k], yy[k]);
+								fprintf(fp_test, ",%f, %f ", y[k], yy[k]);
 							}
 							//if (fp_predict)
 							//{
@@ -1215,9 +1240,9 @@ private:
 							//}
 						}
 						if (i >= iY.size())
-							fprintf(fp_test, "NaN %f\n", yy[y_dim - 1]);
+							fprintf(fp_test, ",NaN, %f\n", yy[y_dim - 1]);
 						else
-							fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
+							fprintf(fp_test, ",%f, %f\n", y[y_dim - 1], yy[y_dim - 1]);
 
 						//if (fp_predict)
 						//{
@@ -1247,9 +1272,9 @@ private:
 						}
 						for (int k = 0; k < y_dim - 1; k++)
 						{
-							fprintf(fp_test, "%f %f ", y[k], y[k]);
+							fprintf(fp_test, ",%f, %f ", y[k], y[k]);
 						}
-						fprintf(fp_test, "%f %f\n", y[y_dim - 1], y[y_dim - 1]);
+						fprintf(fp_test, ",%f, %f\n", y[y_dim - 1], y[y_dim - 1]);
 					}
 					fclose(fp_test);
 				}
@@ -1279,9 +1304,9 @@ private:
 						}
 						for (int k = 0; k < y_dim - 1; k++)
 						{
-							fprintf(fp_test, "%f %f ", y[k], yy[k]);
+							fprintf(fp_test, ",%f, %f ", y[k], yy[k]);
 						}
-						fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
+						fprintf(fp_test, ",%f, %f\n", y[y_dim - 1], yy[y_dim - 1]);
 					}
 					fclose(fp_test);
 				}
@@ -1309,9 +1334,9 @@ private:
 						}
 						for (int k = 0; k < y_dim - 1; k++)
 						{
-							fprintf(fp_test, "%f %f ", y[k], yy[k]);
+							fprintf(fp_test, ",%f, %f ", y[k], yy[k]);
 						}
-						fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
+						fprintf(fp_test, ",%f, %f\n", y[y_dim - 1], yy[y_dim - 1]);
 					}
 					fclose(fp_test);
 				}
@@ -1345,17 +1370,17 @@ private:
 						{
 							for (int k = 0; k < y_dim - 1; k++)
 							{
-								fprintf(fp_test, "NaN %f ", yy[k]);
+								fprintf(fp_test, ",NaN, %f ", yy[k]);
 							}
-							fprintf(fp_test, "NaN %f\n", yy[y_dim - 1]);
+							fprintf(fp_test, ",NaN, %f\n", yy[y_dim - 1]);
 						}
 						else
 						{
 							for (int k = 0; k < y_dim - 1; k++)
 							{
-								fprintf(fp_test, "%f %f ", y[k], yy[k]);
+								fprintf(fp_test, ",%f, %f ", y[k], yy[k]);
 							}
-							fprintf(fp_test, "%f %f\n", y[y_dim - 1], yy[y_dim - 1]);
+							fprintf(fp_test, ",%f, %f\n", y[y_dim - 1], yy[y_dim - 1]);
 						}
 					}
 					fclose(fp_test);
