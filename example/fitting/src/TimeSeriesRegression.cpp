@@ -751,19 +751,40 @@ int main(int argc, char** argv)
 
 		if (csv1.timeform.size() && timeformat != "")
 		{
-			for (int i = 0; i < z.m; i++)
+			if (csv1.timeform[0 * z.n + t_var_idx] == "")
 			{
-				if (csv1.timeform[i*z.n + t_var_idx] == "")
+				time_t current;
+				time(&current);
+				struct tm  *local = localtime(&current);
+
+				char str[80];
+				strftime(str, sizeof(str), "%Y-%m-%d", local);
+				timestamp.push_back(str);
+
+				current += 86400;// +1day
+				strftime(str, sizeof(str), "%Y-%m-%d", local);
+				timestamp.push_back(str);
+
+				for (int i = 2; i < z.m; i++)
 				{
-					char tmp[32];
-					sprintf(tmp, "%d/01/01", (int)(tvar(i, 0)+0.5f));
-					timestamp.push_back(tmp);
-					printf("%s\n", tmp);
-					continue;
+					auto x = timeStr(timestamp[i-2], timestamp[i-1], std::string("%Y-%m-%d"), 1);
+					if (x == "")
+					{
+						printf("ERROR:y < 1970\n");
+						break;
+					}
+					timestamp.push_back(x);
+					printf("%s\n", x);
 				}
-				//tvar(i, 0) = i;
-				timestamp.push_back(csv1.timeform[i*z.n + t_var_idx]);
-				printf("%s\n", csv1.timeform[i*z.n + t_var_idx].c_str());
+			}
+			else
+			{
+				for (int i = 0; i < z.m; i++)
+				{
+					//tvar(i, 0) = i;
+					timestamp.push_back(csv1.timeform[i*z.n + t_var_idx]);
+					printf("%s\n", csv1.timeform[i*z.n + t_var_idx].c_str());
+				}
 			}
 		}
 		if (csv1.timeform.size() && timeformat == "")
@@ -783,6 +804,16 @@ int main(int argc, char** argv)
 		for (int i = 0; i < y.m; i++) tvar(i, 0) = i;
 	}
 
+	//{
+	//	printf("==========================\n"); fflush(stdout);
+	//	for (int i = 0; i < 1000; i++)
+	//	{
+	//		auto x = timeStr(timestamp[0].c_str(), timestamp[1].c_str(), timestamp.size()+i);
+	//		printf("%d %s\n", i, x.c_str());
+	//	}
+	//	printf("==========================\n"); fflush(stdout);
+	//	exit(0);
+	//}
 	if(dump_input)
 	{
 		std::vector<std::string> hed;
