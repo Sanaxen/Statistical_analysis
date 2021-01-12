@@ -758,23 +758,24 @@ int main(int argc, char** argv)
 				struct tm  *local = localtime(&current);
 
 				char str[80];
-				strftime(str, sizeof(str), "%Y-%m-%d", local);
+				strftime(str, sizeof(str), "%Y-%m-%d %H:%M:%S", local);
 				timestamp.push_back(str);
 
-				current += 86400;// +1day
-				strftime(str, sizeof(str), "%Y-%m-%d", local);
+				current += 1;// +1sec
+				local = localtime(&current);
+				strftime(str, sizeof(str), "%Y-%m-%d %H:%M:%S", local);
 				timestamp.push_back(str);
 
 				for (int i = 2; i < z.m; i++)
 				{
-					auto x = timeStr(timestamp[i-2], timestamp[i-1], std::string("%Y-%m-%d"), 1);
+					auto x = timeStr(timestamp[i-2], timestamp[i-1], std::string("%Y-%m-%d %H:%M:%S"), 1);
 					if (x == "")
 					{
 						printf("ERROR:y < 1970\n");
 						break;
 					}
 					timestamp.push_back(x);
-					printf("%s\n", x);
+					printf("%s\n", x.c_str());
 				}
 			}
 			else

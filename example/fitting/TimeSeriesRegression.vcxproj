@@ -196,10 +196,11 @@
       <ForceFileOutput>MultiplyDefinedSymbolOnly</ForceFileOutput>
       <OutputFile>$(OutDir)$(TargetName)_cuda$(TargetExt)</OutputFile>
       <AdditionalLibraryDirectories>C:\tbb2019_20181203oss\lib\intel64\vc14;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2017.4.210\windows\mkl\lib\intel64_win;.\pytorch_cpp\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>rnn6.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\third_party\strptime\strptime.cpp" />
     <ClCompile Include="src\TimeSeriesRegression.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

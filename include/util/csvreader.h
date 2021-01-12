@@ -241,6 +241,14 @@ public:
 					{
 						match = true;
 					}
+					if (std::regex_match(value, std::regex("^\"\\d{2,4}/\\d{1,2}/\\d{1,2} \\d{1,2}:\\d{1,2}\"")))
+					{
+						match = true;
+					}
+					if (std::regex_match(value, std::regex("^\"\\d{2,4}/\\d{1,2}/\\d{1,2} \\d{1,2}\"")))
+					{
+						match = true;
+					}
 					if (std::regex_match(value, std::regex("^\"\\d{2,4}/\\d{1,2}/\\d{1,2}\"")))
 					{
 						match = true;
@@ -262,6 +270,14 @@ public:
 					{
 						match = true;
 					}
+					if (std::regex_match(value, std::regex("^\"\\d{2,4}-\\d{1,2}-\\d{1,2} \\d{1,2}:\\d{1,2}\"")))
+					{
+						match = true;
+					}
+					if (std::regex_match(value, std::regex("^\"\\d{2,4}-\\d{1,2}-\\d{1,2} \\d{1,2}\"")))
+					{
+						match = true;
+					}
 					if (std::regex_match(value, std::regex("^\"\\d{2,4}-\\d{1,2}-\\d{1,2}\"")))
 					{
 						match = true;
@@ -271,40 +287,6 @@ public:
 						match = true;
 					}
 
-					///////////////
-					if (std::regex_match(value, std::regex("^\\d{2,4}/\\d{1,2}/\\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2}")))
-					{
-						match = true;
-					}
-					if (std::regex_match(value, std::regex("^\\d{2,4}/\\d{1,2}/\\d{1,2}")))
-					{
-						match = true;
-					}
-					if (std::regex_match(value, std::regex("^\\d{1,4}/\\d{1,2}")))
-					{
-						match = true;
-					}
-					if (std::regex_match(value, std::regex("^\\d{1,2}:\\d{1,2}:\\d{1,2}")))
-					{
-						match = true;
-					}
-					if (std::regex_match(value, std::regex("^\\d{1,2}:\\d{1,2}")))
-					{
-						match = true;
-					}
-
-					if (std::regex_match(value, std::regex("^\\d{2,4}-\\d{1,2}-\\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2}")))
-					{
-						match = true;
-					}
-					if (std::regex_match(value, std::regex("^\\d{2,4}-\\d{1,2}-\\d{1,2}")))
-					{
-						match = true;
-					}
-					if (std::regex_match(value, std::regex("^\\d{1,4}-\\d{1,2}")))
-					{
-						match = true;
-					}
 
 					//float t[6];
 					//char buf[256];
