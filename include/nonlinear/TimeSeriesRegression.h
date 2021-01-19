@@ -2506,6 +2506,7 @@ public:
 			fprintf(fp, "use_add_bn:%d\n", this->use_add_bn);
 			fprintf(fp, "padding_prm:%d\n", this->padding_prm);
 			fprintf(fp, "residual:%d\n", this->residual);
+			fprintf(fp, "use_observed_value:%f\n", this->use_latest_observations);
 			fclose(fp);
 			
 			float maxvalue = -999999999.0;
