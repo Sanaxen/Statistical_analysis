@@ -766,6 +766,10 @@ int main(int argc, char** argv)
 		{
 			continue;
 		}
+		else if (argname == "--inversion") {
+			regression.inversion = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
 		else if (argname == "--residual")
 		{
 			regression.residual = atoi(argv[count + 1]);

@@ -214,6 +214,7 @@ public:
 	int use_cnn = 0;
 	int use_cnn_add_bn = 0;
 	int use_add_bn = 0;
+	bool inversion = false;
 
 	std::string activation_fnc = "tanh";
 	int n_sampling = 0;
@@ -668,7 +669,7 @@ private:
 								idx = k;
 							}
 						}
-						fprintf(fp_predict, "%d,%.3f\n", idx, y);
+						fprintf(fp_predict, "%d,%.3f\n", idx, (!inversion)?y:-y);
 					}
 				}
 				fclose(fp_predict);
@@ -845,14 +846,14 @@ private:
 				for (int k = 0; k < Y_predict[i].size()-1; k++)
 				{
 					float_t yy = Y_predict[i][k];
-					fprintf(fp_test, "%f %f ", yy, y[k]);
+					fprintf(fp_test, "%f %f ", (!inversion)?yy:-yy, y[k]);
 
 					diff.push_back(y[k]);
 					diff.push_back(yy);
 
 					if (fp_predict)
 					{
-						fprintf(fp_predict, "%.3f,%.3f,%.3f", yy, y[k], yy-y[k]);
+						fprintf(fp_predict, "%.3f,%.3f,%.3f", (!inversion)?yy:-yy, y[k], yy-y[k]);
 					}
 
 					if (test_data_index[i] >= 0)
@@ -875,7 +876,7 @@ private:
 
 				if (fp_predict)
 				{
-					fprintf(fp_predict, "%.3f, %.3f, %.3f\n", yy, y[y_predict.size() - 1], yy- y[y_predict.size() - 1]);
+					fprintf(fp_predict, "%.3f, %.3f, %.3f\n", (!inversion) ? yy:-yy, y[y_predict.size() - 1], yy- y[y_predict.size() - 1]);
 				}
 
 				if (test_data_index[i] >= 0)
@@ -912,9 +913,9 @@ private:
 				fprintf(fp_test, "%d ", i);
 				for (int k = 0; k < y_predict.size() - 1; k++)
 				{
-					fprintf(fp_test, "%f %f ", y_predict[k], y[k]);
+					fprintf(fp_test, "%f %f ", (!inversion) ? y_predict[k]:-y_predict[k], y[k]);
 				}
-				fprintf(fp_test, "%f %f\n", y_predict[y_predict.size() - 1], y[y_predict.size() - 1]);
+				fprintf(fp_test, "%f %f\n", (!inversion) ? y_predict[y_predict.size() - 1]:-y_predict[y_predict.size() - 1], y[y_predict.size() - 1]);
 			}
 			fclose(fp_test);
 		}

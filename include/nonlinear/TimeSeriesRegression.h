@@ -339,6 +339,7 @@ public:
 	bool use_attention = true;
 	int n_sampling = 0;
 	std::mt19937 mt_distribution;
+	bool inversion = false;
 
 	int padding_prm = 0;
 	int residual = 0;
@@ -825,7 +826,7 @@ private:
 								idx = k;
 							}
 						}
-						fprintf(fp_predict, "%d,%.3f\n", idx, y);
+						fprintf(fp_predict, "%d,%.3f\n", idx, (!inversion)?y:-y);
 					}
 				}
 				fclose(fp_predict);
@@ -1175,9 +1176,9 @@ private:
 						tiny_dnn::vec_t y = train[i];
 						for (int k = 0; k < y_dim-1; k++)
 						{
-							fprintf(fp_predict, "%.3f,%.3f,%.3f,", yy[k], y[k], yy[k]-y[k]);
+							fprintf(fp_predict, "%.3f,%.3f,%.3f,", (!inversion) ? yy[k]:-yy[k], y[k], yy[k]-y[k]);
 						}
-						fprintf(fp_predict, "%.3f,%.3f,%.3f\n", yy[y_dim-1], y[y_dim - 1], yy[y_dim - 1]- y[y_dim - 1]);
+						fprintf(fp_predict, "%.3f,%.3f,%.3f\n", (!inversion) ? yy[y_dim-1]:-yy[y_dim-1], y[y_dim - 1], yy[y_dim - 1]- y[y_dim - 1]);
 					}
 
 					for (int i = iY.size(); i < iY.size() + prophecy- use_differnce; i++)
@@ -1193,9 +1194,9 @@ private:
 						tiny_dnn::vec_t y = train[iY.size()-1];
 						for (int k = 0; k < y_dim - 1; k++)
 						{
-							fprintf(fp_predict, "%.3f,%.3f,%.3f,", yy[k], yy[k], 0.0);
+							fprintf(fp_predict, "%.3f,%.3f,%.3f,", (!inversion) ? yy[k]:-yy[k], yy[k], 0.0);
 						}
-						fprintf(fp_predict, "%.3f, %.3f, %.3f\n", yy[y_dim - 1], yy[y_dim - 1], 0.0);
+						fprintf(fp_predict, "%.3f, %.3f, %.3f\n", (!inversion) ? yy[y_dim - 1]:-yy[y_dim-1], yy[y_dim - 1], 0.0);
 					}
 				}
 				if(fp_predict) fclose(fp_predict);
@@ -1224,15 +1225,15 @@ private:
 						{
 							if (i < sequence_length + TARGET_POSITON)
 							{
-								fprintf(fp_test, ",NaN, %f ", yy[k]);
+								fprintf(fp_test, ",NaN, %f ", (!inversion) ? yy[k]:-yy[k]);
 							}else
 							if (i >= iY.size())
 							{
-								fprintf(fp_test, ",NaN, %f ", yy[k]);
+								fprintf(fp_test, ",NaN, %f ", (!inversion) ? yy[k]:-yy[k]);
 							}
 							else
 							{
-								fprintf(fp_test, ",%f, %f ", y[k], yy[k]);
+								fprintf(fp_test, ",%f, %f ", y[k], (!inversion) ? yy[k]:-yy[k]);
 							}
 							//if (fp_predict)
 							//{
@@ -1240,7 +1241,7 @@ private:
 							//}
 						}
 						if (i >= iY.size())
-							fprintf(fp_test, ",NaN, %f\n", yy[y_dim - 1]);
+							fprintf(fp_test, ",NaN, %f\n", (!inversion) ? yy[y_dim - 1]:-yy[y_dim-1]);
 						else
 							fprintf(fp_test, ",%f, %f\n", y[y_dim - 1], yy[y_dim - 1]);
 
@@ -1272,9 +1273,9 @@ private:
 						}
 						for (int k = 0; k < y_dim - 1; k++)
 						{
-							fprintf(fp_test, ",%f, %f ", y[k], y[k]);
+							fprintf(fp_test, ",%f, %f ", y[k], (!inversion) ? y[k]:-y[k]);
 						}
-						fprintf(fp_test, ",%f, %f\n", y[y_dim - 1], y[y_dim - 1]);
+						fprintf(fp_test, ",%f, %f\n", y[y_dim - 1], (!inversion) ? y[y_dim - 1] : -y[y_dim - 1]);
 					}
 					fclose(fp_test);
 				}
@@ -1304,9 +1305,9 @@ private:
 						}
 						for (int k = 0; k < y_dim - 1; k++)
 						{
-							fprintf(fp_test, ",%f, %f ", y[k], yy[k]);
+							fprintf(fp_test, ",%f, %f ", y[k], (!inversion) ? yy[k]:-yy[k]);
 						}
-						fprintf(fp_test, ",%f, %f\n", y[y_dim - 1], yy[y_dim - 1]);
+						fprintf(fp_test, ",%f, %f\n", y[y_dim - 1], (!inversion) ? yy[y_dim - 1] : -yy[y_dim - 1]);
 					}
 					fclose(fp_test);
 				}
@@ -1334,9 +1335,9 @@ private:
 						}
 						for (int k = 0; k < y_dim - 1; k++)
 						{
-							fprintf(fp_test, ",%f, %f ", y[k], yy[k]);
+							fprintf(fp_test, ",%f, %f ", y[k], (!inversion) ? yy[k]:-yy[k]);
 						}
-						fprintf(fp_test, ",%f, %f\n", y[y_dim - 1], yy[y_dim - 1]);
+						fprintf(fp_test, ",%f, %f\n", y[y_dim - 1], (!inversion) ? yy[y_dim - 1] : yy[y_dim - 1]);
 					}
 					fclose(fp_test);
 				}
@@ -1370,17 +1371,17 @@ private:
 						{
 							for (int k = 0; k < y_dim - 1; k++)
 							{
-								fprintf(fp_test, ",NaN, %f ", yy[k]);
+								fprintf(fp_test, ",NaN, %f ", (!inversion) ? yy[k]:yy[k]);
 							}
-							fprintf(fp_test, ",NaN, %f\n", yy[y_dim - 1]);
+							fprintf(fp_test, ",NaN, %f\n", (!inversion) ? yy[y_dim - 1]:yy[y_dim-1]);
 						}
 						else
 						{
 							for (int k = 0; k < y_dim - 1; k++)
 							{
-								fprintf(fp_test, ",%f, %f ", y[k], yy[k]);
+								fprintf(fp_test, ",%f, %f ", y[k], (!inversion) ? yy[k]:yy[k]);
 							}
-							fprintf(fp_test, ",%f, %f\n", y[y_dim - 1], yy[y_dim - 1]);
+							fprintf(fp_test, ",%f, %f\n", y[y_dim - 1], (!inversion) ? yy[y_dim - 1] : yy[y_dim - 1]);
 						}
 					}
 					fclose(fp_test);
@@ -1685,6 +1686,8 @@ public:
 	int fc_hidden_size = -1;
 	std::string weight_init_type = "xavier";
 	bool layer_graph_only = false;
+
+	bool use_self_sequence = true;
 
 	tiny_dnn::core::backend_t default_backend_type = tiny_dnn::core::backend_t::internal;
 	//tiny_dnn::core::backend_t default_backend_type = tiny_dnn::core::backend_t::intel_mkl;
@@ -2085,6 +2088,14 @@ public:
 		const int dim = ny[0].size();
 
 		tiny_dnn::vec_t seq(sequence_length*dim);
+
+		int xdim = dim;
+		if (!use_self_sequence && dim > y_dim)
+		{
+			xdim = dim - y_dim;
+			seq.resize(sequence_length*xdim);
+		}
+
 		for (int k = 0; k < sequence_length; k++)
 		{
 			if (ny.size() <= start + k)
@@ -2092,10 +2103,19 @@ public:
 				printf("range over");
 				throw tiny_dnn::nn_error("seq_vec:range over");
 			}
-			//add_seq(ny[start + k], seq);
-			for (int i = 0; i < dim; i++)
+			if (!use_self_sequence && dim > y_dim)
 			{
-				seq[k*dim + i] = ny[start + k][i];
+				for (int i = 0; i < xdim; i++)
+				{
+					seq[k*xdim + i] = ny[start + k][y_dim + i];
+				}
+			}
+			else
+			{
+				for (int i = 0; i < dim; i++)
+				{
+					seq[k*dim + i] = ny[start + k][i];
+				}
 			}
 		}
 		return seq;
@@ -2507,6 +2527,7 @@ public:
 			fprintf(fp, "padding_prm:%d\n", this->padding_prm);
 			fprintf(fp, "residual:%d\n", this->residual);
 			fprintf(fp, "use_observed_value:%f\n", this->use_latest_observations);
+			fprintf(fp, "use_self_sequence:%d\n", this->use_self_sequence?1:0);
 			fclose(fp);
 			
 			float maxvalue = -999999999.0;

@@ -1220,6 +1220,10 @@ int main(int argc, char** argv)
 		{
 			continue;
 		}
+		else if (argname == "--inversion") {
+			timeSeries.inversion = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
 		else if (argname == "--residual")
 		{
 			timeSeries.residual = atoi(argv[count + 1]);
@@ -1358,6 +1362,11 @@ int main(int argc, char** argv)
 			timeSeries.use_latest_observations = atof(argv[count + 1]);
 			continue;
 		}
+		else if (argname == "--use_self_sequence")
+		{
+			timeSeries.use_self_sequence = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
 		else {
 			std::cerr << "Invalid parameter specified - \"" << argname << "\""
 				<< std::endl;
@@ -1427,6 +1436,7 @@ int main(int argc, char** argv)
 		<< "use_cnn      : " << timeSeries.use_cnn << std::endl
 		<< "padding_prm      : " << timeSeries.padding_prm << std::endl
 		<< "residual      : " << timeSeries.residual << std::endl
+		<< "use_self_sequence: " << timeSeries.use_self_sequence << std::endl
 		<< "dump_input      : " << dump_input << std::endl
 		
 		<< std::endl;
