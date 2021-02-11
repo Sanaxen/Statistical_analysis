@@ -96,6 +96,8 @@ int main(int argc, char** argv)
 	bool ignore_constant_value_columns = true;
 	double lasso_tol = TOLERANCE;
 	int lasso_itr_max = 1000000;
+	bool confounding_factors = false;
+	int confounding_factors_sampling = 1000;
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -167,6 +169,15 @@ int main(int argc, char** argv)
 				{
 					lasso_itr_max = atoi(argv[count + 1]);
 				}
+				else if (argname == "--confounding_factors")
+				{
+					confounding_factors = atoi(argv[count + 1]) == 0 ? false : true;
+				}
+				else if (argname == "--confounding_factors_sampling")
+				{
+					confounding_factors_sampling = atoi(argv[count + 1]);
+				}
+		//
 
 				else {
 					std::cerr << "Invalid parameter specified - \"" << argname << "\""
@@ -467,7 +478,16 @@ int main(int argc, char** argv)
 		}
 	}
 	LiNGAM.set(xs.n);
-	LiNGAM.fit(xs);
+
+	if (confounding_factors)
+	{
+		LiNGAM.confounding_factors_sampling = confounding_factors_sampling;
+		LiNGAM.fit2(xs, max_ica_iteration, ica_tolerance);
+	}
+	else
+	{
+		LiNGAM.fit(xs, max_ica_iteration, ica_tolerance);
+	}
 
 	LiNGAM.B.print_e("B");
 	if (lasso)

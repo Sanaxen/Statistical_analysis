@@ -22,6 +22,8 @@ class ICA
 	int component;
 	int error;
 public:
+	bool logmsg = false;
+
 	inline int getStatus() const
 	{
 		return error;
@@ -73,7 +75,10 @@ public:
 		Matrix<dnn_double>& d = Matrix<dnn_double>(1, rows);
 
 		W = W.RAND();
-		W.print();
+		if (logmsg)
+		{
+			W.print();
+		}
 
 		SVDcmp<dnn_double> svd(W);
 		d.diag_vec(svd.Sigma);
@@ -104,7 +109,10 @@ public:
 
 			if (it % 1000 == 0)
 			{
-				printf("delta[%d]:%f\n", it, delta);
+				if (logmsg)
+				{
+					printf("delta[%d]:%f\n", it, delta);
+				}
 			}
 			if (delta < delta_min)
 			{
@@ -113,12 +121,18 @@ public:
 			}
 			if (fabs(delta - delta_pre) < 1.0e-6 && it > 0)
 			{
-				printf("convergence:%f - iter:%d\n", fabs(delta - delta_pre), it);
+				if (logmsg)
+				{
+					printf("convergence:%f - iter:%d\n", fabs(delta - delta_pre), it);
+				}
 				break;
 			}
 			if (fabs(delta) <= tolerance)
 			{
-				printf("convergence:%f - iter:%d\n", fabs(delta), it);
+				if (logmsg)
+				{
+					printf("convergence:%f - iter:%d\n", fabs(delta), it);
+				}
 			}
 
 			delta_pre = delta;

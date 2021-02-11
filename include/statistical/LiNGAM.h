@@ -53,8 +53,11 @@ class Lingam
 	*/
 	bool AlgorithmB(Matrix<dnn_double>& Bhat, std::vector<int>& p)
 	{
-		printf("\nAlgorithmB start\n");
-		Bhat.print("start");
+		if (logmsg)
+		{
+			printf("\nAlgorithmB start\n");
+			Bhat.print("start");
+		}
 
 		for (int i = 0; i < Bhat.m; i++)
 		{
@@ -90,12 +93,15 @@ class Lingam
 				p.push_back(i);
 			}
 		}
-		for (int x = 0; x < p.size(); x++)
-			std::cout << x << "," << p[x] << "\t";
-		printf("\n");
-		fflush(stdout);
+		if (logmsg)
+		{
+			for (int x = 0; x < p.size(); x++)
+				std::cout << x << "," << p[x] << "\t";
+			printf("\n");
+			fflush(stdout);
 
-		printf("AlgorithmB end\n");
+			printf("AlgorithmB end\n");
+		}
 		return (p.size() == Bhat.m);
 	}
 
@@ -128,14 +134,20 @@ class Lingam
 		{
 			if (nn >= N) break;
 			if (tmp[i].zero_changed) continue;
-			printf("[%d]%f ", i, tmp[i].dat);
+			if (logmsg)
+			{
+				printf("[%d]%f ", i, tmp[i].dat);
+			}
 			tmp[i].dat = 0.0;
 			tmp[i].abs_dat = 0.0;
 			tmp[i].zero_changed = true;
 			nn++;
 		}
 
-		printf("\nAlgorithmC start\n");
+		if (logmsg)
+		{
+			printf("\nAlgorithmC start\n");
+		}
 		int c = 0;
 		std::vector<int> p;
 		p.clear();
@@ -154,7 +166,10 @@ class Lingam
 			for (int i = 0; i < tmp.size(); i++)
 			{
 				if (tmp[i].zero_changed) continue;
-				printf("[%d]%f->0.0\n", i, tmp[i].dat);
+				if (logmsg)
+				{
+					printf("[%d]%f->0.0\n", i, tmp[i].dat);
+				}
 				tmp[i].dat = 0.0;
 				tmp[i].abs_dat = 0.0;
 				tmp[i].zero_changed = true;
@@ -166,18 +181,22 @@ class Lingam
 				b_est_tmp.v[tmp[i].id] = tmp[i].dat;
 			}
 		}
-		for (int x = 0; x < replacement.size(); x++)
-			std::cout << x << "," << replacement[x] << "\t";
-		printf("\nreplacement.size()=%d\n", replacement.size());
-
+		if (logmsg)
+		{
+			for (int x = 0; x < replacement.size(); x++)
+				std::cout << x << "," << replacement[x] << "\t";
+			printf("\nreplacement.size()=%d\n", replacement.size());
+		}
 		std::vector<int> &r = replacement;
 
 		//b_opt = b_opt[r, :]
 		Matrix<dnn_double> b_opt = (Substitution(r)*b_est);
 		//b_opt = b_opt[:, r]
 		b_opt = (b_opt)*Substitution(r).transpose();
-		b_opt.print_e();
-
+		if (logmsg)
+		{
+			b_opt.print_e();
+		}
 		//b_csl = np.tril(b_opt, -1)
 		Matrix<dnn_double> b_csl = b_opt;
 		for (int i = 0; i < b_csl.m; i++)
@@ -187,7 +206,10 @@ class Lingam
 				b_csl(i, j) = 0.0;
 			}
 		}
-		b_csl.print_e();
+		if (logmsg)
+		{
+			b_csl.print_e();
+		}
 
 		if (0)
 		{
@@ -205,12 +227,17 @@ class Lingam
 				r[i] = i;
 			}
 		}
-		printf("AlgorithmC end\n");
-		fflush(stdout);
+		if (logmsg)
+		{
+			printf("AlgorithmC end\n");
+			fflush(stdout);
+		}
 		return b_csl;
 	}
 
 public:
+	bool logmsg = true;
+	int confounding_factors_sampling = 1000;
 
 	vector<int> replacement;
 	Matrix<dnn_double> B;
@@ -498,7 +525,7 @@ public:
 		B = b_csl;
 	}
 
-	int fit(Matrix<dnn_double>& X, const int max_ica_iteration= MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
+	int fit(Matrix<dnn_double>& X, const int max_ica_iteration = MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
 		error = 0;
 
@@ -520,7 +547,7 @@ public:
 
 		double cost = HungAlgo.Solve(W_ica_, replace);
 
-		for ( int x = 0; x < W_ica_.m; x++)
+		for (int x = 0; x < W_ica_.m; x++)
 			std::cout << x << "," << replace[x] << "\t";
 		printf("\n");
 
@@ -663,8 +690,178 @@ public:
 		b_est.print_e();
 		fflush(stdout);
 
-		if ( error == 0 ) B = b_est;
+		if (error == 0) B = b_est;
+
+		return error;
+	}
+
+//#define SAMPLING_MAX	10000
+	int fit2(Matrix<dnn_double>& X, const int max_ica_iteration= MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
+	{
+		logmsg = false;
+		error = 0;
+
+		Matrix<dnn_double> B_best_sv;
+		Matrix<dnn_double> B_av;
+
+		Matrix<dnn_double> residual_error(X.m, X.n);
 		
+		input = X;
+
+		std::random_device seed_gen;
+		std::default_random_engine engine(seed_gen());
+		std::uniform_real_distribution<> udist(-1.0, 1.0);
+		//std::student_t_distribution<> dist(12.0);
+
+		int numB = 0;
+		float delta_0 = 999999999.0;
+		float delta_min = 999999999.0;
+		for (int kk = 0; kk < confounding_factors_sampling; kk++)
+		{
+			Matrix<dnn_double> xs = X;
+
+			//std::uniform_int_distribution<> udist(0, xs.m-1);
+			//const int nn = 100;
+			//Matrix<dnn_double> xs_tmp = xs.Row(udist(engine));
+			//for (int i = 1; i < nn; i++)
+			//{
+			//	xs_tmp.appendRow(xs.Row(udist(engine)));
+			//}
+			//xs = xs_tmp;
+
+			Matrix<dnn_double>É (xs.m, xs.n);
+
+			for (int i = 0; i < xs.n; i++)
+			{
+				auto& y = xs.Col(i);
+				auto& mean = y.Mean();
+				auto& sigma = y.Std(mean);
+				std::normal_distribution<> dist(mean.v[0], sigma.v[0]);
+
+				for (int j = 0; j < xs.m; j++)
+				{
+					É (j, i) = dist(engine)*0.01;
+				}
+			}
+
+			for (int i = 0; i < xs.n; i++)
+			{
+				for (int j = 0; j < xs.m; j++)
+				{
+					xs(j, i) -= É (j, i);
+				}
+			}
+
+			ICA ica;
+			ica.logmsg = false;
+			ica.set(variableNum);
+			ica.fit(xs, max_ica_iteration, tolerance);
+			//(ica.A.transpose()).inv().print_e();
+			error = ica.getStatus();
+
+
+			Matrix<dnn_double>& W_ica = (ica.A.transpose()).inv();
+			Matrix<dnn_double>& W_ica_ = Abs(W_ica).Reciprocal();
+
+			HungarianAlgorithm HungAlgo;
+			vector<int> replace;
+
+			double cost = HungAlgo.Solve(W_ica_, replace);
+
+			//for (int x = 0; x < W_ica_.m; x++)
+			//	std::cout << x << "," << replace[x] << "\t";
+			//printf("\n");
+
+			Matrix<dnn_double>& ixs = toMatrix(replace);
+			//ixs.print();
+			//Substitution(replace).print("Substitution matrix");
+
+			//P^-1*Wica
+			Matrix<dnn_double>& W_ica_perm = (Substitution(replace).inv()*W_ica);
+			//W_ica_perm.print_e("Replacement->W_ica_perm");
+
+			//D^-1
+			Matrix<dnn_double>& D = Matrix<dnn_double>().diag(W_ica_perm);
+			Matrix<dnn_double> D2(diag_vector(D));
+			//(D2.Reciprocal()).print_e("1/D");
+
+			//W_ica_perm_D=I - D^-1*(P^-1*Wica)
+			Matrix<dnn_double>& W_ica_perm_D = W_ica_perm.hadamard(to_vector(D2.Reciprocal()));
+
+			//W_ica_perm_D.print_e("W_ica_perm_D");
+
+			//B=I - D^-1*(P^-1*Wica)
+			Matrix<dnn_double>& b_est = Matrix<dnn_double>().unit(W_ica_perm_D.m, W_ica_perm_D.n) - W_ica_perm_D;
+			//b_est.print_e("b_est");
+
+			//https://www.cs.helsinki.fi/u/ahyvarin/papers/JMLR06.pdf
+			const int n = W_ica_perm_D.m;
+			Matrix<dnn_double> b_est_tmp = b_est;
+			b_est = AlgorithmC(b_est_tmp, n);
+
+			//for (int x = 0; x < replacement.size(); x++)
+			//	std::cout << x << "," << replacement[x] << "\t";
+			//printf("\n");
+			//b_est.print_e();
+			//fflush(stdout);
+
+			if (error == 0)
+			{
+				B = b_est;
+			}
+
+
+			if (kk == 0)
+			{
+				B_best_sv = B;
+				B_av = B;
+			}
+
+			float r = 0.0;
+			{
+				for (int j = 0; j < xs.m; j++)
+				{
+					Matrix<dnn_double> x(xs.n, 1);
+					for (int i = 0; i < xs.n; i++)
+					{
+						x(i, 0) = xs(j, replacement[i]);
+					}
+					//Matrix<dnn_double>& rr = x - (É .Row(j) + B *(x- É .Row(j)));
+					Matrix<dnn_double>& rr = x -  B * x;
+					for (int i = 0; i < xs.n; i++)
+					{
+						r += rr(0, i)*rr(0, i);
+						residual_error(j, i) = rr(0, i);
+					}
+				}
+				r /= (xs.m*xs.n);
+
+				if (kk == 0)
+				{
+					delta_0 = r;
+				}
+			}
+			if (delta_0 > r)
+			{
+				B_av += B;
+				numB++;
+			}
+			if (delta_min > r)
+			{
+				printf("@ %f -> %f\n", delta_min, r);
+				fflush(stdout);
+				B_best_sv = B;
+				delta_min = r;
+			}
+		}
+
+		B = B_best_sv;
+		B_av = B_av / (double)numB;
+
+		printf("Residual error %f -> %f\n", delta_0, delta_min);
+		//B_av.print_e("BïΩãœ");
+		//B = B_av;
+
 		return error;
 	}
 };
