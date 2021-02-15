@@ -479,6 +479,12 @@ int main(int argc, char** argv)
 	}
 	LiNGAM.set(xs.n);
 
+	//MutualInformation I(xs.Col(0), xs.Col(1), 30);
+	//double tmp = I.Information();
+	//printf("MI=%f\n", tmp);
+	//fflush(stdout);
+	//exit(0);
+
 	if (confounding_factors)
 	{
 		LiNGAM.confounding_factors_sampling = confounding_factors_sampling;
