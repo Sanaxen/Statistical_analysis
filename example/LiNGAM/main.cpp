@@ -569,7 +569,7 @@ int main(int argc, char** argv)
 	{
 		if (mutual_information_cut > 1.0)
 		{
-			printf("mutual_information_cut:%f -> [0,1]\n");
+			printf("mutual_information_cut:%f -> [0,1]\n", mutual_information_cut);
 			mutual_information_cut = 1.0;
 		}
 		for (int i = 0; i < LiNGAM.B.m; i++)

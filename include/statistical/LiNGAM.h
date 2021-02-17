@@ -3,6 +3,7 @@
 //All rights reserved.
 
 #define __LINGAM_H__
+#include <chrono>
 
 #include "../../include/Matrix.hpp"
 #include "../../include/statistical/fastICA.h"
@@ -1040,33 +1041,46 @@ public:
 
 		if (error == 0) B = b_est;
 
-		mutual_information = Matrix<dnn_double>().zeros(B.n, B.n);
-		for (int j = 0; j < B.n; j++)
-		{
-			Matrix<dnn_double> x;
-			Matrix<dnn_double> y;
-
-			for (int i = 0; i < B.n; i++)
-			{
-				if (fabs(B(i, j)) < 0.0001) continue;
-				x = X.Col(replacement[i]);
-				y = X.Col(replacement[j]);
-
-				MutualInformation I(x, y);
-				double tmp = I.Information();
-				mutual_information(i, j) = tmp;
-			}
-			printf("\n");
-		}
-		//mutual_information = mutual_information / mutual_information.Max();
+		calc_mutual_information(X, mutual_information);
 
 		B_pre_sort = B;
 		return error;
 	}
 
-//#define SAMPLING_MAX	10000
+	void calc_mutual_information(Matrix<dnn_double>& X, Matrix<dnn_double>& info)
+	{
+		info = Matrix<dnn_double>().zeros(B.n, B.n);
+#pragma omp parallel for
+		for (int j = 0; j < B.n; j++)
+		{
+			for (int i = 0; i < B.n; i++)
+			{
+				if (fabs(B(i, j)) >= 0.0001)
+				{
+					Matrix<dnn_double>& x = X.Col(replacement[i]);
+					Matrix<dnn_double>& y = X.Col(replacement[j]);
+
+					info(i, j) = 0;
+
+					MutualInformation I(x, y);
+					double tmp = I.Information();
+					//if (tmp < 0.04)
+					//{
+					//	B(i, j) = 0;
+					//	printf("Mutual Information=%f -> rmove edge(%d,%d)\n", tmp, i, j);
+					//}
+					info(i, j) = tmp;
+				}
+			}
+		}
+	}
+
 	int fit2(Matrix<dnn_double>& X, const int max_ica_iteration= MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
+		std::chrono::system_clock::time_point  start, end;
+		double elapsed;
+		double elapsed_ave = 0.0;
+
 		logmsg = false;
 		error = 0;
 
@@ -1087,6 +1101,8 @@ public:
 		float delta_min = 999999999.0;
 		for (int kk = 0; kk < confounding_factors_sampling; kk++)
 		{
+			start = std::chrono::system_clock::now();
+
 			Matrix<dnn_double> xs = X;
 
 			//std::uniform_int_distribution<> udist(0, xs.m-1);
@@ -1112,6 +1128,7 @@ public:
 			//		É (j, i) = dist(engine)*0.01;
 			//	}
 			//}
+//#pragma omp parallel for <-- óêêîÇÃèáèòÇ™ïœÇÌÇ¡ÇƒÇµÇ‹Ç§Ç©ÇÁï¿óÒâªÇµÇΩÇÁÉ_ÉÅ7
 			for (int i = 0; i < xs.n; i++)
 			{
 				std::normal_distribution<> dist(0.0, 30.0);
@@ -1226,35 +1243,9 @@ public:
 			}
 
 			//Evaluation of independence
-			//printf("---- Evaluation of independence ----\n");
-
-			double minfo = 0;
-			Matrix<dnn_double> Minfo = Matrix<dnn_double>().zeros(B.n, B.n);
-			for (int j = 0; j < B.n; j++)
-			{
-				Matrix<dnn_double> x;
-				Matrix<dnn_double> y;
-
-				for (int i = 0; i < B.n; i++)
-				{
-					if (fabs(B(i, j)) < 0.0001) continue;
-					x = xs.Col(replacement[i]);
-					y = xs.Col(replacement[j]);
-
-					MutualInformation I(x, y);
-					double tmp = I.Information();
-					//if (tmp < 0.04)
-					//{
-					//	B(i, j) = 0;
-					//	//printf("Mutual Information=%f -> rmove edge(%d,%d)\n", tmp, i, j);
-					//}
-					//printf("(%d,%d) %f ", i, j, tmp);
-					Minfo(i, j) = tmp;
-				}
-				minfo = Minfo.Sum();
-				//printf("\n");
-			}
-			//printf("\n");
+			Matrix<dnn_double> Minfo;
+			calc_mutual_information(xs, Minfo);
+			double minfo = Minfo.Sum();
 			//printf("---- Evaluation of independence end ----\n");
 
 			//if ((minfo_max <= minfo || kk == 0) && delta_min >= r)
@@ -1285,6 +1276,7 @@ public:
 			//	modification_input = xs;
 			//}
 
+			fflush(stdout);
 			if (delta_min > r)
 			{
 				if (minfo >= minfo_max)
@@ -1297,37 +1289,58 @@ public:
 					modification_input = xs;
 					printf("->accept\n");
 					fflush(stdout);
+
+					B_pre_sort = B;
+					calc_mutual_information(X, mutual_information);
+					save(std::string("lingam"));
 				}
 			}
+
+
+			end = std::chrono::system_clock::now();
+			elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+			//printf("[%d/%d]%8.3f[msec]\n", kk, confounding_factors_sampling - 1, elapsed);
+			
+			elapsed_ave += elapsed;
+			double t1 = (confounding_factors_sampling - 1 - kk)*(elapsed_ave*0.001 / (kk + 1));
+			if (kk != 0 && elapsed_ave*0.001 / (kk + 1) < 1 && kk % 10)
+			{
+				continue;
+			}
+			if (t1 < 60)
+			{
+				printf("[%d/%d]Total elapsed time:%.3f[sec] Estimated end time:%.3f[sec]\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001, t1);
+				fflush(stdout);
+				continue;
+			}
+			t1 /= 60.0;
+			if (t1 < 1)
+			{
+				printf("[%d/%d]Total elapsed time:%.3f[min] Estimated end time:%.3f[min]\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001 / 60.0, t1);
+				fflush(stdout);
+				continue;
+			}
+			t1 /= 60.0;
+			if (t1 < 24)
+			{
+				printf("[%d/%d]Total elapsed time:%.3f[h] Estimated end time:%.3f[h]\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001 / 60.0 / 60.0, t1);
+				fflush(stdout);
+				continue;
+			}
+			t1 /= 365;
+			if (t1 < 365)
+			{
+				printf("[%d/%d]Total elapsed time:%.3f[days] Estimated end time:%.3f[days]\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001 /60 / 60 / 24.0 / 365.0, t1);
+				fflush(stdout);
+				continue;
+			}
+			printf("[%d/%d]Total elapsed time:%.3f[years] Estimated end time:%.3f[years]\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001 /60 / 60 / 24.0 / 365.0, t1);
+			fflush(stdout);
 		}
 
 		B = B_best_sv;
 
-		mutual_information = Matrix<dnn_double>().zeros(B.n, B.n);
-		for (int j = 0; j < B.n; j++)
-		{
-			Matrix<dnn_double> x;
-			Matrix<dnn_double> y;
-
-			for (int i = 0; i < B.n; i++)
-			{
-				if (fabs(B(i, j)) < 0.0001) continue;
-				x = X.Col(replacement[i]);
-				y = X.Col(replacement[j]);
-
-				MutualInformation I(x, y);
-				double tmp = I.Information();
-				//if (tmp < 0.04)
-				//{
-				//	B(i, j) = 0;
-				//	printf("Mutual Information=%f -> rmove edge(%d,%d)\n", tmp, i, j);
-				//}
-				mutual_information(i, j) = tmp;
-			}
-			//printf("\n");
-		}
-		//mutual_information = mutual_information / mutual_information.Max();
-
+		calc_mutual_information(X, mutual_information);
 		printf("Residual error %f -> %f\n", delta_0, delta_min);
 
 		B_pre_sort = B;
