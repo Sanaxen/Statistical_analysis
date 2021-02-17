@@ -1,6 +1,5 @@
 #define _cublas_Init_def
 #include "../../include/statistical/LiNGAM.h"
-#include "../../include/util/csvreader.h"
 #include "../../include/util/swilk.h"
 
 #ifdef USE_GNUPLOT
@@ -98,6 +97,10 @@ int main(int argc, char** argv)
 	int lasso_itr_max = 1000000;
 	bool confounding_factors = false;
 	int confounding_factors_sampling = 1000;
+	double mutual_information_cut = 0.0;
+	bool mutual_information_values = true;
+
+	std::string load_model = "";
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
@@ -176,6 +179,16 @@ int main(int argc, char** argv)
 				else if (argname == "--confounding_factors_sampling")
 				{
 					confounding_factors_sampling = atoi(argv[count + 1]);
+				}
+				else if (argname == "--mutual_information_cut")
+				{
+					mutual_information_cut = atof(argv[count + 1]);
+				}
+				else if (argname == "--mutual_information_values") {
+					mutual_information_values = atoi(argv[count + 1]) == 0 ? false : true;
+				}
+				else if (argname == "--load_model") {
+					load_model = argv[count + 1];
 				}
 		//
 
@@ -478,6 +491,8 @@ int main(int argc, char** argv)
 		}
 	}
 	LiNGAM.set(xs.n);
+	LiNGAM.mutual_information_values = mutual_information_values;
+	LiNGAM.confounding_factors = confounding_factors? 1: 0;
 
 	//MutualInformation I(xs.Col(0), xs.Col(1), 30);
 	//double tmp = I.Information();
@@ -485,17 +500,31 @@ int main(int argc, char** argv)
 	//fflush(stdout);
 	//exit(0);
 
-	if (confounding_factors)
+	if (load_model != "")
 	{
-		LiNGAM.confounding_factors_sampling = confounding_factors_sampling;
-		LiNGAM.fit2(xs, max_ica_iteration, ica_tolerance);
+		if (!LiNGAM.load(load_model))
+		{
+			printf("ERROR:load_model\n");
+			return -1;
+		}
+		printf("load_model ok.\n");
 	}
 	else
 	{
-		LiNGAM.fit(xs, max_ica_iteration, ica_tolerance);
+		if (confounding_factors)
+		{
+			LiNGAM.confounding_factors_sampling = confounding_factors_sampling;
+			LiNGAM.fit2(xs, max_ica_iteration, ica_tolerance);
+		}
+		else
+		{
+			LiNGAM.fit(xs, max_ica_iteration, ica_tolerance);
+		}
+
+		LiNGAM.save(std::string("lingam"));
 	}
 
-	LiNGAM.B.print_e("B");
+	LiNGAM.B.print_e("(#1)B");
 	if (lasso)
 	{
 		if (LiNGAM.remove_redundancy(lasso, lasso_itr_max, lasso_tol) != 0)
@@ -504,8 +533,9 @@ int main(int argc, char** argv)
 		}
 	}
 	LiNGAM.before_sorting();
+	LiNGAM.before_sorting(LiNGAM.mutual_information);
 
-	LiNGAM.B.print_e("B");
+	LiNGAM.B.print_e("(#2)B");
 	if (min_cor_delete > 0)
 	{
 		Matrix<dnn_double> XCor = xs.Cor();
@@ -534,6 +564,25 @@ int main(int argc, char** argv)
 		}
 	}
 
+	//mutual_information_cut = 0.001;
+	if (mutual_information_cut > 0)
+	{
+		if (mutual_information_cut > 1.0)
+		{
+			printf("mutual_information_cut:%f -> [0,1]\n");
+			mutual_information_cut = 1.0;
+		}
+		for (int i = 0; i < LiNGAM.B.m; i++)
+		{
+			for (int j = 0; j < LiNGAM.B.n; j++)
+			{
+				if (LiNGAM.mutual_information(i,j) < mutual_information_cut)
+				{
+					LiNGAM.B(i, j) = 0.0;
+				}
+			}
+		}
+	}
 	if (cor_range[0] != 0 && cor_range[1] != 0 && cor_range[0] < cor_range[1])
 	{
 		Matrix<dnn_double> XCor = xs.Cor();
@@ -552,7 +601,7 @@ int main(int argc, char** argv)
 			}
 		}
 	}
-	LiNGAM.B.print_e("B");
+	LiNGAM.B.print_e("(#3)B");
 
 	std::vector<int> residual_flag(xs.n, 0);
 	if (error_distr)
@@ -620,7 +669,7 @@ int main(int argc, char** argv)
 	{
 		LiNGAM.linear_regression_var.push_back(y_var[0]);
 	}
-	LiNGAM.digraph(header_names, y_var, residual_flag, "digraph.txt", sideways, diaglam_size, output_diaglam_type);
+	LiNGAM.diagram(header_names, y_var, residual_flag, "digraph.txt", sideways, diaglam_size, output_diaglam_type, mutual_information_cut);
 	LiNGAM.report(header_names);
 
 	{
@@ -656,6 +705,7 @@ int main(int argc, char** argv)
 			fclose(fp);
 		}
 	}
+
 	if (resp == 0)
 	{
 		for (int i = 0; i < argc; i++)

@@ -10,6 +10,7 @@
 #include "../../include/statistical/LinearRegression.h"
 #include "../../include/statistical/RegularizationRegression.h"
 #include "../../include/util/utf8_printf.hpp"
+#include "../../include/util/csvreader.h"
 
 //#define USE_EIGEN
 
@@ -68,9 +69,12 @@ class MutualInformation
 			{
 				double c = 0;
 				if (i == grid - 1) c = 0.000001;
-				if (M1.v[k] >= min1 + dx * i && M1.v[k] < min1 + dx * (i + 1)+c)
+				if (M1.v[k] >= min1 + dx * i && M1.v[k] < min1 + dx * (i + 1))
 				{
-					table1[i] += 1;
+#pragma omp critical
+					{
+						table1[i] += 1;
+					}
 				}
 			}
 
@@ -80,7 +84,10 @@ class MutualInformation
 				if (i == grid - 1) c = 0.000001;
 				if (M2.v[k] >= min2 + dy * i && M2.v[k] < min2 + dy * (i + 1)+c)
 				{
-					table2[i] += 1;
+#pragma omp critical
+					{
+						table2[i] += 1;
+					}
 				}
 			}
 			for (int i = 0; i < grid; i++)
@@ -95,11 +102,21 @@ class MutualInformation
 					if (M1.v[k] >= min1 + dx * j && M1.v[k] < min1 + dx * (j + 1)+d &&
 						M2.v[k] >= min2 + dy * i && M2.v[k] < min2 + dy * (i + 1)+c)
 					{
-						table12(i, j) += 1;
+#pragma omp critical
+						{
+							table12(i, j) += 1;
+						}
 					}
 				}
 			}
 		}
+
+		//for (int i = 0; i < table1.size(); i++)
+		//{
+		//	printf("%d, ", (int)table1[i]);
+		//}
+		//printf("\n");
+		//printf("dx:%f\n", dx);
 
 		probability1.resize(grid,0);
 		probability2.resize(grid,0);
@@ -147,8 +164,8 @@ class MutualInformation
 		//probability1_2 = probability1_2 / s12;
 
 		//dump
-		Matrix<dnn_double> tmp1(probability1);
-		Matrix<dnn_double> tmp2(probability2);
+		//Matrix<dnn_double> tmp1(probability1);
+		//Matrix<dnn_double> tmp2(probability2);
 
 		//tmp1.print_csv("p1.csv");
 		//tmp2.print_csv("p2.csv");
@@ -164,7 +181,7 @@ public:
 	Matrix<dnn_double> probability1_2;		//p(x)*p(y)
 
 
-	MutualInformation(Matrix<dnn_double>& Col1, Matrix<dnn_double>& Col2, int grid_ = 20)
+	MutualInformation(Matrix<dnn_double>& Col1, Matrix<dnn_double>& Col2, int grid_ = 30)
 	{
 		grid = grid_;
 
@@ -407,7 +424,12 @@ public:
 
 	vector<int> replacement;
 	Matrix<dnn_double> B;
+	Matrix<dnn_double> B_pre_sort;
 	Matrix<dnn_double> input;
+	Matrix<dnn_double> modification_input;
+	Matrix<dnn_double> mutual_information;
+	bool mutual_information_values = false;
+	int confounding_factors = 0;
 
 	Lingam() {
 		error = -999;
@@ -417,6 +439,89 @@ public:
 	{
 		variableNum = variableNum_;
 	}
+
+	void save(std::string& filename)
+	{
+		FILE* fp = fopen((filename+".replacement").c_str(), "w");
+
+		if (fp)
+		{
+			for (int i = 0; i < replacement.size(); i++)
+			{
+				fprintf(fp, "%d\n", replacement[i]);
+			}
+			fclose(fp);
+		}
+		fp = fopen((filename + ".option").c_str(), "w");
+		if (fp)
+		{
+			fprintf(fp, "confounding_factors:%d\n", confounding_factors);
+			fclose(fp);
+		}
+
+		B.print_csv((char*)(filename + ".B.csv").c_str());
+		B_pre_sort.print_csv((char*)(filename + ".B_pre_sort.csv").c_str());
+		input.print_csv((char*)(filename + ".input.csv").c_str());
+		modification_input.print_csv((char*)(filename + ".modification_input.csv").c_str());
+		mutual_information.print_csv((char*)(filename + ".mutual_information.csv").c_str());
+
+	}
+	bool load(std::string& filename)
+	{
+		char buf[256];
+		FILE* fp = fopen((filename + ".replacement").c_str(), "r");
+		
+		if (fp == NULL)
+		{
+			return false;
+		}
+		if (fp)
+		{
+			replacement.clear();
+			while (fgets(buf, 256, fp) != NULL)
+			{
+				int id = 0;
+				sscanf(buf, "%d", &id);
+				replacement.push_back(id);
+			}
+			fclose(fp);
+		}
+		fp = fopen((filename + ".option").c_str(), "r");
+		if (fp)
+		{
+			while (fgets(buf, 256, fp) != NULL)
+			{
+				if (strstr(buf, "confounding_factors:"))
+				{
+					sscanf(buf, "confounding_factors:%d\n", &confounding_factors);
+				}
+			}
+			fclose(fp);
+		}
+
+		CSVReader csv1((filename + ".B.csv"), ',', false);
+		B = csv1.toMat();
+		printf("laod B\n"); fflush(stdout);
+
+		CSVReader csv2((filename + ".B_pre_sort.csv"), ',', false);
+		B_pre_sort = csv2.toMat();
+		printf("load B_pre_sort\n"); fflush(stdout);
+
+		CSVReader csv3((filename + ".input.csv"), ',', false);
+		input = csv3.toMat();
+		printf("load input\n"); fflush(stdout);
+
+		CSVReader csv4((filename + ".modification_input.csv"), ',', false);
+		modification_input = csv4.toMat();
+		printf("load modification_input\n"); fflush(stdout);
+
+		CSVReader csv5((filename + ".mutual_information.csv"), ',', false);
+		mutual_information = csv5.toMat();
+		printf("load mutual_information\n"); fflush(stdout);
+
+		return true;
+	}
+
 
 	int remove_redundancy(const dnn_double alpha = 0.01, const size_t max_ica_iteration = 1000000, const dnn_double tolerance = TOLERANCE)
 	{
@@ -482,7 +587,21 @@ public:
 
 	std::vector<std::string> linear_regression_var;
 
-	void digraph(const std::vector<std::string>& column_names, std::vector<std::string> y_var, std::vector<int>& residual_flag, const char* filename, bool sideways = false, int size=30, char* outformat="png", bool background_Transparent=false)
+	std::string line_colors[10] =
+	{
+		"#000000",
+		"#000000",
+		"#000000",
+		"#000000",
+		"#696969",
+		"#808080",
+		"#a9a9a9",
+		"#c0c0c0",
+		"#d3d3d3",
+		"#dcdcdc"
+	};
+
+	void diagram(const std::vector<std::string>& column_names, std::vector<std::string> y_var, std::vector<int>& residual_flag, const char* filename, bool sideways = false, int size=30, char* outformat="png", bool background_Transparent=false, double mutual_information_cut = 0)
 	{
 		Matrix<dnn_double> B_tmp = B.chop(0.001);
 		B_tmp.print_e("remove 0.001");
@@ -506,6 +625,8 @@ public:
 		}
 		Matrix<dnn_double> XCor = input.Cor();
 #endif
+
+		auto& mutual_information_tmp = mutual_information / mutual_information.Max();
 
 		utf8str utf8;
 		FILE* fp = fopen(filename, "w");
@@ -580,17 +701,39 @@ public:
 					}
 					if (out_line)
 					{
-						utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=red penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), style);
+						if (mutual_information_values)
+						{
+							utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.2f\" color=red penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), style);
+						}
+						else
+						{
+							utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=red penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), style);
+						}
 					}
 					else
 						if (in_line)
 						{
 							linear_regression_var.push_back(item[j]);
-							utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=blue penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), style);
+							if (mutual_information_values)
+							{
+								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.2f\" color=blue penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), style);
+							}
+							else
+							{
+								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=blue penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), style);
+							}
 						}
 						else
 						{
-							utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=black %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i,j), style);
+							if (mutual_information_values)
+							{
+
+								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.2f\" color=\"%s\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), line_colors[9 - (int)(9 * mutual_information_tmp(i, j))], style);
+							}
+							else
+							{
+								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=black %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i,j), style);
+							}
 						}
 				}
 			}
@@ -605,6 +748,22 @@ public:
 			}
 			utf8.fprintf(fp, "%s [fillcolor=\"#ccddff\", style=\"filled\"]\n", item1.c_str());
 		}
+		for (int i = 0; i < B_tmp.n; i++)
+		{
+			for (int j = 0; j < B_tmp.n; j++)
+			{
+				if (mutual_information(i, j) < mutual_information_cut)
+				{
+					std::string item1 = item[i];
+					if (item1.c_str()[0] != '\"')
+					{
+						item1 = "\"" + item1 + "\"";
+					}
+					utf8.fprintf(fp, "%s [fillcolor=\"#ccddff\", style=\"filled\"]\n", item1.c_str());
+				}
+			}
+		}
+
 
 		utf8.fprintf(fp, "}\n");
 		fclose(fp);
@@ -691,11 +850,34 @@ public:
 		B = b_csl;
 	}
 
+	void before_sorting(Matrix<dnn_double>& b)
+	{
+		std::vector<int> &r = replacement;
+		Matrix<dnn_double> b_csl = b;
+
+		//•À‚×‘Ö‚¦‚ðŒ³‚É–ß‚·
+		//b_csl[r, :] = deepcopy(b_csl)
+		b_csl = (Substitution(r).transpose()*b_csl);
+		//b_csl.print_e();
+
+		//b_csl[:, r] = deepcopy(b_csl)
+		b_csl = (b_csl*Substitution(r));
+		//b_csl.print_e();
+
+		for (int i = 0; i < b.n; i++)
+		{
+			r[i] = i;
+		}
+		b = b_csl;
+	}
+
 	int fit(Matrix<dnn_double>& X, const int max_ica_iteration = MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
 		error = 0;
 
 		input = X;
+		modification_input = X;
+
 		Matrix<dnn_double> xs = X;
 
 		ICA ica;
@@ -858,6 +1040,27 @@ public:
 
 		if (error == 0) B = b_est;
 
+		mutual_information = Matrix<dnn_double>().zeros(B.n, B.n);
+		for (int j = 0; j < B.n; j++)
+		{
+			Matrix<dnn_double> x;
+			Matrix<dnn_double> y;
+
+			for (int i = 0; i < B.n; i++)
+			{
+				if (fabs(B(i, j)) < 0.0001) continue;
+				x = X.Col(replacement[i]);
+				y = X.Col(replacement[j]);
+
+				MutualInformation I(x, y);
+				double tmp = I.Information();
+				mutual_information(i, j) = tmp;
+			}
+			printf("\n");
+		}
+		//mutual_information = mutual_information / mutual_information.Max();
+
+		B_pre_sort = B;
 		return error;
 	}
 
@@ -868,15 +1071,14 @@ public:
 		error = 0;
 
 		Matrix<dnn_double> B_best_sv;
-		Matrix<dnn_double> B_av;
 
 		Matrix<dnn_double> residual_error(X.m, X.n);
 		
 		input = X;
 
-		std::random_device seed_gen;
-		std::default_random_engine engine(seed_gen());
-		std::uniform_real_distribution<> udist(-1.0, 1.0);
+		//std::random_device seed_gen;
+		//std::default_random_engine engine(seed_gen());
+		std::default_random_engine engine(123456789);
 		//std::student_t_distribution<> dist(12.0);
 
 		double minfo_max = 0.0;
@@ -898,18 +1100,29 @@ public:
 
 			Matrix<dnn_double>ƒÊ(xs.m, xs.n);
 
+			//for (int i = 0; i < xs.n; i++)
+			//{
+			//	auto& y = xs.Col(i);
+			//	auto& mean = y.Mean();
+			//	auto& sigma = y.Std(mean);
+			//	std::normal_distribution<> dist(mean.v[0], sigma.v[0]);
+
+			//	for (int j = 0; j < xs.m; j++)
+			//	{
+			//		ƒÊ(j, i) = dist(engine)*0.01;
+			//	}
+			//}
 			for (int i = 0; i < xs.n; i++)
 			{
-				auto& y = xs.Col(i);
-				auto& mean = y.Mean();
-				auto& sigma = y.Std(mean);
-				std::normal_distribution<> dist(mean.v[0], sigma.v[0]);
+				std::normal_distribution<> dist(0.0, 30.0);
 
 				for (int j = 0; j < xs.m; j++)
 				{
-					ƒÊ(j, i) = dist(engine)*0.01;
+					ƒÊ(j, i) = dist(engine)*0.005;
 				}
 			}
+			//ƒÊ.print_csv("ƒÊ.csv");
+			//exit(0);
 
 			for (int i = 0; i < xs.n; i++)
 			{
@@ -981,7 +1194,6 @@ public:
 			if (kk == 0)
 			{
 				B_best_sv = B;
-				B_av = B;
 			}
 
 			float r = 0.0;
@@ -1010,11 +1222,14 @@ public:
 			}
 			if (delta_0 > r)
 			{
-				B_av += B;
 				numB++;
 			}
 
+			//Evaluation of independence
+			//printf("---- Evaluation of independence ----\n");
+
 			double minfo = 0;
+			Matrix<dnn_double> Minfo = Matrix<dnn_double>().zeros(B.n, B.n);
 			for (int j = 0; j < B.n; j++)
 			{
 				Matrix<dnn_double> x;
@@ -1022,26 +1237,35 @@ public:
 
 				for (int i = 0; i < B.n; i++)
 				{
-					if (B(i, j) < 0.0001) continue;
+					if (fabs(B(i, j)) < 0.0001) continue;
 					x = xs.Col(replacement[i]);
 					y = xs.Col(replacement[j]);
 
 					MutualInformation I(x, y);
 					double tmp = I.Information();
-					if (tmp < 1.0e-16) B(i, j) = 0;
-					minfo += tmp;
+					//if (tmp < 0.04)
+					//{
+					//	B(i, j) = 0;
+					//	//printf("Mutual Information=%f -> rmove edge(%d,%d)\n", tmp, i, j);
+					//}
+					//printf("(%d,%d) %f ", i, j, tmp);
+					Minfo(i, j) = tmp;
 				}
+				minfo = Minfo.Sum();
+				//printf("\n");
 			}
+			//printf("\n");
+			//printf("---- Evaluation of independence end ----\n");
 
-			if ((minfo_max <= minfo || kk == 0) && delta_min >= r)
-			{
-				printf("@[%d/%d] %f -> %f /", kk, confounding_factors_sampling-1, minfo_max, minfo);
-				printf(" %f -> %f\n", delta_min, r);
-				fflush(stdout);
-				B_best_sv = B;
-				minfo_max = minfo;
-				delta_min = r;
-			}
+			//if ((minfo_max <= minfo || kk == 0) && delta_min >= r)
+			//{
+			//	printf("@[%d/%d] %f -> %f /", kk, confounding_factors_sampling-1, minfo_max, minfo);
+			//	printf(" %f -> %f\n", delta_min, r);
+			//	fflush(stdout);
+			//	B_best_sv = B;
+			//	minfo_max = minfo;
+			//	delta_min = r;
+			//}
 
 			//if (minfo_max < minfo  )
 			//{
@@ -1049,6 +1273,7 @@ public:
 			//	fflush(stdout);
 			//	B_best_sv = B;
 			//	minfo_max = minfo;
+			//	modification_input = xs;
 			//}
 
 			//if (delta_min > r)
@@ -1057,16 +1282,55 @@ public:
 			//	fflush(stdout);
 			//	B_best_sv = B;
 			//	delta_min = r;
+			//	modification_input = xs;
 			//}
+
+			if (delta_min > r)
+			{
+				if (minfo >= minfo_max)
+				{
+					printf("@[%d/%d] %f -> %f /", kk, confounding_factors_sampling - 1, minfo_max, minfo);
+					printf(" %f -> %f", delta_min, r);
+					B_best_sv = B;
+					minfo_max = minfo;
+					delta_min = r;
+					modification_input = xs;
+					printf("->accept\n");
+					fflush(stdout);
+				}
+			}
 		}
 
 		B = B_best_sv;
-		B_av = B_av / (double)numB;
+
+		mutual_information = Matrix<dnn_double>().zeros(B.n, B.n);
+		for (int j = 0; j < B.n; j++)
+		{
+			Matrix<dnn_double> x;
+			Matrix<dnn_double> y;
+
+			for (int i = 0; i < B.n; i++)
+			{
+				if (fabs(B(i, j)) < 0.0001) continue;
+				x = X.Col(replacement[i]);
+				y = X.Col(replacement[j]);
+
+				MutualInformation I(x, y);
+				double tmp = I.Information();
+				//if (tmp < 0.04)
+				//{
+				//	B(i, j) = 0;
+				//	printf("Mutual Information=%f -> rmove edge(%d,%d)\n", tmp, i, j);
+				//}
+				mutual_information(i, j) = tmp;
+			}
+			//printf("\n");
+		}
+		//mutual_information = mutual_information / mutual_information.Max();
 
 		printf("Residual error %f -> %f\n", delta_0, delta_min);
-		//B_av.print_e("B•½‹Ï");
-		//B = B_av;
 
+		B_pre_sort = B;
 		return error;
 	}
 };

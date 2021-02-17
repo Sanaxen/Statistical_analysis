@@ -360,7 +360,7 @@ struct Matrix
 				fprintf(fp, "%f", v[n*i + j]);
 				if (j < n - 1) fprintf(fp, ",");
 				else fprintf(fp, "\n");
-	}
+			}
 		}
 		fclose(fp);
 	}
