@@ -429,6 +429,7 @@ public:
 	Matrix<dnn_double> input;
 	Matrix<dnn_double> modification_input;
 	Matrix<dnn_double> mutual_information;
+	Matrix<dnn_double> Mu;
 	bool mutual_information_values = false;
 	int confounding_factors = 0;
 
@@ -465,6 +466,7 @@ public:
 		input.print_csv((char*)(filename + ".input.csv").c_str());
 		modification_input.print_csv((char*)(filename + ".modification_input.csv").c_str());
 		mutual_information.print_csv((char*)(filename + ".mutual_information.csv").c_str());
+		Mu.print_csv((char*)(filename + ".mu.csv").c_str());
 
 	}
 	bool load(std::string& filename)
@@ -519,6 +521,10 @@ public:
 		CSVReader csv5((filename + ".mutual_information.csv"), ',', false);
 		mutual_information = csv5.toMat();
 		printf("load mutual_information\n"); fflush(stdout);
+
+		CSVReader csv6((filename + ".mu.csv"), ',', false);
+		Mu = csv6.toMat();
+		printf("load É \n"); fflush(stdout);
 
 		return true;
 	}
@@ -749,21 +755,21 @@ public:
 			}
 			utf8.fprintf(fp, "%s [fillcolor=\"#ccddff\", style=\"filled\"]\n", item1.c_str());
 		}
-		for (int i = 0; i < B_tmp.n; i++)
-		{
-			for (int j = 0; j < B_tmp.n; j++)
-			{
-				if (mutual_information(i, j) < mutual_information_cut)
-				{
-					std::string item1 = item[i];
-					if (item1.c_str()[0] != '\"')
-					{
-						item1 = "\"" + item1 + "\"";
-					}
-					utf8.fprintf(fp, "%s [fillcolor=\"#ccddff\", style=\"filled\"]\n", item1.c_str());
-				}
-			}
-		}
+		//for (int i = 0; i < B_tmp.n; i++)
+		//{
+		//	for (int j = 0; j < B_tmp.n; j++)
+		//	{
+		//		if (mutual_information(i, j) < mutual_information_cut)
+		//		{
+		//			std::string item1 = item[i];
+		//			if (item1.c_str()[0] != '\"')
+		//			{
+		//				item1 = "\"" + item1 + "\"";
+		//			}
+		//			utf8.fprintf(fp, "%s [fillcolor=\"#ccddff\", style=\"filled\"]\n", item1.c_str());
+		//		}
+		//	}
+		//}
 
 
 		utf8.fprintf(fp, "}\n");
@@ -876,6 +882,7 @@ public:
 	{
 		error = 0;
 
+		Mu = Matrix<dnn_double>().zeros(X.m, X.n);
 		input = X;
 		modification_input = X;
 
@@ -1084,8 +1091,8 @@ public:
 		logmsg = false;
 		error = 0;
 
+		Mu = Matrix<dnn_double>().zeros(X.m, X.n);
 		Matrix<dnn_double> B_best_sv;
-
 		Matrix<dnn_double> residual_error(X.m, X.n);
 		
 		input = X;
@@ -1094,11 +1101,14 @@ public:
 		//std::default_random_engine engine(seed_gen());
 		std::default_random_engine engine(123456789);
 		//std::student_t_distribution<> dist(12.0);
+		std::uniform_real_distribution<> acceptance_rate(0.0, 1.0);
+		std::uniform_real_distribution<> rate_cf(0.0, 1.0);
 
+		int reject_count = 0;
+		double temperature = 0.0;
+		double temperature_alp = 0.001;
 		double minfo_max = 0.0;
-		int numB = 0;
-		float delta_0 = 999999999.0;
-		float delta_min = 999999999.0;
+		float min_value = 999999999.0;
 		for (int kk = 0; kk < confounding_factors_sampling; kk++)
 		{
 			start = std::chrono::system_clock::now();
@@ -1128,14 +1138,16 @@ public:
 			//		É (j, i) = dist(engine)*0.01;
 			//	}
 			//}
+
 //#pragma omp parallel for <-- óêêîÇÃèáèòÇ™ïœÇÌÇ¡ÇƒÇµÇ‹Ç§Ç©ÇÁï¿óÒâªÇµÇΩÇÁÉ_ÉÅ7
 			for (int i = 0; i < xs.n; i++)
 			{
 				std::normal_distribution<> dist(0.0, 30.0);
 
+				double rate = 0.005;
 				for (int j = 0; j < xs.m; j++)
 				{
-					É (j, i) = dist(engine)*0.005;
+					É (j, i) = dist(engine)*rate;
 				}
 			}
 			//É .print_csv("É .csv");
@@ -1218,12 +1230,13 @@ public:
 				for (int j = 0; j < xs.m; j++)
 				{
 					Matrix<dnn_double> x(xs.n, 1);
+					Matrix<dnn_double> y(xs.n, 1);
 					for (int i = 0; i < xs.n; i++)
 					{
 						x(i, 0) = xs(j, replacement[i]);
+						y(i, 0) = X(j, replacement[i]);
 					}
-					//Matrix<dnn_double>& rr = x - (É .Row(j) + B *(x- É .Row(j)));
-					Matrix<dnn_double>& rr = x -  B * x;
+					Matrix<dnn_double>& rr = y -  B * x;
 					for (int i = 0; i < xs.n; i++)
 					{
 						r += rr(0, i)*rr(0, i);
@@ -1231,15 +1244,6 @@ public:
 					}
 				}
 				r /= (xs.m*xs.n);
-
-				if (kk == 0)
-				{
-					delta_0 = r;
-				}
-			}
-			if (delta_0 > r)
-			{
-				numB++;
 			}
 
 			//Evaluation of independence
@@ -1248,54 +1252,56 @@ public:
 			double minfo = Minfo.Sum();
 			//printf("---- Evaluation of independence end ----\n");
 
-			//if ((minfo_max <= minfo || kk == 0) && delta_min >= r)
-			//{
-			//	printf("@[%d/%d] %f -> %f /", kk, confounding_factors_sampling-1, minfo_max, minfo);
-			//	printf(" %f -> %f\n", delta_min, r);
-			//	fflush(stdout);
-			//	B_best_sv = B;
-			//	minfo_max = minfo;
-			//	delta_min = r;
-			//}
-
-			//if (minfo_max < minfo  )
-			//{
-			//	printf("@ %f -> %f\n", minfo_max, minfo);
-			//	fflush(stdout);
-			//	B_best_sv = B;
-			//	minfo_max = minfo;
-			//	modification_input = xs;
-			//}
-
-			//if (delta_min > r)
-			//{
-			//	printf("@ %f -> %f\n", delta_min, r);
-			//	fflush(stdout);
-			//	B_best_sv = B;
-			//	delta_min = r;
-			//	modification_input = xs;
-			//}
-
 			fflush(stdout);
-			if (delta_min > r)
-			{
-				if (minfo >= minfo_max)
-				{
-					printf("@[%d/%d] %f -> %f /", kk, confounding_factors_sampling - 1, minfo_max, minfo);
-					printf(" %f -> %f", delta_min, r);
-					B_best_sv = B;
-					minfo_max = minfo;
-					delta_min = r;
-					modification_input = xs;
-					printf("->accept\n");
-					fflush(stdout);
 
-					B_pre_sort = B;
-					calc_mutual_information(X, mutual_information);
-					save(std::string("lingam"));
-				}
+			double rt = (double)kk / (double)confounding_factors_sampling;
+			temperature = pow(temperature_alp, rt);
+
+			bool accept = false;
+
+			double value = r;
+			if (min_value > value && minfo_max < minfo)
+			{
+				accept = true;
 			}
 
+			double alp = acceptance_rate(engine);
+			if (min_value > value && minfo_max > minfo && alp < exp((minfo - minfo_max) / temperature))
+			{
+				accept = true;
+			}
+			if (accept)
+			{
+				printf("@[%d/%d] %f -> %f /", kk, confounding_factors_sampling - 1, minfo_max, minfo);
+				printf(" %f -> %f", min_value, value);
+				printf("->accept\n");
+
+				minfo_max = minfo;
+				if (min_value > value)
+				{
+					min_value = value;
+				}
+
+				Mu = É ;
+				B_best_sv = B;
+				B_pre_sort = B;
+				modification_input = xs;
+
+				calc_mutual_information(X, mutual_information);
+				save(std::string("lingam"));
+				fflush(stdout);
+
+				reject_count = 0;
+			}
+			else
+			{
+				reject_count++;
+			}
+
+			if (confounding_factors_sampling > 1000 && reject_count > confounding_factors_sampling / 3)
+			{
+				break;
+			}
 
 			end = std::chrono::system_clock::now();
 			elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -1309,39 +1315,38 @@ public:
 			}
 			if (t1 < 60)
 			{
-				printf("[%d/%d]Total elapsed time:%.3f[sec] Estimated end time:%.3f[sec]\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001, t1);
+				printf("[%d/%d]Total elapsed time:%.3f[sec] Estimated end time:%.3f[sec] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001, t1, reject_count);
 				fflush(stdout);
 				continue;
 			}
 			t1 /= 60.0;
-			if (t1 < 1)
+			if (t1 < 60)
 			{
-				printf("[%d/%d]Total elapsed time:%.3f[min] Estimated end time:%.3f[min]\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001 / 60.0, t1);
+				printf("[%d/%d]Total elapsed time:%.3f[min] Estimated end time:%.3f[min] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001 / 60.0, t1, reject_count);
 				fflush(stdout);
 				continue;
 			}
 			t1 /= 60.0;
 			if (t1 < 24)
 			{
-				printf("[%d/%d]Total elapsed time:%.3f[h] Estimated end time:%.3f[h]\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001 / 60.0 / 60.0, t1);
+				printf("[%d/%d]Total elapsed time:%.3f[h] Estimated end time:%.3f[h] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001 / 60.0 / 60.0, t1, reject_count);
 				fflush(stdout);
 				continue;
 			}
 			t1 /= 365;
 			if (t1 < 365)
 			{
-				printf("[%d/%d]Total elapsed time:%.3f[days] Estimated end time:%.3f[days]\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001 /60 / 60 / 24.0 / 365.0, t1);
+				printf("[%d/%d]Total elapsed time:%.3f[days] Estimated end time:%.3f[days] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001 /60 / 60 / 24.0 / 365.0, t1, reject_count);
 				fflush(stdout);
 				continue;
 			}
-			printf("[%d/%d]Total elapsed time:%.3f[years] Estimated end time:%.3f[years]\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001 /60 / 60 / 24.0 / 365.0, t1);
+			printf("[%d/%d]Total elapsed time:%.3f[years] Estimated end time:%.3f[years] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001 /60 / 60 / 24.0 / 365.0, t1, reject_count);
 			fflush(stdout);
 		}
 
 		B = B_best_sv;
 
 		calc_mutual_information(X, mutual_information);
-		printf("Residual error %f -> %f\n", delta_0, delta_min);
 
 		B_pre_sort = B;
 		return error;

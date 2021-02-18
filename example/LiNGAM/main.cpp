@@ -669,7 +669,7 @@ int main(int argc, char** argv)
 	{
 		LiNGAM.linear_regression_var.push_back(y_var[0]);
 	}
-	LiNGAM.diagram(header_names, y_var, residual_flag, "digraph.txt", sideways, diaglam_size, output_diaglam_type, mutual_information_cut);
+	LiNGAM.diagram(header_names, y_var, residual_flag, "digraph.txt", sideways, diaglam_size, output_diaglam_type, false, mutual_information_cut);
 	LiNGAM.report(header_names);
 
 	{
