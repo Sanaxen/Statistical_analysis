@@ -99,6 +99,8 @@ int main(int argc, char** argv)
 	int confounding_factors_sampling = 1000;
 	double mutual_information_cut = 0.0;
 	bool mutual_information_values = true;
+	double distribution_rate = 0.005;
+	double temperature_alp = 0.75;
 
 	std::string load_model = "";
 
@@ -190,8 +192,12 @@ int main(int argc, char** argv)
 				else if (argname == "--load_model") {
 					load_model = argv[count + 1];
 				}
-		//
-
+				else if (argname == "--distribution_rate") {
+					distribution_rate = atof(argv[count + 1]);
+				}
+				else if (argname == "--temperature_alp") {
+					temperature_alp = atof(argv[count + 1]);
+				}
 				else {
 					std::cerr << "Invalid parameter specified - \"" << argname << "\""
 						<< std::endl;
@@ -493,6 +499,8 @@ int main(int argc, char** argv)
 	LiNGAM.set(xs.n);
 	LiNGAM.mutual_information_values = mutual_information_values;
 	LiNGAM.confounding_factors = confounding_factors? 1: 0;
+	LiNGAM.distribution_rate = distribution_rate;
+	LiNGAM.temperature_alp = temperature_alp;
 
 	//MutualInformation I(xs.Col(0), xs.Col(1), 30);
 	//double tmp = I.Information();
