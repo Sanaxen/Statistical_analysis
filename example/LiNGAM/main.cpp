@@ -540,8 +540,8 @@ int main(int argc, char** argv)
 			printf("ERROR:lasso(remove_redundancy)\n");
 		}
 	}
-	LiNGAM.before_sorting();
 	LiNGAM.before_sorting(LiNGAM.mutual_information);
+	LiNGAM.before_sorting();
 
 	LiNGAM.B.print_e("(#2)B");
 	if (min_cor_delete > 0)
@@ -575,11 +575,6 @@ int main(int argc, char** argv)
 	//mutual_information_cut = 0.001;
 	if (mutual_information_cut > 0)
 	{
-		if (mutual_information_cut > 1.0)
-		{
-			printf("mutual_information_cut:%f -> [0,1]\n", mutual_information_cut);
-			mutual_information_cut = 1.0;
-		}
 		for (int i = 0; i < LiNGAM.B.m; i++)
 		{
 			for (int j = 0; j < LiNGAM.B.n; j++)

@@ -859,7 +859,7 @@ public:
 
 	void before_sorting(Matrix<dnn_double>& b)
 	{
-		std::vector<int> &r = replacement;
+		std::vector<int> r = replacement;
 		Matrix<dnn_double> b_csl = b;
 
 		//ï¿Ç◊ë÷Ç¶Çå≥Ç…ñﬂÇ∑
@@ -870,12 +870,23 @@ public:
 		//b_csl[:, r] = deepcopy(b_csl)
 		b_csl = (b_csl*Substitution(r));
 		//b_csl.print_e();
-
-		for (int i = 0; i < b.n; i++)
-		{
-			r[i] = i;
-		}
 		b = b_csl;
+	}
+
+	Matrix<dnn_double> before_sorting_(Matrix<dnn_double>& b)
+	{
+		std::vector<int> r = replacement;
+		Matrix<dnn_double> b_csl = b;
+
+		//ï¿Ç◊ë÷Ç¶Çå≥Ç…ñﬂÇ∑
+		//b_csl[r, :] = deepcopy(b_csl)
+		b_csl = (Substitution(r).transpose()*b_csl);
+		//b_csl.print_e();
+
+		//b_csl[:, r] = deepcopy(b_csl)
+		b_csl = (b_csl*Substitution(r));
+		//b_csl.print_e();
+		return b_csl;
 	}
 
 	int fit(Matrix<dnn_double>& X, const int max_ica_iteration = MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
@@ -1107,21 +1118,21 @@ public:
 		std::uniform_real_distribution<> acceptance_rate(0.0, 1.0);
 		std::uniform_real_distribution<> rate_cf(-1.0, 1.0);
 
+		bool min_Residual_error = true;
 		int reject = 0;
 		int accept = 0;
 		double temperature = 0.0;
-		double best_max_info = 0.0;
+		//double best_max_info = 0.0;
+		double best_min_info = 999999999.0;
 		double best_min_value = 999999999.0;
+		Matrix<dnn_double>É (X.m, X.n);
+		Matrix<dnn_double>É 0;
 
 		for (int kk = 0; kk < confounding_factors_sampling; kk++)
 		{
 			start = std::chrono::system_clock::now();
 
 			Matrix<dnn_double> xs = X;
-
-			Matrix<dnn_double>É (xs.m, xs.n);
-			Matrix<dnn_double>É 0;
-
 
 //#pragma omp parallel for <-- óêêîÇÃèáèòÇ™ïœÇÌÇ¡ÇƒÇµÇ‹Ç§Ç©ÇÁï¿óÒâªÇµÇΩÇÁÉ_ÉÅ7
 			
@@ -1145,22 +1156,23 @@ public:
 			else
 			{
 
-				double max_É  = 0;
-				for (int i = 0; i < É .m*É .n; i++)
-				{
-					if (fabs(É .v[i]) > max_É )
-					{
-						max_É  = fabs(É .v[i]);
-					}
-				}
+				//double max_É  = 0;
+				//for (int i = 0; i < É .m*É .n; i++)
+				//{
+				//	if (fabs(É .v[i]) > max_É )
+				//	{
+				//		max_É  = fabs(É .v[i]);
+				//	}
+				//}
 
 				double a = 0.01 / (double)(kk + 1);
+				a = 0.005;
 				//printf("max_É :%f a:%f\n", max_É , a);
 
 #pragma omp parallel for
 				for (int i = 0; i < É .m*É .n; i++)
 				{
-					É .v[i] += a*rate_cf(engine) / (accept*max_É );
+					É .v[i] += a*rate_cf(engine) / (accept+1/**max_É */);
 				}
 			}
 #pragma omp parallel for
@@ -1253,8 +1265,9 @@ public:
 
 			//Evaluation of independence
 			Matrix<dnn_double> Minfo;
-			calc_mutual_information(xs, Minfo);
-			double info = Minfo.Sum();
+			//calc_mutual_information(xs, Minfo);
+			calc_mutual_information(residual_error, Minfo);
+			double info = Minfo.Sum() + r;
 			//printf("---- Evaluation of independence end ----\n");
 
 			fflush(stdout);
@@ -1264,10 +1277,22 @@ public:
 
 			bool accept_ = false;
 			double value = r;
-			if (best_min_value > value)
+
+			if (min_Residual_error)
 			{
-				accept_ = true;
+				if (best_min_value > value)
+				{
+					accept_ = true;
+				}
 			}
+			else
+			{
+				if (best_min_info > info)
+				{
+					accept_ = true;
+				}
+			}
+
 			if ( kk == 0 ) accept_ = true;
 
 			if (!accept_)
@@ -1275,9 +1300,19 @@ public:
 				double alp = acceptance_rate(engine);
 
 				double th = -1.0;
-				if (best_min_value < value )
+				if (min_Residual_error)
 				{
-					th = exp((best_min_value - value) / temperature);
+					if (best_min_value < value)
+					{
+						th = exp((best_min_value - value) / temperature);
+					}
+				}
+				else
+				{
+					if (best_min_info < info)
+					{
+						th = exp((best_min_info - info) / temperature);
+					}
 				}
 				if (alp < th)
 				{
@@ -1285,22 +1320,49 @@ public:
 				}
 			}
 
+			//if (kk > 0 && true)
+			//{
+			//	auto& b = before_sorting_(B);
+			//	if (fabs(b(1, 2)) > 0.001)
+			//	{
+			//		accept_ = false;
+			//	}
+			//	if (fabs(b(2, 3)) > 0.001)
+			//	{
+			//		accept_ = false;
+			//	}
+			//	if (fabs(b(3, 0)) > 0.001)
+			//	{
+			//		accept_ = false;
+			//	}
+			//}
+
 			if (accept_)
 			{
 				bool best_update = false;
-				if (best_min_value > value)
+				if (min_Residual_error)
 				{
-					best_min_value = value;
-					best_max_info = info;
-					best_update = true;
+					if (best_min_value > value)
+					{
+						best_min_value = value;
+						best_min_info = info;
+						best_update = true;
+					}
 				}
-
-				É  = É 0;
+				else
+				{
+					if (best_min_info > info)
+					{
+						best_min_value = value;
+						best_min_info = info;
+						best_update = true;
+					}
+				}
 				reject = 0;
 				if (best_update)
 				{
 					accept++;
-					printf("@[%d/%d] %f /", kk, confounding_factors_sampling - 1, best_max_info);
+					printf("@[%d/%d] %f /", kk, confounding_factors_sampling - 1, best_min_info);
 					printf(" %f accept:%d\n", best_min_value, accept);
 
 					Mu = É ;
@@ -1315,6 +1377,7 @@ public:
 				}
 				else
 				{
+					É  = É 0;
 					accept = 0;
 				}
 

@@ -40,7 +40,9 @@ public:
 	//estimated source matrix
 	Matrix<dnn_double> S;
 
-	ICA(){}
+	ICA(){
+		error = 0;
+	}
 
 	Matrix<dnn_double>& whitening()
 	{
@@ -81,6 +83,11 @@ public:
 		}
 
 		SVDcmp<dnn_double> svd(W);
+		if (svd.getStatus() != 0)
+		{
+			error = 2;
+			return Matrix<dnn_double>();
+		}
 		d.diag_vec(svd.Sigma);
 
 
@@ -101,6 +108,11 @@ public:
 			tmp = tmp*xt - D.diag(tmp.one_sub_sqr(alp).mean_rows().v)*Wd;
 
 			SVDcmp<dnn_double> svd(tmp);
+			if (svd.getStatus() != 0)
+			{
+				error = 2;
+				return Wd;
+			}
 			d.diag_vec(svd.Sigma);
 
 			W = svd.U*svd.V.diag(d.Reciprocal().v)*svd.U.transpose()*tmp;
@@ -177,6 +189,11 @@ public:
 		xt = xx.transpose();
 		xx = xx / dnn_double(rows);
 		SVDcmp<dnn_double> svd1(xt*xx);
+		if (svd1.getStatus() != 0)
+		{
+			error = 1;
+			return;
+		}
 		d.diag_vec(svd1.Sigma);
 
 		const dnn_double epsilon = 1.0e-12;
