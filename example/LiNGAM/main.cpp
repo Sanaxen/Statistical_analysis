@@ -8,6 +8,139 @@
 #endif
 #include "../../include/util/cmdline_args.h"
 
+vector<string> split(string str, string separator) 
+{
+	if (separator == "") return { str };
+	vector<string> result;
+	string tstr = str + separator;
+	long l = tstr.length(), sl = separator.length();
+	string::size_type pos = 0, prev = 0;
+
+	for (; pos < l && (pos = tstr.find(separator, pos)) != string::npos; prev = (pos += sl)) {
+		result.emplace_back(tstr, prev, pos - prev);
+	}
+	return result;
+}
+bool prior_knowledge(const char* filename, std::vector<std::string>& header_names, std::vector<int>& m)
+{
+	printf("prior_knowledge[%s]\n", filename);
+	FILE* fp = fopen(filename, "r");
+	if (!fp) return false;
+
+	char buf[256];
+	while (fgets(buf, 256, fp) != NULL)
+	{
+		char* p = strchr(buf, '\n');
+		if (p) *p = '\0';
+
+		if (buf[0] == '#') continue;
+		if (buf[0] == '\0') continue;
+
+		printf("---[%s]------\n", buf);
+		std::string str(buf);
+		auto tokens1 = split(str, "<-");
+		if (tokens1.size() == 2)
+		{
+			for (auto t : tokens1) 
+			{
+				for (int i = 0; i < header_names.size(); i++)
+				{
+					//std::cout << t << " " << header_names[i] << std::endl;
+					if (t == header_names[i])
+					{
+						m.push_back(-(i + 1));
+						break;
+					}else
+					if ("\""+t +"\"" == header_names[i])
+					{
+						m.push_back(-(i + 1));
+						break;
+					}
+
+					if (t == "_" )
+					{
+						int id = abs(m[m.size() - 1])-1;
+						m.pop_back();
+						for (int j = 0; j < header_names.size(); j++)
+						{
+							if (j == id) continue;
+							m.push_back(-(id + 1));
+							m.push_back(-(j + 1));
+						}
+						break;
+					}
+				}
+			}
+		}
+		//printf("%d\n", m.size());
+		if (m.size() % 2)
+		{
+			printf("ERROR:prior_knowledge\n");
+		}
+		auto tokens2 = split(str, "->");
+
+		if (tokens2.size() == 2)
+		{
+			for (auto t : tokens2)
+			{
+				for (int i = 0; i < header_names.size(); i++)
+				{
+					//std::cout << t << " " << header_names[i] << std::endl;
+					if (t == header_names[i])
+					{
+						m.push_back(i + 1);
+						break;
+					}
+					else
+					if ("\"" + t + "\"" == header_names[i])
+					{
+						m.push_back(i + 1);
+						break;
+					}
+					if (t == "_" )
+					{
+						int id = abs(m[m.size() - 1]) - 1;
+						m.pop_back();
+						for (int j = 0; j < header_names.size(); j++)
+						{
+							if (j == id) continue;
+							m.push_back((id + 1));
+							m.push_back((j + 1));
+						}
+						break;
+					}
+				}
+			}
+		}
+		//printf("%d\n", m.size());
+		if (m.size() % 2)
+		{
+			printf("ERROR:prior_knowledge\n");
+		}
+	}
+
+	for (int i = 0; i < m.size()/2; i++)
+	{
+		if (m[2 * i] < 0)
+		{
+			printf("X %d<-%d\n", abs(m[2 * i]) - 1, abs(m[2 * i + 1]) - 1);
+		}
+		if (m[2 * i] > 0)
+		{
+			printf("O %d->%d\n", abs(m[2 * i]) - 1, abs(m[2 * i + 1]) - 1);
+		}
+	}
+	fclose(fp);
+
+	if (m.size() % 2)
+	{
+		printf("ERROR:prior_knowledge\n");
+	}
+	else
+	{
+		printf("prior_knowledge[%s] success\n", filename);
+	}
+}
 
 //https://qiita.com/m__k/items/bd87c063a7496897ba7c
 //LiNGAMÉÇÉfÉãÇÃêÑíËï˚ñ@Ç…Ç¬Ç¢Çƒ
@@ -101,6 +234,8 @@ int main(int argc, char** argv)
 	bool mutual_information_values = true;
 	double distribution_rate = 0.005;
 	double temperature_alp = 0.75;
+	std::string prior_knowledge_file = "";
+	double rho = 0.0001;
 
 	std::string load_model = "";
 
@@ -198,6 +333,13 @@ int main(int argc, char** argv)
 				else if (argname == "--temperature_alp") {
 					temperature_alp = atof(argv[count + 1]);
 				}
+				else if (argname == "--prior_knowledge") {
+					prior_knowledge_file = argv[count + 1];
+				}
+				else if (argname == "--rho") {
+					rho = atof(argv[count + 1]);
+				}
+		//
 				else {
 					std::cerr << "Invalid parameter specified - \"" << argname << "\""
 						<< std::endl;
@@ -496,6 +638,8 @@ int main(int argc, char** argv)
 			fclose(fp);
 		}
 	}
+
+
 	LiNGAM.set(xs.n);
 	LiNGAM.mutual_information_values = mutual_information_values;
 	LiNGAM.confounding_factors = confounding_factors? 1: 0;
@@ -521,6 +665,10 @@ int main(int argc, char** argv)
 	{
 		if (confounding_factors)
 		{
+			std::vector<int> knowledge;
+			prior_knowledge(prior_knowledge_file.c_str(), header_names, knowledge);
+
+			LiNGAM.prior_knowledge = knowledge;
 			LiNGAM.confounding_factors_sampling = confounding_factors_sampling;
 			LiNGAM.fit2(xs, max_ica_iteration, ica_tolerance);
 		}

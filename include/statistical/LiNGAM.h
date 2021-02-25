@@ -904,7 +904,11 @@ public:
 		ica.fit(xs, max_ica_iteration, tolerance);
 		(ica.A.transpose()).inv().print_e();
 		error = ica.getStatus();
-
+		if (error != 0)
+		{
+			printf("ERROR:ICA\n");
+			return error;
+		}
 
 		Matrix<dnn_double>& W_ica = (ica.A.transpose()).inv();
 		Matrix<dnn_double>& W_ica_ = Abs(W_ica).Reciprocal();
@@ -1062,6 +1066,12 @@ public:
 		calc_mutual_information(X, mutual_information);
 
 		B_pre_sort = B;
+
+		if (error)
+		{
+			printf("WARNING:It is possible that the proper causal relationship has not been searched for.\n");
+		}
+
 		return error;
 	}
 
@@ -1093,10 +1103,16 @@ public:
 		}
 	}
 
+	std::vector<int> prior_knowledge;
 	double distribution_rate = 0.005;
 	double temperature_alp = 0.75;
+	double rho = 0.0001;
 	int fit2(Matrix<dnn_double>& X, const int max_ica_iteration= MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
+		CONSOLE_SCREEN_BUFFER_INFO csbi;
+		HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+		GetConsoleScreenBufferInfo(hStdout, &csbi);
+
 		std::chrono::system_clock::time_point  start, end;
 		double elapsed;
 		double elapsed_ave = 0.0;
@@ -1118,7 +1134,7 @@ public:
 		std::uniform_real_distribution<> acceptance_rate(0.0, 1.0);
 		std::uniform_real_distribution<> rate_cf(-1.0, 1.0);
 
-		bool min_Residual_error = true;
+		int update_count = 0;
 		int reject = 0;
 		int accept = 0;
 		double temperature = 0.0;
@@ -1156,27 +1172,19 @@ public:
 			else
 			{
 
-				//double max_É  = 0;
-				//for (int i = 0; i < É .m*É .n; i++)
-				//{
-				//	if (fabs(É .v[i]) > max_É )
-				//	{
-				//		max_É  = fabs(É .v[i]);
-				//	}
-				//}
+				const double a = rho;
 
-				double a = 0.01 / (double)(kk + 1);
-				a = 0.005;
-				//printf("max_É :%f a:%f\n", max_É , a);
-
+				const size_t sz = É .m*É .n;
 #pragma omp parallel for
-				for (int i = 0; i < É .m*É .n; i++)
+				for (int i = 0; i < sz; i++)
 				{
-					É .v[i] += a*rate_cf(engine) / (accept+1/**max_É */);
+					É .v[i] += a * rate_cf(engine) / (pow(accept,3.0) + 1);
 				}
 			}
+
+			const size_t sz = xs.m*xs.n;
 #pragma omp parallel for
-			for (int i = 0; i < xs.m*xs.n; i++)
+			for (int i = 0; i < sz; i++)
 			{
 				xs.v[i] -= É .v[i];
 			}
@@ -1241,19 +1249,27 @@ public:
 			{
 				B = b_est;
 			}
+			else
+			{
+				printf("--------------------\n");
+				continue;
+			}
 
 			float r = 0.0;
 			{
+				auto& b = before_sorting_(B);
 				for (int j = 0; j < xs.m; j++)
 				{
 					Matrix<dnn_double> x(xs.n, 1);
 					Matrix<dnn_double> y(xs.n, 1);
 					for (int i = 0; i < xs.n; i++)
 					{
-						x(i, 0) = xs(j, replacement[i]);
-						y(i, 0) = X(j, replacement[i]);
+						//x(i, 0) = xs(j, replacement[i]);
+						//y(i, 0) = X(j, replacement[i]);
+						x(i, 0) = xs(j, i);
+						y(i, 0) = X(j, i);
 					}
-					Matrix<dnn_double>& rr = y -  B * x;
+					Matrix<dnn_double>& rr = y -  b * x;
 					for (int i = 0; i < xs.n; i++)
 					{
 						r += rr(0, i)*rr(0, i);
@@ -1265,9 +1281,10 @@ public:
 
 			//Evaluation of independence
 			Matrix<dnn_double> Minfo;
-			//calc_mutual_information(xs, Minfo);
 			calc_mutual_information(residual_error, Minfo);
-			double info = Minfo.Sum() + r;
+			
+			double info = Minfo.Sum();
+			double value = 0.001*info + r;
 			//printf("---- Evaluation of independence end ----\n");
 
 			fflush(stdout);
@@ -1276,95 +1293,129 @@ public:
 			temperature = pow(temperature_alp, rt);
 
 			bool accept_ = false;
-			double value = r;
 
-			if (min_Residual_error)
+			if (best_min_value > value)
 			{
-				if (best_min_value > value)
-				{
-					accept_ = true;
-				}
-			}
-			else
-			{
-				if (best_min_info > info)
-				{
-					accept_ = true;
-				}
+				accept_ = true;
 			}
 
-			if ( kk == 0 ) accept_ = true;
+			if (kk == 0) accept_ = true;
 
 			if (!accept_)
 			{
 				double alp = acceptance_rate(engine);
 
 				double th = -1.0;
-				if (min_Residual_error)
+				if (best_min_value < value)
 				{
-					if (best_min_value < value)
+					if (value - best_min_value > 1.5)
+					{
+						th = exp(-1.5 / temperature);
+					}
+					else
 					{
 						th = exp((best_min_value - value) / temperature);
 					}
 				}
-				else
-				{
-					if (best_min_info < info)
-					{
-						th = exp((best_min_info - info) / temperature);
-					}
-				}
+				//printf("temperature:%f  alp:%f th:%f\n", temperature, alp, th );
 				if (alp < th)
 				{
 					accept_ = true;
 				}
 			}
 
-			//if (kk > 0 && true)
-			//{
-			//	auto& b = before_sorting_(B);
-			//	if (fabs(b(1, 2)) > 0.001)
-			//	{
-			//		accept_ = false;
-			//	}
-			//	if (fabs(b(2, 3)) > 0.001)
-			//	{
-			//		accept_ = false;
-			//	}
-			//	if (fabs(b(3, 0)) > 0.001)
-			//	{
-			//		accept_ = false;
-			//	}
-			//}
+			if (kk > 0 && accept_ && prior_knowledge.size())
+			{
+				auto& b = before_sorting_(B);
+				bool a = accept_;
+
+				for (int k = 0; k < prior_knowledge.size() / 2; k++)
+				{
+					bool ng_edge = false;
+					int ii, jj;
+					if (prior_knowledge[2 * k] < 0)
+					{
+						ii = abs(prior_knowledge[2 * k]) - 1;
+						jj = abs(prior_knowledge[2 * k + 1]) - 1;
+						ng_edge = true;
+					}
+					else
+					{
+						ii = prior_knowledge[2 * k] - 1;
+						jj = prior_knowledge[2 * k + 1] - 1;
+					}
+					if (ng_edge)
+					{
+						if (fabs(b(ii, jj)) > 0.001) accept_ = false;
+						//printf("%d -> %d NG\n", jj, ii);
+					}
+					else
+					{
+						if (fabs(b(ii, jj)) > 0.001 && fabs(b(jj, ii)) < 0.001)
+						{
+							accept_ = false;
+							//printf("%d -> %d NG\n", jj, ii);
+						}
+						if (fabs(b(ii, jj)) > 0.001 || fabs(b(jj, ii)) < 0.001)
+						{
+							accept_ = false;
+							//printf("%d -> %d NG\n", jj, ii);
+						}
+					}
+				}
+				// Å¶ b( i, j ) = j -> i
+				////b.print("b");
+				////printf("b(0,1):%f b(0,2):%f\n", b(0, 1), b(0, 2));
+				//// # -> 0 NG
+				//if (fabs(b(0, 1)) > 0.001 || fabs(b(0, 2)) > 0.001 )
+				//{
+				//	accept_ = false;
+				//}
+				////2 -> 1 NG   1 -> 2 OK
+				//if (fabs(b(2, 1)) < fabs(b(1, 2)))
+				//{
+				//	accept_ = false;
+				//}
+
+				//if (!accept_ && a)
+				//{
+				//	b.print("NG-b");
+				//}
+			}
 
 			if (accept_)
 			{
+				//printf("+\n");
 				bool best_update = false;
-				if (min_Residual_error)
+				if (best_min_value > value)
 				{
-					if (best_min_value > value)
-					{
-						best_min_value = value;
-						best_min_info = info;
-						best_update = true;
-					}
+					best_min_value = value;
+					best_update = true;
 				}
-				else
-				{
-					if (best_min_info > info)
-					{
-						best_min_value = value;
-						best_min_info = info;
-						best_update = true;
-					}
-				}
+				//{
+				//	auto& b = before_sorting_(B);
+				//	b.print("accept-b");
+				//}
+				accept++;
 				reject = 0;
 				if (best_update)
-				{
-					accept++;
-					printf("@[%d/%d] %f /", kk, confounding_factors_sampling - 1, best_min_info);
-					printf(" %f accept:%d\n", best_min_value, accept);
+				{		
+					update_count++;
+					char buf[256];
+					sprintf(buf, "@[%d/%d] %f (%f)accept:%d", kk, confounding_factors_sampling - 1, best_min_value, info, accept);
 
+					if (1)
+					{
+						DWORD  bytesWritten = 0;
+						SetConsoleTextAttribute(hStdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_BLUE | BACKGROUND_INTENSITY);
+						WriteFile(hStdout, buf, strlen(buf), &bytesWritten, NULL);
+						SetConsoleTextAttribute(hStdout, csbi.wAttributes);
+						printf("\n");
+					}
+					else
+					{
+						printf(buf);
+					}
 					Mu = É ;
 					B_best_sv = B;
 					B_pre_sort = B;
@@ -1378,7 +1429,6 @@ public:
 				else
 				{
 					É  = É 0;
-					accept = 0;
 				}
 
 				fflush(stdout);
@@ -1389,9 +1439,9 @@ public:
 				reject++;
 			}
 
-			if (confounding_factors_sampling > 1000 && accept > confounding_factors_sampling / 3)
+			if (confounding_factors_sampling > 4000 && reject > confounding_factors_sampling / 4)
 			{
-				//break;
+				break;
 			}
 
 			end = std::chrono::system_clock::now();
@@ -1400,7 +1450,7 @@ public:
 			
 			elapsed_ave += elapsed;
 			double t1 = (confounding_factors_sampling - 1 - kk)*(elapsed_ave*0.001 / (kk + 1));
-			if (kk != 0 && elapsed_ave*0.001 / (kk + 1) < 1 && kk % 10)
+			if (kk != 0 && elapsed_ave*0.001 / (kk + 1) < 1 && kk % 20)
 			{
 				continue;
 			}
@@ -1441,6 +1491,11 @@ public:
 		calc_mutual_information(X, mutual_information);
 
 		B_pre_sort = B;
+		if (update_count < 2)
+		{
+			error = 1;
+			printf("WARNING:It is possible that the proper causal relationship has not been searched for.\n");
+		}
 		return error;
 	}
 };
