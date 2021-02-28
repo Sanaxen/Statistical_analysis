@@ -1069,7 +1069,7 @@ public:
 
 		if (error)
 		{
-			printf("WARNING:It is possible that the proper causal relationship has not been searched for.\n");
+			printf("WARNING:No valid path was found.\n");
 		}
 
 		return error;
@@ -1172,7 +1172,7 @@ public:
 			else
 			{
 
-				const double a = rho;
+				const double a = 0.001;
 
 				const size_t sz = É .m*É .n;
 #pragma omp parallel for
@@ -1284,7 +1284,7 @@ public:
 			calc_mutual_information(residual_error, Minfo);
 			
 			double info = Minfo.Sum();
-			double value = 0.001*info + r;
+			double value = rho*info + r;
 			//printf("---- Evaluation of independence end ----\n");
 
 			fflush(stdout);
@@ -1494,7 +1494,7 @@ public:
 		if (update_count < 2)
 		{
 			error = 1;
-			printf("WARNING:It is possible that the proper causal relationship has not been searched for.\n");
+			printf("WARNING:No valid path was found.\n");
 		}
 		return error;
 	}
