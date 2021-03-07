@@ -1371,12 +1371,11 @@ struct Matrix
 		return d;
 	}
 
-	inline Matrix<T> RandMT()
+	inline Matrix<T> RandMT(std::mt19937 mt)
 	{
 		Matrix<T> d = *this;
 		const int mn = d.m*d.n;
 
-		std::mt19937 mt(1234);
 		std::uniform_real_distribution<> rand01(0.0, 1.0);
 
 		for (int i = 0; i < mn; i++) d.v[i] = rand01(mt);

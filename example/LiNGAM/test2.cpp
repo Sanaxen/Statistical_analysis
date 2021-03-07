@@ -94,9 +94,11 @@ int main()
 	//xs.print_csv("sample2.csv");
 	xs.print_e();
 
+	std::mt19937 mt(1234);
+
 	Lingam LiNGAM;
 
-	LiNGAM.set(6);
+	LiNGAM.set(6, mt);
 	LiNGAM.fit(xs);
 
 	LiNGAM.B.print_e("B");

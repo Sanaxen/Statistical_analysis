@@ -2,6 +2,7 @@
 //Copyright (c) 2018, Sanaxn
 //All rights reserved.
 
+#define NOMINMAX
 #define __LINGAM_H__
 #include <chrono>
 
@@ -52,8 +53,17 @@ class MutualInformation
 		max2 = M2.Max();
 		min2 = M2.Min();
 
+#if 0
 		double dx = (max1 - min1) / grid;
 		double dy = (max2 - min2) / grid;
+#else
+		max1 = (max1 > max2) ? max1 : max2;
+		min1 = (min1 < min2) ? min1 : min2;
+		max2 = max1;
+		min2 = min1;
+		double dx = (max1 - min1) / grid;
+		double dy = (max2 - min2) / grid;
+#endif
 
 		//printf("dx:%f dy:%f\n", dx, dy);
 		std::vector<dnn_double> table1;
@@ -419,9 +429,13 @@ class Lingam
 		return b_csl;
 	}
 
+	std::mt19937 mt;
+
 public:
+
 	bool logmsg = true;
 	int confounding_factors_sampling = 1000;
+	double confounding_factors_upper = 0.90;
 
 	vector<int> replacement;
 	Matrix<dnn_double> B;
@@ -430,6 +444,8 @@ public:
 	Matrix<dnn_double> modification_input;
 	Matrix<dnn_double> mutual_information;
 	Matrix<dnn_double> Mu;
+	Matrix<dnn_double> residual_error;
+	Matrix<dnn_double> residual_error_info;
 	bool mutual_information_values = false;
 	int confounding_factors = 0;
 
@@ -437,8 +453,9 @@ public:
 		error = -999;
 	}
 
-	void set(int variableNum_)
+	void set(int variableNum_, std::mt19937 mt_)
 	{
+		mt = mt_;
 		variableNum = variableNum_;
 	}
 
@@ -467,6 +484,9 @@ public:
 		modification_input.print_csv((char*)(filename + ".modification_input.csv").c_str());
 		mutual_information.print_csv((char*)(filename + ".mutual_information.csv").c_str());
 		Mu.print_csv((char*)(filename + ".mu.csv").c_str());
+		
+		residual_error_info.print_csv((char*)(filename + ".residual_error_info.csv").c_str());
+		residual_error.print_csv((char*)(filename + ".residual_error.csv").c_str());
 
 	}
 	bool load(std::string& filename)
@@ -525,6 +545,14 @@ public:
 		CSVReader csv6((filename + ".mu.csv"), ',', false);
 		Mu = csv6.toMat();
 		printf("load É \n"); fflush(stdout);
+
+		CSVReader csv7((filename + ".residual_error_info.csv"), ',', false);
+		residual_error_info = csv7.toMat();
+		printf("residual_error_info\n"); fflush(stdout);
+
+		CSVReader csv8((filename + ".residual_error.csv"), ',', false);
+		residual_error = csv8.toMat();
+		printf("residual_error\n"); fflush(stdout);
 
 		return true;
 	}
@@ -710,7 +738,7 @@ public:
 					{
 						if (mutual_information_values)
 						{
-							utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.2f\" color=red penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), style);
+							utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.3f\" color=red penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), style);
 						}
 						else
 						{
@@ -723,7 +751,7 @@ public:
 							linear_regression_var.push_back(item[j]);
 							if (mutual_information_values)
 							{
-								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.2f\" color=blue penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), style);
+								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.3f\" color=blue penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), style);
 							}
 							else
 							{
@@ -735,7 +763,7 @@ public:
 							if (mutual_information_values)
 							{
 
-								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.2f\" color=\"%s\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), line_colors[9 - (int)(9 * mutual_information_tmp(i, j))], style);
+								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.3f\" color=\"%s\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), line_colors[9 - (int)(9 * mutual_information_tmp(i, j))], style);
 							}
 							else
 							{
@@ -891,8 +919,10 @@ public:
 
 	int fit(Matrix<dnn_double>& X, const int max_ica_iteration = MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
+		remove("confounding_factors.txt");
 		error = 0;
 
+		residual_error = Matrix<dnn_double>(X.m, X.n);
 		Mu = Matrix<dnn_double>().zeros(X.m, X.n);
 		input = X;
 		modification_input = X;
@@ -1064,8 +1094,40 @@ public:
 		if (error == 0) B = b_est;
 
 		calc_mutual_information(X, mutual_information);
+		{
+			auto& b = before_sorting_(B);
+			for (int j = 0; j < xs.m; j++)
+			{
+				Matrix<dnn_double> x(xs.n, 1);
+				Matrix<dnn_double> y(xs.n, 1);
+				for (int i = 0; i < xs.n; i++)
+				{
+					x(i, 0) = xs(j, i);
+					y(i, 0) = X(j, i);
+				}
+				Matrix<dnn_double>& rr = y - b * x;
+				for (int i = 0; i < xs.n; i++)
+				{
+					residual_error(j, i) = rr(0, i);
+				}
+			}
+			//Evaluation of independence
+			calc_mutual_information( residual_error, residual_error_info);
+		}
+		
+		double c_factors = residual_error_info.Max();
+		residual_error_info.print_csv("confounding_factors_info.csv");
+		if (c_factors > confounding_factors_upper)
+		{
+			FILE* fp = fopen("confounding_factors.txt", "w");
+			if (fp)
+			{
+				fprintf(fp, "Confounding factors may be present\n");
+				fclose(fp);
+			}
+		}
 
-		B_pre_sort = B;
+		B_pre_sort = this->before_sorting_(B);
 
 		if (error)
 		{
@@ -1075,40 +1137,41 @@ public:
 		return error;
 	}
 
-	void calc_mutual_information(Matrix<dnn_double>& X, Matrix<dnn_double>& info)
+	void calc_mutual_information( Matrix<dnn_double>& X, Matrix<dnn_double>& info)
 	{
-		info = Matrix<dnn_double>().zeros(B.n, B.n);
+		info = Matrix<dnn_double>().zeros(X.n, X.n);
 #pragma omp parallel for
-		for (int j = 0; j < B.n; j++)
+		for (int j = 0; j < X.n; j++)
 		{
-			for (int i = 0; i < B.n; i++)
+			for (int i = 0; i < X.n; i++)
 			{
-				if (fabs(B(i, j)) >= 0.0001)
+				info(i, j) = 0;
+				if (i == j)
 				{
-					Matrix<dnn_double>& x = X.Col(replacement[i]);
-					Matrix<dnn_double>& y = X.Col(replacement[j]);
-
-					info(i, j) = 0;
-
-					MutualInformation I(x, y);
-					double tmp = I.Information();
-					//if (tmp < 0.04)
-					//{
-					//	B(i, j) = 0;
-					//	printf("Mutual Information=%f -> rmove edge(%d,%d)\n", tmp, i, j);
-					//}
-					info(i, j) = tmp;
+					continue;
 				}
+
+				Matrix<dnn_double>& x = X.Col(replacement[i]);
+				Matrix<dnn_double>& y = X.Col(replacement[j]);
+
+				MutualInformation I(x, y);
+				double tmp = I.Information();
+				info(i, j) = tmp;
 			}
 		}
 	}
 
+	int early_stopping = 0;
+	double prior_knowledge_rate = 1.0;
 	std::vector<int> prior_knowledge;
-	double distribution_rate = 0.005;
-	double temperature_alp = 0.75;
-	double rho = 0.0001;
+	double distribution_rate = 1.0;
+	double temperature_alp = 0.95;
+	double rho = 1.0;
+	double mu_max_value = 10.0;
 	int fit2(Matrix<dnn_double>& X, const int max_ica_iteration= MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
+		remove("confounding_factors.txt");
+
 		CONSOLE_SCREEN_BUFFER_INFO csbi;
 		HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
 		GetConsoleScreenBufferInfo(hStdout, &csbi);
@@ -1120,9 +1183,9 @@ public:
 		logmsg = false;
 		error = 0;
 
+		residual_error = Matrix<dnn_double>(X.m, X.n);
 		Mu = Matrix<dnn_double>().zeros(X.m, X.n);
 		Matrix<dnn_double> B_best_sv;
-		Matrix<dnn_double> residual_error(X.m, X.n);
 		auto replacement_best = replacement;
 		
 		input = X;
@@ -1133,39 +1196,69 @@ public:
 		//std::student_t_distribution<> dist(12.0);
 		std::uniform_real_distribution<> acceptance_rate(0.0, 1.0);
 		std::uniform_real_distribution<> rate_cf(-1.0, 1.0);
+		std::uniform_real_distribution<> knowledge_rate(0.0, 1.0);
+		std::uniform_real_distribution<> noise(0.0, 0.0001);
 
+		int no_accept_count = 0;
 		int update_count = 0;
 		int reject = 0;
 		int accept = 0;
 		double temperature = 0.0;
-		//double best_max_info = 0.0;
-		double best_min_info = 999999999.0;
+
+		double residual_error_max = -1;
 		double best_min_value = 999999999.0;
 		Matrix<dnn_double>É (X.m, X.n);
 		Matrix<dnn_double>É 0;
+		std::uniform_int_distribution<> var_select(0, X.n);
 
+
+		É  = É .zeros(É .m, É .n);
+		//std::student_t_distribution<> dist(6.0);
+		//std::normal_distribution<> dist(0.0, 20.0);
+		std::uniform_real_distribution<> dist(-mu_max_value, mu_max_value);
 		for (int kk = 0; kk < confounding_factors_sampling; kk++)
 		{
 			start = std::chrono::system_clock::now();
 
+			//parameter_search mode!!
+			if (early_stopping < 0 )
+			{
+				if (update_count > 2 || kk > abs(early_stopping))
+				{
+					break;
+				}
+			}
+
+			no_accept_count++;
+			if (early_stopping > 0 && no_accept_count > early_stopping)
+			{
+				printf("early_stopping!\n");
+				error = 1;
+				break;
+			}
 			Matrix<dnn_double> xs = X;
 
 //#pragma omp parallel for <-- óêêîÇÃèáèòÇ™ïœÇÌÇ¡ÇƒÇµÇ‹Ç§Ç©ÇÁï¿óÒâªÇµÇΩÇÁÉ_ÉÅ7
 			
+			double confounding_factors_zeros = 1.0;
+			//if (kk == 0)
+			//{
+			//	confounding_factors_zeros = 0;
+			//}
 			if (accept == 0)
 			{
+				//int var = var_select(engine);
 				//printf("------------reject--------------\n");
 				for (int i = 0; i < xs.n; i++)
 				{
-					std::normal_distribution<> dist(0.0, 30.0);
-
-					const double rate = distribution_rate;
+					const double rate = confounding_factors_zeros*distribution_rate * dist(engine);
 					for (int j = 0; j < xs.m; j++)
 					{
-						É (j, i) = dist(engine)*rate;
+						É (j, i) = rate + noise(engine);
 					}
 				}
 				É 0 = É ;
+				//É .Row(0).print("É ", "%.3f ");
 				//É .print_csv("É .csv");
 				//exit(0);
 			}
@@ -1174,11 +1267,18 @@ public:
 
 				const double a = 0.001;
 
-				const size_t sz = É .m*É .n;
+//				const size_t sz = É .m*É .n;
+//#pragma omp parallel for
+//				for (int i = 0; i < sz; i++)
+//				{
+//					É .v[i] += a * rate_cf(engine) / (pow(accept,4.0) + 1);
+//				}
+
+				int var = var_select(engine);
 #pragma omp parallel for
-				for (int i = 0; i < sz; i++)
+				for (int j = 0; j < xs.m; j++)
 				{
-					É .v[i] += a * rate_cf(engine) / (pow(accept,3.0) + 1);
+					É (j, var) += confounding_factors_zeros*a * rate_cf(engine) / (pow(accept, 4.0) + 1);
 				}
 			}
 
@@ -1192,11 +1292,19 @@ public:
 			ICA ica;
 			ica.logmsg = false;
 			ica.set(variableNum);
-			ica.fit(xs, max_ica_iteration, tolerance);
-			//(ica.A.transpose()).inv().print_e();
-			error = ica.getStatus();
-			if (error != 0)
+			try
 			{
+				ica.fit(xs, max_ica_iteration, tolerance);
+				//(ica.A.transpose()).inv().print_e();
+				error = ica.getStatus();
+				if (error != 0)
+				{
+					continue;
+				}
+			}
+			catch (...)
+			{
+				//error = -99;
 				continue;
 			}
 
@@ -1277,19 +1385,26 @@ public:
 					}
 				}
 				r /= (xs.m*xs.n);
-			}
 
-			//Evaluation of independence
-			Matrix<dnn_double> Minfo;
-			calc_mutual_information(residual_error, Minfo);
-			
-			double info = Minfo.Sum();
-			double value = rho*info + r;
+				//Evaluation of independence
+				calc_mutual_information( residual_error, residual_error_info);
+			}
+				
+			rho = 1.0;
+			if (residual_error_max < 0)
+			{
+				residual_error_max = Abs(residual_error).Max();
+				//residual_error_max = 1.0;
+			}
+			double info = residual_error_info.Max();
+			double residual = rho * Abs(residual_error).Max();
+			double value = std::max(info, residual);
 			//printf("---- Evaluation of independence end ----\n");
 
+			//printf("info:%f %f -> %f\n", info, Abs(residual_error).Max() / residual_error.norm(), value);
 			fflush(stdout);
 
-			double rt = (double)kk / (double)confounding_factors_sampling;
+			double rt = (double)0.1*kk / (double)confounding_factors_sampling;
 			temperature = pow(temperature_alp, rt);
 
 			bool accept_ = false;
@@ -1327,7 +1442,6 @@ public:
 			if (kk > 0 && accept_ && prior_knowledge.size())
 			{
 				auto& b = before_sorting_(B);
-				bool a = accept_;
 
 				for (int k = 0; k < prior_knowledge.size() / 2; k++)
 				{
@@ -1346,7 +1460,11 @@ public:
 					}
 					if (ng_edge)
 					{
-						if (fabs(b(ii, jj)) > 0.001) accept_ = false;
+						if (fabs(b(ii, jj)) > 0.001)
+						{
+							accept_ = false;
+							break;
+						}
 						//printf("%d -> %d NG\n", jj, ii);
 					}
 					else
@@ -1354,12 +1472,21 @@ public:
 						if (fabs(b(ii, jj)) > 0.001 && fabs(b(jj, ii)) < 0.001)
 						{
 							accept_ = false;
+							break;
 							//printf("%d -> %d NG\n", jj, ii);
 						}
 						if (fabs(b(ii, jj)) > 0.001 || fabs(b(jj, ii)) < 0.001)
 						{
 							accept_ = false;
+							break;
 							//printf("%d -> %d NG\n", jj, ii);
+						}
+					}
+					if (!accept_)
+					{
+						if (prior_knowledge_rate < knowledge_rate(engine))
+						{
+							accept_ = true;
 						}
 					}
 				}
@@ -1383,10 +1510,10 @@ public:
 				//}
 			}
 
+			bool best_update = false;
 			if (accept_)
 			{
 				//printf("+\n");
-				bool best_update = false;
 				if (best_min_value > value)
 				{
 					best_min_value = value;
@@ -1400,9 +1527,10 @@ public:
 				reject = 0;
 				if (best_update)
 				{		
+					no_accept_count = 0;
 					update_count++;
 					char buf[256];
-					sprintf(buf, "@[%d/%d] %f (%f)accept:%d", kk, confounding_factors_sampling - 1, best_min_value, info, accept);
+					sprintf(buf, "@[%d/%d] %f (%f,%f)accept:%d", kk, confounding_factors_sampling - 1, best_min_value, info, residual, accept);
 
 					if (1)
 					{
@@ -1424,7 +1552,12 @@ public:
 
 
 					calc_mutual_information(X, mutual_information);
-					save(std::string("lingam"));
+					save(std::string("lingam.model"));
+					if (best_min_value < 0.000001)
+					{
+						printf("convergence!\n");
+						break;
+					}
 				}
 				else
 				{
@@ -1439,10 +1572,10 @@ public:
 				reject++;
 			}
 
-			if (confounding_factors_sampling > 4000 && reject > confounding_factors_sampling / 4)
-			{
-				break;
-			}
+			//if ( confounding_factors_sampling >= 4000 && reject > confounding_factors_sampling / 4)
+			//{
+			//	break;
+			//}
 
 			end = std::chrono::system_clock::now();
 			elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -1490,7 +1623,18 @@ public:
 
 		calc_mutual_information(X, mutual_information);
 
-		B_pre_sort = B;
+		double c_factors = residual_error_info.Max();
+		residual_error_info.print_csv("confounding_factors_info.csv");
+		if (c_factors > confounding_factors_upper)
+		{
+			FILE* fp = fopen("confounding_factors.txt", "w");
+			if (fp)
+			{
+				fprintf(fp, "Confounding factors may be present\n");
+				fclose(fp);
+			}
+		}
+		B_pre_sort = this->before_sorting_(B);
 		if (update_count < 2)
 		{
 			error = 1;

@@ -282,6 +282,7 @@ int main(int argc, char *argv[])
 	}
 #endif
 
+	//std::mt19937 mt(1234);
 	ICA ica;
 
 	ica.set(compc);

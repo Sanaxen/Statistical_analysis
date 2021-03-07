@@ -152,6 +152,7 @@ int main(int argc, char** argv)
 		printf("command line error.\n");
 		return -1;
 	}
+	std::mt19937 mt(1234);
 
 	std::string csvfile("sample.csv");
 
@@ -235,7 +236,11 @@ int main(int argc, char** argv)
 	double distribution_rate = 0.005;
 	double temperature_alp = 0.75;
 	std::string prior_knowledge_file = "";
+	double prior_knowledge_rate = 1.0;
 	double rho = 0.0001;
+	int early_stopping = 0;
+	int parameter_search = 0;
+	double confounding_factors_upper = 0.9;
 
 	std::string load_model = "";
 
@@ -336,10 +341,22 @@ int main(int argc, char** argv)
 				else if (argname == "--prior_knowledge") {
 					prior_knowledge_file = argv[count + 1];
 				}
+				else if (argname == "--prior_knowledge_rate") {
+					prior_knowledge_rate = atof(argv[count + 1]);
+				}
 				else if (argname == "--rho") {
 					rho = atof(argv[count + 1]);
 				}
-		//
+				else if (argname == "--early_stopping") {
+					early_stopping = atoi(argv[count + 1]);
+				}
+				else if (argname == "--parameter_search") {
+					parameter_search = atoi(argv[count + 1]);
+				}
+				else if (argname == "--confounding_factors_upper") {
+					confounding_factors_upper = atof(argv[count + 1]);
+				}
+				//
 				else {
 					std::cerr << "Invalid parameter specified - \"" << argname << "\""
 						<< std::endl;
@@ -550,7 +567,7 @@ int main(int argc, char** argv)
 	{
 		printf("y_var:%s %d\n", y_var[i].c_str(), y_var_idx[i]);
 	}
-
+	
 	std::vector<std::string> headers_tmp;
 	std::vector<std::string> error_cols;
 
@@ -564,7 +581,7 @@ int main(int argc, char** argv)
 		{
 			if (ignore_constant_value_columns) continue;
 			error_cols.push_back(header_names[x_var_idx[i]]);
-			col = col + col.RandMT()*0.001;
+			col = col + col.RandMT(mt)*0.001;
 			break;
 		}else
 		{
@@ -588,7 +605,7 @@ int main(int argc, char** argv)
 		{
 			if (ignore_constant_value_columns) continue;
 			error_cols.push_back(header_names[x_var_idx[i]]);
-			col = col + col.RandMT()*0.001;
+			col = col + col.RandMT(mt)*0.001;
 		}
 		xs = xs.appendCol(col);
 		headers_tmp.push_back(header_names[x_var_idx[i]]);
@@ -610,7 +627,7 @@ int main(int argc, char** argv)
 		{
 			if (ignore_constant_value_columns) continue;
 			error_cols.push_back(header_names[y_var_idx[i]]);
-			col = col + col.RandMT()*0.001;
+			col = col + col.RandMT(mt)*0.001;
 		}
 		xs = xs.appendCol(col);
 		headers_tmp.push_back(header_names[y_var_idx[i]]);
@@ -640,11 +657,9 @@ int main(int argc, char** argv)
 	}
 
 
-	LiNGAM.set(xs.n);
+	LiNGAM.set(xs.n, mt);
 	LiNGAM.mutual_information_values = mutual_information_values;
 	LiNGAM.confounding_factors = confounding_factors? 1: 0;
-	LiNGAM.distribution_rate = distribution_rate;
-	LiNGAM.temperature_alp = temperature_alp;
 
 	//MutualInformation I(xs.Col(0), xs.Col(1), 30);
 	//double tmp = I.Information();
@@ -668,8 +683,32 @@ int main(int argc, char** argv)
 			std::vector<int> knowledge;
 			prior_knowledge(prior_knowledge_file.c_str(), header_names, knowledge);
 
+			LiNGAM.early_stopping = early_stopping;
+			LiNGAM.distribution_rate = distribution_rate;
+			LiNGAM.temperature_alp = temperature_alp;
 			LiNGAM.prior_knowledge = knowledge;
+			LiNGAM.prior_knowledge_rate = prior_knowledge_rate;
 			LiNGAM.confounding_factors_sampling = confounding_factors_sampling;
+			LiNGAM.confounding_factors_upper = confounding_factors_upper;
+
+			//double rate[] = { 0.001*distribution_rate, 0.01* distribution_rate, 0.1* distribution_rate, 0.5 * distribution_rate, 1.0 * distribution_rate };
+			//int s = -1;
+			//if (parameter_search != 0)
+			//{
+			//	for (int i = 0; i < 5; i++)
+			//	{
+			//		LiNGAM.distribution_rate = rate[i];
+			//		LiNGAM.early_stopping = -50;	//parameter_search!
+			//		s = LiNGAM.fit2(xs, max_ica_iteration, ica_tolerance);
+			//		if (s == 0) break;
+			//	}
+			//	if (s == 0)
+			//	{
+			//		printf("distribution_rate:%f\n", LiNGAM.distribution_rate);
+			//		LiNGAM.early_stopping = early_stopping;
+			//	}
+			//}
+			
 			LiNGAM.fit2(xs, max_ica_iteration, ica_tolerance);
 		}
 		else
@@ -677,7 +716,7 @@ int main(int argc, char** argv)
 			LiNGAM.fit(xs, max_ica_iteration, ica_tolerance);
 		}
 
-		LiNGAM.save(std::string("lingam"));
+		LiNGAM.save(std::string("lingam.model"));
 	}
 
 	LiNGAM.B.print_e("(#1)B");
@@ -856,6 +895,20 @@ int main(int argc, char** argv)
 			fclose(fp);
 		}
 	}
+
+	for (int i = 0; i < LiNGAM.residual_error.n; i++)
+	{
+		printf("epsilon_mean[%s]:%.4f\n", header_names[i].c_str(), LiNGAM.residual_error.Col(i).Mean().v[0]);
+	}
+
+	for (int i = 0; i < LiNGAM.residual_error.n; i++)
+	{
+		for (int j = i+1; j < LiNGAM.residual_error.n; j++)
+		{
+			printf("residual_error_info[%s,%s]:%.4f\n", header_names[i].c_str(), header_names[j].c_str(), LiNGAM.residual_error_info(i,j));
+		}
+	}
+	printf("residual_error_info max:%.4f\n", LiNGAM.residual_error_info.Max());
 
 	if (resp == 0)
 	{

@@ -8,8 +8,8 @@
 //where 1 ≤ a1 ≤ 2 is some suitable constant, often taken as a1 = 1. 
 #define A1_			1
 
-//#define RAND	RandMT
-#define RAND	Rand
+#define RAND	RandMT
+//#define RAND	Rand
 
 class ICA
 {
@@ -40,8 +40,10 @@ public:
 	//estimated source matrix
 	Matrix<dnn_double> S;
 
-	ICA(){
+	std::mt19937* mt = NULL;
+	ICA(std::mt19937* mt_ = NULL){
 		error = 0;
+		mt = mt_;
 	}
 
 	Matrix<dnn_double>& whitening()
@@ -76,7 +78,14 @@ public:
 		Matrix<dnn_double>& D = Matrix<dnn_double>(rows, rows);
 		Matrix<dnn_double>& d = Matrix<dnn_double>(1, rows);
 
-		W = W.RAND();
+		if (mt == NULL)
+		{
+			W = W.Rand();
+		}
+		else
+		{
+			W = W.RandMT(*mt);
+		}
 		if (logmsg)
 		{
 			W.print();
