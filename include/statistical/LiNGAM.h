@@ -461,8 +461,14 @@ public:
 
 	void save(std::string& filename)
 	{
-		FILE* fp = fopen((filename+".replacement").c_str(), "w");
+		FILE* lock = fopen("lingam.lock", "w");
+		if (lock == NULL)
+		{
+			printf("lingam_lock:fatal error.\n");
+			return;
+		}
 
+		FILE* fp = fopen((filename + ".replacement").c_str(), "w");
 		if (fp)
 		{
 			for (int i = 0; i < replacement.size(); i++)
@@ -488,7 +494,9 @@ public:
 		residual_error_info.print_csv((char*)(filename + ".residual_error_info.csv").c_str());
 		residual_error.print_csv((char*)(filename + ".residual_error.csv").c_str());
 
+		fclose(lock);
 	}
+
 	bool load(std::string& filename)
 	{
 		char buf[256];
@@ -1170,6 +1178,9 @@ public:
 	double mu_max_value = 10.0;
 	int fit2(Matrix<dnn_double>& X, const int max_ica_iteration= MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
+		printf("distribution_rate:%f\n", distribution_rate);
+		printf("rho:%f\n", rho);
+
 		remove("confounding_factors.txt");
 
 		CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -1183,21 +1194,26 @@ public:
 		logmsg = false;
 		error = 0;
 
+		mu_max_value = rho;
 		residual_error = Matrix<dnn_double>(X.m, X.n);
 		Mu = Matrix<dnn_double>().zeros(X.m, X.n);
 		Matrix<dnn_double> B_best_sv;
 		auto replacement_best = replacement;
 		
 		input = X;
+		double min_value = Abs(X).Min();
+		if (min_value < 1.0e-3) min_value = 1.0e-3;
 
 		//std::random_device seed_gen;
 		//std::default_random_engine engine(seed_gen());
 		std::default_random_engine engine(123456789);
 		//std::student_t_distribution<> dist(12.0);
 		std::uniform_real_distribution<> acceptance_rate(0.0, 1.0);
-		std::uniform_real_distribution<> rate_cf(-1.0, 1.0);
+		//std::uniform_real_distribution<> rate_cf(-1.0/ mu_max_value, 1.0/ mu_max_value);
 		std::uniform_real_distribution<> knowledge_rate(0.0, 1.0);
-		std::uniform_real_distribution<> noise(0.0, 0.0001);
+		std::uniform_real_distribution<> noise(-min_value*0.1, min_value*0.1);
+
+		std::uniform_real_distribution<> condition(0.0, 1.0);
 
 		int no_accept_count = 0;
 		int update_count = 0;
@@ -1205,17 +1221,19 @@ public:
 		int accept = 0;
 		double temperature = 0.0;
 
-		double residual_error_max = -1;
+		double best_residual = 999999999.0;
 		double best_min_value = 999999999.0;
 		Matrix<dnn_double>É (X.m, X.n);
-		Matrix<dnn_double>É 0;
 		std::uniform_int_distribution<> var_select(0, X.n);
 
+		double abs_residual_errormax = -1;
 
-		É  = É .zeros(É .m, É .n);
+		//É  = É .zeros(É .m, É .n);
+		É  = É .Rand()*rho;
 		//std::student_t_distribution<> dist(6.0);
 		//std::normal_distribution<> dist(0.0, 20.0);
 		std::uniform_real_distribution<> dist(-mu_max_value, mu_max_value);
+
 		for (int kk = 0; kk < confounding_factors_sampling; kk++)
 		{
 			start = std::chrono::system_clock::now();
@@ -1238,55 +1256,35 @@ public:
 			}
 			Matrix<dnn_double> xs = X;
 
-//#pragma omp parallel for <-- óêêîÇÃèáèòÇ™ïœÇÌÇ¡ÇƒÇµÇ‹Ç§Ç©ÇÁï¿óÒâªÇµÇΩÇÁÉ_ÉÅ7
-			
-			double confounding_factors_zeros = 1.0;
-			//if (kk == 0)
-			//{
-			//	confounding_factors_zeros = 0;
-			//}
-			if (accept == 0)
+			//if (kk > 0)
 			{
-				//int var = var_select(engine);
-				//printf("------------reject--------------\n");
-				for (int i = 0; i < xs.n; i++)
+				int var = var_select(engine);
+				//printf("var:%d\n", var);
+
+				if (accept)
 				{
-					const double rate = confounding_factors_zeros*distribution_rate * dist(engine);
-					for (int j = 0; j < xs.m; j++)
+					for (int j = 0; j < X.m; j++)
 					{
-						É (j, i) = rate + noise(engine);
+						É (j, var) += noise(engine)/pow(2.0, accept);
 					}
 				}
-				É 0 = É ;
-				//É .Row(0).print("É ", "%.3f ");
-				//É .print_csv("É .csv");
-				//exit(0);
-			}
-			else
-			{
-
-				const double a = 0.001;
-
-//				const size_t sz = É .m*É .n;
-//#pragma omp parallel for
-//				for (int i = 0; i < sz; i++)
-//				{
-//					É .v[i] += a * rate_cf(engine) / (pow(accept,4.0) + 1);
-//				}
-
-				int var = var_select(engine);
-#pragma omp parallel for
-				for (int j = 0; j < xs.m; j++)
+				else
 				{
-					É (j, var) += confounding_factors_zeros*a * rate_cf(engine) / (pow(accept, 4.0) + 1);
+					//#pragma omp parallel for <-- óêêîÇÃèáèòÇ™ïœÇÌÇ¡ÇƒÇµÇ‹Ç§Ç©ÇÁï¿óÒâªÇµÇΩÇÁÉ_ÉÅ7
+					const double rate = distribution_rate * dist(engine);
+					for (int j = 0; j < X.m; j++)
+					{
+						É (j, var) = rate + noise(engine);
+					}
 				}
-			}
-
-			const size_t sz = xs.m*xs.n;
 #pragma omp parallel for
-			for (int i = 0; i < sz; i++)
-			{
-				xs.v[i] -= É .v[i];
+				for (int j = 0; j < X.m; j++)
+				{
+					for (int i = 0; i < X.n; i++)
+					{
+						xs(j, i) -= É (j, i);
+					}
+				}
 			}
 
 			ICA ica;
@@ -1363,11 +1361,14 @@ public:
 				continue;
 			}
 
-			float r = 0.0;
+			//float r = 0.0;
 			{
 				auto& b = before_sorting_(B);
+				//b.print("b");
+#pragma omp parallel for
 				for (int j = 0; j < xs.m; j++)
 				{
+					Matrix<dnn_double> É T(xs.n, 1);
 					Matrix<dnn_double> x(xs.n, 1);
 					Matrix<dnn_double> y(xs.n, 1);
 					for (int i = 0; i < xs.n; i++)
@@ -1376,36 +1377,41 @@ public:
 						//y(i, 0) = X(j, replacement[i]);
 						x(i, 0) = xs(j, i);
 						y(i, 0) = X(j, i);
+						É T(i, 0) = É (j, i);
 					}
-					Matrix<dnn_double>& rr = y -  b * x;
+					Matrix<dnn_double>& rr = y - b * x + É T;
 					for (int i = 0; i < xs.n; i++)
 					{
-						r += rr(0, i)*rr(0, i);
+						//r += rr(0, i)*rr(0, i);
 						residual_error(j, i) = rr(0, i);
 					}
 				}
-				r /= (xs.m*xs.n);
+				//r /= (xs.m*xs.n);
 
 				//Evaluation of independence
 				calc_mutual_information( residual_error, residual_error_info);
 			}
-				
-			rho = 1.0;
-			if (residual_error_max < 0)
+			
+			double  abs_residual_errormax_cur = Abs(residual_error).Max();
+			if (abs_residual_errormax < 0)
 			{
-				residual_error_max = Abs(residual_error).Max();
-				//residual_error_max = 1.0;
+				abs_residual_errormax = abs_residual_errormax_cur;
 			}
+			if (abs_residual_errormax < 1.0e-10)
+			{
+				abs_residual_errormax = 1.0e-10;
+			}
+
+			//residual_error.print("residual_error");
+			//printf("residual_error max:%f\n", Abs(residual_error).Max());
+
 			double info = residual_error_info.Max();
-			double residual = rho * Abs(residual_error).Max();
+			double residual = abs_residual_errormax_cur / abs_residual_errormax;
+
 			double value = std::max(info, residual);
-			//printf("---- Evaluation of independence end ----\n");
 
-			//printf("info:%f %f -> %f\n", info, Abs(residual_error).Max() / residual_error.norm(), value);
-			fflush(stdout);
 
-			double rt = (double)0.1*kk / (double)confounding_factors_sampling;
-			temperature = pow(temperature_alp, rt);
+			//printf("%d info:%f residual:%f -> value:%f (best_min_value:%f)\n", kk, info, residual, value, best_min_value);
 
 			bool accept_ = false;
 
@@ -1413,8 +1419,19 @@ public:
 			{
 				accept_ = true;
 			}
-
 			if (kk == 0) accept_ = true;
+
+			//if (!accept_ && best_residual == residual)
+			//{
+			//	if (best_min_value > info )
+			//	{
+			//		accept_ = true;
+			//	}
+			//}
+
+
+			double rt = (double)0.1*kk / (double)confounding_factors_sampling;
+			temperature = pow(temperature_alp, rt);
 
 			if (!accept_)
 			{
@@ -1514,9 +1531,11 @@ public:
 			if (accept_)
 			{
 				//printf("+\n");
-				if (best_min_value > value)
+				if (best_min_value >= value)
 				{
 					best_min_value = value;
+					best_residual = residual;
+
 					best_update = true;
 				}
 				//{
@@ -1553,17 +1572,12 @@ public:
 
 					calc_mutual_information(X, mutual_information);
 					save(std::string("lingam.model"));
-					if (best_min_value < 0.000001)
+					if (info + residual < 0.000001)
 					{
 						printf("convergence!\n");
 						break;
 					}
 				}
-				else
-				{
-					É  = É 0;
-				}
-
 				fflush(stdout);
 			}
 			else
@@ -1587,6 +1601,7 @@ public:
 			{
 				continue;
 			}
+
 			if (t1 < 60)
 			{
 				printf("[%d/%d]Total elapsed time:%.3f[sec] Estimated end time:%.3f[sec] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001, t1, accept);
