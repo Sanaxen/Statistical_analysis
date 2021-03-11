@@ -931,6 +931,8 @@ public:
 		error = 0;
 
 		residual_error = Matrix<dnn_double>(X.m, X.n);
+		residual_error_info = Matrix<dnn_double>(X.n, X.n);
+
 		Mu = Matrix<dnn_double>().zeros(X.m, X.n);
 		input = X;
 		modification_input = X;
@@ -1195,11 +1197,17 @@ public:
 		error = 0;
 
 		mu_max_value = rho;
-		residual_error = Matrix<dnn_double>(X.m, X.n);
+
+
 		Mu = Matrix<dnn_double>().zeros(X.m, X.n);
 		Matrix<dnn_double> B_best_sv;
 		auto replacement_best = replacement;
+		residual_error = Matrix<dnn_double>(X.m, X.n);
+		residual_error_info = Matrix<dnn_double>(X.n, X.n);
 		
+		auto residual_error_best = residual_error;
+		auto residual_error_info_best = residual_error_info;
+
 		input = X;
 		double min_value = Abs(X).Min();
 		if (min_value < 1.0e-3) min_value = 1.0e-3;
@@ -1222,6 +1230,7 @@ public:
 		double temperature = 0.0;
 
 		double best_residual = 999999999.0;
+		double best_independ = 999999999.0;
 		double best_min_value = 999999999.0;
 		Matrix<dnn_double>É (X.m, X.n);
 		std::uniform_int_distribution<> var_select(0, X.n);
@@ -1232,7 +1241,26 @@ public:
 		É  = É .Rand()*rho;
 		//std::student_t_distribution<> dist(6.0);
 		//std::normal_distribution<> dist(0.0, 20.0);
-		std::uniform_real_distribution<> dist(-mu_max_value, mu_max_value);
+		//std::uniform_real_distribution<> dist(-mu_max_value, mu_max_value);
+
+		double t_p = 12.0*rho;
+		if (t_p <= 6.0) t_p = 7.0;
+		std::uniform_real_distribution<> student_t_dist(6.0, t_p);
+		std::vector<int> dist_t_param(X.n);
+		for (int i = 0; i < X.n; i++)
+		{
+			dist_t_param[i] = student_t_dist(engine);
+		}
+
+		const char* loss = "lingam_loss.dat";
+		try
+		{
+			std::ofstream ofs(loss, std::ios::out);
+			ofs.close();
+		}
+		catch (...)
+		{
+		}
 
 		for (int kk = 0; kk < confounding_factors_sampling; kk++)
 		{
@@ -1256,6 +1284,7 @@ public:
 			}
 			Matrix<dnn_double> xs = X;
 
+
 			//if (kk > 0)
 			{
 				int var = var_select(engine);
@@ -1265,11 +1294,24 @@ public:
 				{
 					for (int j = 0; j < X.m; j++)
 					{
-						É (j, var) += noise(engine)/pow(2.0, accept);
+						double c = 1;
+						if (accept < 32)
+						{
+							c = 1.0 / pow(2.0, accept);
+						}
+						else
+						{
+							c = 1.0e-10;
+						}
+						É (j, var) += noise(engine) * c;
 					}
 				}
 				else
 				{
+					dist_t_param[var] = student_t_dist(engine);
+
+					auto& dist = std::student_t_distribution<>(dist_t_param[var]);
+
 					//#pragma omp parallel for <-- óêêîÇÃèáèòÇ™ïœÇÌÇ¡ÇƒÇµÇ‹Ç§Ç©ÇÁï¿óÒâªÇµÇΩÇÁÉ_ÉÅ7
 					const double rate = distribution_rate * dist(engine);
 					for (int j = 0; j < X.m; j++)
@@ -1277,6 +1319,7 @@ public:
 						É (j, var) = rate + noise(engine);
 					}
 				}
+
 #pragma omp parallel for
 				for (int j = 0; j < X.m; j++)
 				{
@@ -1379,7 +1422,7 @@ public:
 						y(i, 0) = X(j, i);
 						É T(i, 0) = É (j, i);
 					}
-					Matrix<dnn_double>& rr = y - b * x + É T;
+					Matrix<dnn_double>& rr = y - b * y - É T;
 					for (int i = 0; i < xs.n; i++)
 					{
 						//r += rr(0, i)*rr(0, i);
@@ -1535,6 +1578,7 @@ public:
 				{
 					best_min_value = value;
 					best_residual = residual;
+					best_independ = info;
 
 					best_update = true;
 				}
@@ -1568,6 +1612,8 @@ public:
 					B_pre_sort = B;
 					modification_input = xs;
 					replacement_best = replacement;
+					residual_error_best = residual_error;
+					residual_error_info_best = residual_error_info;
 
 
 					calc_mutual_information(X, mutual_information);
@@ -1584,6 +1630,15 @@ public:
 			{
 				accept = 0;
 				reject++;
+			}
+			try
+			{
+				std::ofstream ofs(loss, std::ios::app);
+				ofs << best_residual << "," << best_independ << std::endl;
+				ofs.close();
+			}
+			catch (...)
+			{
 			}
 
 			//if ( confounding_factors_sampling >= 4000 && reject > confounding_factors_sampling / 4)
@@ -1633,6 +1688,8 @@ public:
 			fflush(stdout);
 		}
 
+		residual_error = residual_error_best;
+		residual_error_info = residual_error_info_best;
 		replacement = replacement_best;
 		B = B_best_sv;
 
