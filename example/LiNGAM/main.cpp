@@ -237,7 +237,7 @@ int main(int argc, char** argv)
 	double temperature_alp = 0.75;
 	std::string prior_knowledge_file = "";
 	double prior_knowledge_rate = 1.0;
-	double rho = 0.0001;
+	double rho = 1.0;
 	int early_stopping = 0;
 	int parameter_search = 0;
 	double confounding_factors_upper = 0.9;
@@ -690,32 +690,15 @@ int main(int argc, char** argv)
 			LiNGAM.prior_knowledge_rate = prior_knowledge_rate;
 			LiNGAM.confounding_factors_sampling = confounding_factors_sampling;
 			LiNGAM.confounding_factors_upper = confounding_factors_upper;
+			LiNGAM.rho = rho;
 
-			//double rate[] = { 0.001*distribution_rate, 0.01* distribution_rate, 0.1* distribution_rate, 0.5 * distribution_rate, 1.0 * distribution_rate };
-			//int s = -1;
-			//if (parameter_search != 0)
-			//{
-			//	for (int i = 0; i < 5; i++)
-			//	{
-			//		LiNGAM.distribution_rate = rate[i];
-			//		LiNGAM.early_stopping = -50;	//parameter_search!
-			//		s = LiNGAM.fit2(xs, max_ica_iteration, ica_tolerance);
-			//		if (s == 0) break;
-			//	}
-			//	if (s == 0)
-			//	{
-			//		printf("distribution_rate:%f\n", LiNGAM.distribution_rate);
-			//		LiNGAM.early_stopping = early_stopping;
-			//	}
-			//}
-			
 			LiNGAM.fit2(xs, max_ica_iteration, ica_tolerance);
 		}
 		else
 		{
 			LiNGAM.fit(xs, max_ica_iteration, ica_tolerance);
 		}
-
+		
 		LiNGAM.save(std::string("lingam.model"));
 	}
 
@@ -796,22 +779,23 @@ int main(int argc, char** argv)
 	std::vector<int> residual_flag(xs.n, 0);
 	if (error_distr)
 	{
-		Matrix<dnn_double> r(xs.m, xs.n);
-		for (int j = 0; j < xs.m; j++)
-		{
-			Matrix<dnn_double> x(xs.n, 1);
-			for (int i = 0; i < xs.n; i++)
-			{
-				x(i, 0) = xs(j, i);
-			}
-			Matrix<dnn_double>& rr = x - LiNGAM.B*x;
-			for (int i = 0; i < xs.n; i++)
-			{
-				r(j, i) = rr(0, i);
-			}
-		}
-		r.print_csv("error_distr.csv", header_names);
+		//Matrix<dnn_double> r(xs.m, xs.n);
+		//for (int j = 0; j < xs.m; j++)
+		//{
+		//	Matrix<dnn_double> x(xs.n, 1);
+		//	for (int i = 0; i < xs.n; i++)
+		//	{
+		//		x(i, 0) = xs(j, i);
+		//	}
+		//	Matrix<dnn_double>& rr = x - LiNGAM.B*x;
+		//	for (int i = 0; i < xs.n; i++)
+		//	{
+		//		r(j, i) = rr(0, i);
+		//	}
+		//}
+		//r.print_csv("error_distr.csv", header_names);
 
+		LiNGAM.residual_error.print_csv("error_distr.csv", header_names);
 		std::vector<std::string> shapiro_wilk_values;
 		{
 			printf("shapiro_wilk test(0.05) start\n");
@@ -819,7 +803,7 @@ int main(int argc, char** argv)
 			for (int i = 0; i < xs.n; i++)
 			{
 
-				Matrix<dnn_double> tmp = r.Col(i);
+				Matrix<dnn_double> tmp = LiNGAM.residual_error.Col(i);
 				//tmp = tmp.whitening(tmp.Mean(), tmp.Std(tmp.Mean()));
 				//tmp = tmp.Centers(tmp.Mean());
 
@@ -850,7 +834,7 @@ int main(int argc, char** argv)
 		{
 			plot1.set_capture(error_distr_size, std::string("causal_multi_histgram.png"));
 		}
-		plot1.multi_histgram(std::string("causal_multi_histgram.png"), r, header_names, residual_flag);
+		plot1.multi_histgram(std::string("causal_multi_histgram.png"), LiNGAM.residual_error, header_names, residual_flag);
 		plot1.draw();
 #endif
 	}
@@ -908,7 +892,8 @@ int main(int argc, char** argv)
 			printf("residual_error_info[%s,%s]:%.4f\n", header_names[i].c_str(), header_names[j].c_str(), LiNGAM.residual_error_info(i,j));
 		}
 	}
-	printf("residual_error_info max:%.4f\n", LiNGAM.residual_error_info.Max());
+	printf("residual_independence:[%.4f,%.4f]\n", LiNGAM.residual_error_info.Min(), LiNGAM.residual_error_info.Max());
+	printf("residual_error:[%.4f, %.4f]\n", LiNGAM.residual_error.Min(), LiNGAM.residual_error.Max());
 
 	if (resp == 0)
 	{
