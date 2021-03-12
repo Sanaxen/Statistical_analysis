@@ -154,7 +154,7 @@ struct Matrix
 		return;
 #endif
 
-		for( int i = 0; i < m; ++i ) this->v[i] = v[i];
+		for( int i = 0; i < mn; ++i ) this->v[i] = v[i];
 	}
 
 	inline Matrix(const int* mat, int m_, int n_) :m(m_), n(n_)

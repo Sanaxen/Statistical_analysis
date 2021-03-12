@@ -379,7 +379,7 @@ class Lingam
 		{
 			for (int x = 0; x < replacement.size(); x++)
 				std::cout << x << "," << replacement[x] << "\t";
-			printf("\nreplacement.size()=%d\n", replacement.size());
+			printf("\nreplacement.size()=%d\n", (int)replacement.size());
 		}
 		std::vector<int> &r = replacement;
 
@@ -484,16 +484,26 @@ public:
 			fclose(fp);
 		}
 
-		B.print_csv((char*)(filename + ".B.csv").c_str());
-		B_pre_sort.print_csv((char*)(filename + ".B_pre_sort.csv").c_str());
-		input.print_csv((char*)(filename + ".input.csv").c_str());
-		modification_input.print_csv((char*)(filename + ".modification_input.csv").c_str());
-		mutual_information.print_csv((char*)(filename + ".mutual_information.csv").c_str());
-		Mu.print_csv((char*)(filename + ".mu.csv").c_str());
-		
-		residual_error_info.print_csv((char*)(filename + ".residual_error_info.csv").c_str());
-		residual_error.print_csv((char*)(filename + ".residual_error.csv").c_str());
+		try
+		{
+			B.print_csv((char*)(filename + ".B.csv").c_str());
+			B_pre_sort.print_csv((char*)(filename + ".B_pre_sort.csv").c_str());
+			input.print_csv((char*)(filename + ".input.csv").c_str());
+			modification_input.print_csv((char*)(filename + ".modification_input.csv").c_str());
+			mutual_information.print_csv((char*)(filename + ".mutual_information.csv").c_str());
+			Mu.print_csv((char*)(filename + ".mu.csv").c_str());
 
+			residual_error_info.print_csv((char*)(filename + ".residual_error_info.csv").c_str());
+			residual_error.print_csv((char*)(filename + ".residual_error.csv").c_str());
+		}
+		catch (std::exception& e)
+		{
+			printf("LiNGAM save exception:%s\n", e.what());
+		}
+		catch (...)
+		{
+			printf("LiNGAM save exception\n");
+		}
 		fclose(lock);
 	}
 
@@ -530,38 +540,48 @@ public:
 			fclose(fp);
 		}
 
-		CSVReader csv1((filename + ".B.csv"), ',', false);
-		B = csv1.toMat();
-		printf("laod B\n"); fflush(stdout);
+		try
+		{
+			CSVReader csv1((filename + ".B.csv"), ',', false);
+			B = csv1.toMat();
+			printf("laod B\n"); fflush(stdout);
 
-		CSVReader csv2((filename + ".B_pre_sort.csv"), ',', false);
-		B_pre_sort = csv2.toMat();
-		printf("load B_pre_sort\n"); fflush(stdout);
+			CSVReader csv2((filename + ".B_pre_sort.csv"), ',', false);
+			B_pre_sort = csv2.toMat();
+			printf("load B_pre_sort\n"); fflush(stdout);
 
-		CSVReader csv3((filename + ".input.csv"), ',', false);
-		input = csv3.toMat();
-		printf("load input\n"); fflush(stdout);
+			CSVReader csv3((filename + ".input.csv"), ',', false);
+			input = csv3.toMat();
+			printf("load input\n"); fflush(stdout);
 
-		CSVReader csv4((filename + ".modification_input.csv"), ',', false);
-		modification_input = csv4.toMat();
-		printf("load modification_input\n"); fflush(stdout);
+			CSVReader csv4((filename + ".modification_input.csv"), ',', false);
+			modification_input = csv4.toMat();
+			printf("load modification_input\n"); fflush(stdout);
 
-		CSVReader csv5((filename + ".mutual_information.csv"), ',', false);
-		mutual_information = csv5.toMat();
-		printf("load mutual_information\n"); fflush(stdout);
+			CSVReader csv5((filename + ".mutual_information.csv"), ',', false);
+			mutual_information = csv5.toMat();
+			printf("load mutual_information\n"); fflush(stdout);
 
-		CSVReader csv6((filename + ".mu.csv"), ',', false);
-		Mu = csv6.toMat();
-		printf("load É \n"); fflush(stdout);
+			CSVReader csv6((filename + ".mu.csv"), ',', false);
+			Mu = csv6.toMat();
+			printf("load É \n"); fflush(stdout);
 
-		CSVReader csv7((filename + ".residual_error_info.csv"), ',', false);
-		residual_error_info = csv7.toMat();
-		printf("residual_error_info\n"); fflush(stdout);
+			CSVReader csv7((filename + ".residual_error_info.csv"), ',', false);
+			residual_error_info = csv7.toMat();
+			printf("residual_error_info\n"); fflush(stdout);
 
-		CSVReader csv8((filename + ".residual_error.csv"), ',', false);
-		residual_error = csv8.toMat();
-		printf("residual_error\n"); fflush(stdout);
-
+			CSVReader csv8((filename + ".residual_error.csv"), ',', false);
+			residual_error = csv8.toMat();
+			printf("residual_error\n"); fflush(stdout);
+		}
+		catch (std::exception& e)
+		{
+			printf("LiNGAM load exception:%s\n", e.what());
+		}
+		catch (...)
+		{
+			printf("LiNGAM load exception\n");
+		}
 		return true;
 	}
 
@@ -1176,8 +1196,8 @@ public:
 	std::vector<int> prior_knowledge;
 	double distribution_rate = 1.0;
 	double temperature_alp = 0.95;
-	double rho = 1.0;
-	double mu_max_value = 10.0;
+	double rho = 3.0;
+	//double mu_max_value = 10.0;
 	int fit2(Matrix<dnn_double>& X, const int max_ica_iteration= MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
 		printf("distribution_rate:%f\n", distribution_rate);
@@ -1195,9 +1215,6 @@ public:
 
 		logmsg = false;
 		error = 0;
-
-		mu_max_value = rho;
-
 
 		Mu = Matrix<dnn_double>().zeros(X.m, X.n);
 		Matrix<dnn_double> B_best_sv;
@@ -1349,58 +1366,71 @@ public:
 				continue;
 			}
 
-			Matrix<dnn_double>& W_ica = (ica.A.transpose()).inv();
-			Matrix<dnn_double>& W_ica_ = Abs(W_ica).Reciprocal();
-
-			HungarianAlgorithm HungAlgo;
-			vector<int> replace;
-
-			double cost = HungAlgo.Solve(W_ica_, replace);
-
-			//for (int x = 0; x < W_ica_.m; x++)
-			//	std::cout << x << "," << replace[x] << "\t";
-			//printf("\n");
-
-			Matrix<dnn_double>& ixs = toMatrix(replace);
-			//ixs.print();
-			//Substitution(replace).print("Substitution matrix");
-
-			//P^-1*Wica
-			Matrix<dnn_double>& W_ica_perm = (Substitution(replace).inv()*W_ica);
-			//W_ica_perm.print_e("Replacement->W_ica_perm");
-
-			//D^-1
-			Matrix<dnn_double>& D = Matrix<dnn_double>().diag(W_ica_perm);
-			Matrix<dnn_double> D2(diag_vector(D));
-			//(D2.Reciprocal()).print_e("1/D");
-
-			//W_ica_perm_D=I - D^-1*(P^-1*Wica)
-			Matrix<dnn_double>& W_ica_perm_D = W_ica_perm.hadamard(to_vector(D2.Reciprocal()));
-
-			//W_ica_perm_D.print_e("W_ica_perm_D");
-
-			//B=I - D^-1*(P^-1*Wica)
-			Matrix<dnn_double>& b_est = Matrix<dnn_double>().unit(W_ica_perm_D.m, W_ica_perm_D.n) - W_ica_perm_D;
-			//b_est.print_e("b_est");
-
-			//https://www.cs.helsinki.fi/u/ahyvarin/papers/JMLR06.pdf
-			const int n = W_ica_perm_D.m;
-			Matrix<dnn_double> b_est_tmp = b_est;
-			b_est = AlgorithmC(b_est_tmp, n);
-
-			//for (int x = 0; x < replacement.size(); x++)
-			//	std::cout << x << "," << replacement[x] << "\t";
-			//printf("\n");
-			//b_est.print_e();
-			//fflush(stdout);
-
-			if (error == 0)
+			try
 			{
-				B = b_est;
+				Matrix<dnn_double>& W_ica = (ica.A.transpose()).inv();
+				Matrix<dnn_double>& W_ica_ = Abs(W_ica).Reciprocal();
+
+				HungarianAlgorithm HungAlgo;
+				vector<int> replace;
+
+				double cost = HungAlgo.Solve(W_ica_, replace);
+
+				//for (int x = 0; x < W_ica_.m; x++)
+				//	std::cout << x << "," << replace[x] << "\t";
+				//printf("\n");
+
+				Matrix<dnn_double>& ixs = toMatrix(replace);
+				//ixs.print();
+				//Substitution(replace).print("Substitution matrix");
+
+				//P^-1*Wica
+				Matrix<dnn_double>& W_ica_perm = (Substitution(replace).inv()*W_ica);
+				//W_ica_perm.print_e("Replacement->W_ica_perm");
+
+				//D^-1
+				Matrix<dnn_double>& D = Matrix<dnn_double>().diag(W_ica_perm);
+				Matrix<dnn_double> D2(diag_vector(D));
+				//(D2.Reciprocal()).print_e("1/D");
+
+				//W_ica_perm_D=I - D^-1*(P^-1*Wica)
+				Matrix<dnn_double>& W_ica_perm_D = W_ica_perm.hadamard(to_vector(D2.Reciprocal()));
+
+				//W_ica_perm_D.print_e("W_ica_perm_D");
+
+				//B=I - D^-1*(P^-1*Wica)
+				Matrix<dnn_double>& b_est = Matrix<dnn_double>().unit(W_ica_perm_D.m, W_ica_perm_D.n) - W_ica_perm_D;
+				//b_est.print_e("b_est");
+
+				//https://www.cs.helsinki.fi/u/ahyvarin/papers/JMLR06.pdf
+				const int n = W_ica_perm_D.m;
+				Matrix<dnn_double> b_est_tmp = b_est;
+				b_est = AlgorithmC(b_est_tmp, n);
+
+				//for (int x = 0; x < replacement.size(); x++)
+				//	std::cout << x << "," << replacement[x] << "\t";
+				//printf("\n");
+				//b_est.print_e();
+				//fflush(stdout);
+
+				if (error == 0)
+				{
+					B = b_est;
+				}
+				else
+				{
+					printf("--------------------\n");
+					continue;
+				}
 			}
-			else
+			catch (std::exception& e)
 			{
-				printf("--------------------\n");
+				printf("Exception:%s\n", e.what());
+				continue;
+			}
+			catch (...)
+			{
+				printf("Exception\n");
 				continue;
 			}
 

@@ -140,6 +140,7 @@ bool prior_knowledge(const char* filename, std::vector<std::string>& header_name
 	{
 		printf("prior_knowledge[%s] success\n", filename);
 	}
+	return true;
 }
 
 //https://qiita.com/m__k/items/bd87c063a7496897ba7c
@@ -230,14 +231,14 @@ int main(int argc, char** argv)
 	double lasso_tol = TOLERANCE;
 	int lasso_itr_max = 1000000;
 	bool confounding_factors = false;
-	int confounding_factors_sampling = 1000;
+	int confounding_factors_sampling = 4000;
 	double mutual_information_cut = 0.0;
 	bool mutual_information_values = true;
-	double distribution_rate = 0.005;
-	double temperature_alp = 0.75;
+	double distribution_rate = 1.0;
+	double temperature_alp = 0.95;
 	std::string prior_knowledge_file = "";
 	double prior_knowledge_rate = 1.0;
-	double rho = 1.0;
+	double rho = 3.0;
 	int early_stopping = 0;
 	int parameter_search = 0;
 	double confounding_factors_upper = 0.9;
@@ -349,9 +350,6 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--early_stopping") {
 					early_stopping = atoi(argv[count + 1]);
-				}
-				else if (argname == "--parameter_search") {
-					parameter_search = atoi(argv[count + 1]);
 				}
 				else if (argname == "--confounding_factors_upper") {
 					confounding_factors_upper = atof(argv[count + 1]);

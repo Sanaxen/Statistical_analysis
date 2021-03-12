@@ -127,7 +127,7 @@ public:
 				if ( fp )fprintf(fp, "%d,%s\n", k, header[i + 1].c_str());
 			}
 		}
-		fclose(fp);
+		if ( fp ) fclose(fp);
 		fprintf(fp1, "à–¾•Ï”:%d -> %d\n", coef.n - 1, num);
 
 		if (y != NULL)

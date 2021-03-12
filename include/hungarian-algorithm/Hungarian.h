@@ -78,7 +78,7 @@ private:
 		/* generate working copy of distance Matrix */
 		/* check if all matrix elements are positive */
 		nOfElements = nOfRows * nOfColumns;
-		distMatrix = (double *)malloc(nOfElements * sizeof(double));
+		distMatrix = (double *)malloc((nOfElements + 1) * sizeof(double));
 		distMatrixEnd = distMatrix + nOfElements;
 
 		for (row = 0; row<nOfElements; row++)
