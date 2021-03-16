@@ -1623,7 +1623,7 @@ public:
 					no_accept_count = 0;
 					update_count++;
 					char buf[256];
-					sprintf(buf, "@[%d/%d] %f (%f,%f)accept:%d", kk, confounding_factors_sampling - 1, best_min_value, info, residual, accept);
+					sprintf(buf, "@[%d/%d] %f (ind:%f,err:%f)accept:%d", kk, confounding_factors_sampling - 1, best_min_value, info, residual, accept);
 
 					if (1)
 					{
