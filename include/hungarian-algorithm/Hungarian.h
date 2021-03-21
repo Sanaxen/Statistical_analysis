@@ -52,8 +52,11 @@ public:
 		assignmentoptimal(assignment, &cost, distMatrixIn, nRows, nCols);
 
 		Assignment.clear();
+		//for (unsigned int r = 0; r < nRows; r++)
+		//	Assignment.push_back(assignment[r]);
+		Assignment.resize(nRows);
 		for (unsigned int r = 0; r < nRows; r++)
-			Assignment.push_back(assignment[r]);
+			Assignment[r] = assignment[r];
 
 		delete[] distMatrixIn;
 		delete[] assignment;
@@ -93,9 +96,9 @@ private:
 		/* memory allocation */
 		coveredColumns = (bool *)calloc(nOfColumns, sizeof(bool));
 		coveredRows = (bool *)calloc(nOfRows, sizeof(bool));
-		starMatrix = (bool *)calloc(nOfElements, sizeof(bool));
-		primeMatrix = (bool *)calloc(nOfElements, sizeof(bool));
-		newStarMatrix = (bool *)calloc(nOfElements, sizeof(bool)); /* used in step4 */
+		starMatrix = (bool *)calloc(nOfElements + 1, sizeof(bool));
+		primeMatrix = (bool *)calloc(nOfElements + 1, sizeof(bool));
+		newStarMatrix = (bool *)calloc(nOfElements + 1, sizeof(bool)); /* used in step4 */
 
 																   /* preliminary steps */
 		if (nOfRows <= nOfColumns)

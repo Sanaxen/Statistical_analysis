@@ -1121,7 +1121,7 @@ struct Matrix
 		return tr;
 	}
 
-	Matrix<T> inv()
+	Matrix<T> inv(int* error_stat = NULL)
 	{
 		if (m == 1 && n == 1)
 		{
@@ -1131,7 +1131,7 @@ struct Matrix
 		}
 		SVDcmp<T> svd(*this);
 
-		return svd.inv();
+		return svd.inv(error_stat);
 	}
 
 	Matrix<T> diag(Matrix<T>& X)
@@ -1195,6 +1195,20 @@ struct Matrix
 
 		return means;
 	}
+
+	inline double mean()
+	{
+		Matrix<T>& x = *this;
+		double mean = 0;
+
+		for (int i = 0; i < m; i++)
+			for (int j = 0; j < n; j++)
+				mean += x(i, j);
+
+
+		return mean / (m*n);
+	}
+
 
 	Matrix<T> Var(Matrix<T>& means)
 	{
@@ -2062,22 +2076,23 @@ T SumAll(Matrix<T>& X)
 }
 
 template<class T>
-inline Matrix<T> Tanh(Matrix<T>& mat)
+inline Matrix<T> InvSqrt(Matrix<T>& mat, int* stat = NULL)
 {
 	Matrix<T>ret(mat.m, mat.n);
 	const int mn = mat.m*mat.n;
 
-	for (int i = 0; i < mn; i++) ret.v[i] = tanh(mat.v[i]);
+	for (int i = 0; i < mn; i++)
+	{
+		if (mat.v[i] <= 0.0)
+		{
+			ret.v[i] = 0.0;
+			if (stat != NULL) *stat = -1;
+			printf("Sqrt(%f):Divide by Zero", mat.v[i]);
+			continue;
+		}
 
-	return ret;
-}
-template<class T>
-inline Matrix<T> InvSqrt(Matrix<T>& mat)
-{
-	Matrix<T>ret(mat.m, mat.n);
-	const int mn = mat.m*mat.n;
-
-	for (int i = 0; i < mn; i++) ret.v[i] = 1.0 / sqrt(mat.v[i]);
+		ret.v[i] = 1.0 / sqrt(mat.v[i]);
+	}
 	return ret;
 }
 template<class T>
@@ -2090,12 +2105,22 @@ inline Matrix<T> Sqr(Matrix<T>& mat)
 	return ret;
 }
 template<class T>
-inline Matrix<T> Sqrt(Matrix<T>& mat)
+inline Matrix<T> Sqrt(Matrix<T>& mat, int* stat = NULL)
 {
 	Matrix<T>ret(mat.m, mat.n);
 	const int mn = mat.m*mat.n;
 
-	for (int i = 0; i < mn; i++) ret.v[i] = sqrt(mat.v[i]);
+	for (int i = 0; i < mn; i++)
+	{
+		if (mat.v[i] <= 0.0)
+		{
+			ret.v[i] = 0.0;
+			if (stat != NULL) *stat = -1;
+			printf("Sqrt(%f):domain error", mat.v[i]);
+			continue;
+		}
+		ret.v[i] = sqrt(mat.v[i]);
+	}
 	return ret;
 }
 template<class T>
@@ -2117,6 +2142,61 @@ inline Matrix<T> Pow(Matrix<T>& mat, T e)
 	return ret;
 }
 template<class T>
+inline Matrix<T> Exp(Matrix<T>& mat)
+{
+	Matrix<T>ret(mat.m, mat.n);
+	const int mn = mat.m*mat.n;
+
+	for (int i = 0; i < mn; i++) ret.v[i] = exp(mat.v[i]);
+	return ret;
+}
+template<class T>
+inline Matrix<T> Log(Matrix<T>& mat, int* stat = NULL)
+{
+	Matrix<T>ret(mat.m, mat.n);
+	const int mn = mat.m*mat.n;
+
+	for (int i = 0; i < mn; i++)
+	{
+		if ( mat.v[i] <= 0.0)
+		{
+			ret.v[i] = 0.0;
+			if (stat != NULL ) *stat = -1;
+			printf("Log(%f):domain error", mat.v[i]);
+			continue;
+		}
+		ret.v[i] = log(mat.v[i]);
+	}
+	return ret;
+}
+template<class T>
+inline Matrix<T> Cosh(Matrix<T>& mat)
+{
+	Matrix<T>ret(mat.m, mat.n);
+	const int mn = mat.m*mat.n;
+
+	for (int i = 0; i < mn; i++) ret.v[i] = cosh(mat.v[i]);
+	return ret;
+}
+template<class T>
+inline Matrix<T> Sinh(Matrix<T>& mat)
+{
+	Matrix<T>ret(mat.m, mat.n);
+	const int mn = mat.m*mat.n;
+
+	for (int i = 0; i < mn; i++) ret.v[i] = sinh(mat.v[i]);
+	return ret;
+}
+template<class T>
+inline Matrix<T> Tanh(Matrix<T>& mat)
+{
+	Matrix<T>ret(mat.m, mat.n);
+	const int mn = mat.m*mat.n;
+
+	for (int i = 0; i < mn; i++) ret.v[i] = tanh(mat.v[i]);
+	return ret;
+}
+template<class T>
 inline Matrix<T> Sin(Matrix<T>& mat)
 {
 	Matrix<T>ret(mat.m, mat.n);
@@ -2131,7 +2211,7 @@ inline Matrix<T> Cos(Matrix<T>& mat)
 	Matrix<T>ret(mat.m, mat.n);
 	const int mn = mat.m*mat.n;
 
-	for (int i = 0; i < mn; i++) ret.v[i] = sin(mat.v[i]);
+	for (int i = 0; i < mn; i++) ret.v[i] = cos(mat.v[i]);
 	return ret;
 }
 template<class T>
@@ -2140,14 +2220,15 @@ inline Matrix<T> Tan(Matrix<T>& mat)
 	Matrix<T>ret(mat.m, mat.n);
 	const int mn = mat.m*mat.n;
 
-	for (int i = 0; i < mn; i++) ret.v[i] = sin(mat.v[i]);
+	for (int i = 0; i < mn; i++) ret.v[i] = tan(mat.v[i]);
 	return ret;
 }
 
 inline Matrix<dnn_double> toMatrix(std::vector<int>& change)
 {
 	Matrix<dnn_double> p(change.size(), 2);
-	for (int x = 0; x < change.size(); x++)
+	const size_t sz = change.size();
+	for (int x = 0; x < sz; x++)
 	{
 		p(x, 0) = x;
 		p(x, 1) = change[x];
@@ -2159,8 +2240,9 @@ inline Matrix<dnn_double> Substitution(std::vector<int>& change)
 {
 	Matrix<dnn_double> s;
 
-	s = Matrix<dnn_double>().zeros(change.size(), change.size());
-	for (int x = 0; x < change.size(); x++)
+	const size_t sz = change.size();
+	s = Matrix<dnn_double>().zeros(sz, sz);
+	for (int x = 0; x < sz; x++)
 	{
 		s(x, change[x]) = 1.0;
 	}
@@ -2239,20 +2321,32 @@ public:
 		svd.free_vector(w, 1, n);
 	}
 
-	Matrix<T> inv() const
+	Matrix<T> inv(int* error_stat = NULL) const
 	{
 		//A^-1 = V * [diag(1/Wj)] *Vt;
 
 		Matrix<T> Ws = Sigma;
 		for (int i = 0; i < Sigma.n; i++)
 		{
+			if (Sigma(i, i) == 0.0)
+			{
+				if (error_stat == NULL)
+				{
+					printf("Division by zero [inverse matrix] ERROR\n");
+				}
+				else
+				{
+					*error_stat = -1;
+				}
+			}
 			Ws(i, i) = 1.0 / Sigma(i, i);
 		}
-		Matrix<T> Ut = U.transpose(U);
+		Matrix<T>& Ut = U.transpose(U);
 #if 0
 		Matrix<T> t = *A*(V*Ws*Ut);
 		std::cout << t << std::endl;
 #endif
+		if (error_stat != NULL) *error_stat = 0;
 		return V*Ws*Ut;
 	}
 
@@ -2433,11 +2527,18 @@ public:
 #endif
 	}
 
-	Matrix<T> inv() const
+	Matrix<T> inv(int* error_stat = NULL) const
 	{
 		if (error != 0)
 		{
-			printf("_SingularValueDecomposition ERROR\n");
+			if (error_stat == NULL)
+			{
+				printf("_SingularValueDecomposition ERROR\n");
+			}
+			else
+			{
+				*error_stat = error;
+			}
 			return Matrix<dnn_double>();
 		}
 		//A^-1 = V * [diag(1/Wj)] *Vt;
@@ -2445,13 +2546,25 @@ public:
 		Matrix<T> Ws = Sigma;
 		for (int i = 0; i < Sigma.n; i++)
 		{
+			if (Sigma(i, i) == 0.0)
+			{
+				if (error_stat == NULL)
+				{
+					printf("Division by zero [inverse matrix] ERROR\n");
+				}
+				else
+				{
+					*error_stat = -1;
+				}
+			}
 			Ws(i, i) = 1.0 / Sigma(i, i);
 		}
-		Matrix<T> Ut = U.transpose(U);
+		Matrix<T>& Ut = U.transpose(U);
 #if 0
 		Matrix<T> t = *A*(V*Ws*Ut);
 		std::cout << t << std::endl;
 #endif
+		if (error_stat != NULL) *error_stat = error;
 		return V*Ws*Ut;
 	}
 

@@ -229,6 +229,72 @@ public:
 	}
 };
 
+class lingam_reg
+{
+public:
+	void calc_r(Matrix<dnn_double>&x, Matrix<dnn_double>&y, Matrix<dnn_double>&xr, Matrix<dnn_double>&yr)
+	{
+		
+		auto& x_mean = x.Mean();
+		auto& y_mean = y.Mean();
+		auto& xy_mean = x.hadamard(y).Mean();
+
+		xr = (x - xy_mean.v[0] - x_mean.v[0]*y_mean.v[0]) / y.Var(y_mean).hadamard(y).v[0];
+		yr = (y - xy_mean.v[0] - x_mean.v[0]*y_mean.v[0]) / x.Var(x_mean).hadamard(x).v[0];
+
+		return;
+	}
+
+	Matrix<dnn_double> normalize(Matrix<dnn_double>& x)
+	{
+		auto& x_mean = x.Mean();
+
+		return (x - x_mean.v[0]) / x.Std(x_mean).v[0];
+	}
+	double entropy(Matrix<dnn_double>& u)
+	{
+		auto Hv = (1 + log(2 * M_PI)) / 2.0;
+		const double k1 = 79.047;
+		const double k2 = 7.4129;
+		const double gamma = 0.37457;
+
+		double t = Cosh(u).mean();
+		double a;
+		if (t > 0)
+		{
+			a = log(t) - gamma;
+		}
+		else
+		{
+			a = 1;
+		}
+
+		double b = u.hadamard( Exp(-0.5* u.hadamard(u))).mean();
+
+		return Hv - k1 * a*a - k2 * b*b;
+	}
+
+	bool dir(Matrix<dnn_double>&x, Matrix<dnn_double>&y, double& diff)
+	{
+
+		Matrix<dnn_double> xr;
+		Matrix<dnn_double> yr;
+		calc_r(x, y, xr, yr);
+
+		auto& xr_mean = xr.Mean();
+		auto& yr_mean = yr.Mean();
+		double m = entropy(normalize(x)) + entropy(normalize(xr) / xr.Std(xr_mean))
+			- entropy(normalize(y)) - entropy(normalize(yr) / yr.Std(yr_mean));
+		
+		diff = m;
+		if (m >= 0)
+		{
+			return true;
+		}
+		return false;
+	}
+};
+
 /*
 S.Shimizu, P.O.Hoyer, A.Hyvarinen and A.Kerminen.
 A linear non-Gaussian acyclic model for causal discovery (2006)
@@ -505,6 +571,7 @@ public:
 			printf("LiNGAM save exception\n");
 		}
 		fclose(lock);
+		remove("lingam.lock");
 	}
 
 	bool load(std::string& filename)
@@ -970,7 +1037,13 @@ public:
 			return error;
 		}
 
-		Matrix<dnn_double>& W_ica = (ica.A.transpose()).inv();
+		int inv_error = 0;
+		Matrix<dnn_double>& W_ica = (ica.A.transpose()).inv(&inv_error);
+		if (inv_error != 0)
+		{
+			printf("ERROR:W_ica\n");
+			return error;
+		}
 		Matrix<dnn_double>& W_ica_ = Abs(W_ica).Reciprocal();
 
 		HungarianAlgorithm HungAlgo;
@@ -987,9 +1060,14 @@ public:
 		Substitution(replace).print("Substitution matrix");
 
 		//P^-1*Wica
-		Matrix<dnn_double>& W_ica_perm = (Substitution(replace).inv()*W_ica);
+		inv_error = 0;
+		Matrix<dnn_double>& W_ica_perm = (Substitution(replace).inv(&inv_error)*W_ica);
 		W_ica_perm.print_e("Replacement->W_ica_perm");
-
+		if (inv_error != 0)
+		{
+			printf("ERROR:P^-1*Wica\n");
+			return error;
+		}
 		//D^-1
 		Matrix<dnn_double>& D = Matrix<dnn_double>().diag(W_ica_perm);
 		Matrix<dnn_double> D2(diag_vector(D));
@@ -1238,6 +1316,7 @@ public:
 		std::uniform_real_distribution<> knowledge_rate(0.0, 1.0);
 		std::uniform_real_distribution<> noise(-min_value*0.1, min_value*0.1);
 
+		std::uniform_real_distribution<> mu_zero(0.0, 1.0);
 		std::uniform_real_distribution<> condition(0.0, 1.0);
 
 		int no_accept_count = 0;
@@ -1250,12 +1329,14 @@ public:
 		double best_independ = 999999999.0;
 		double best_min_value = 999999999.0;
 		Matrix<dnn_double>É (X.m, X.n);
+		Matrix<dnn_double>É _sv;
 		std::uniform_int_distribution<> var_select(0, X.n);
 
 		double abs_residual_errormax = -1;
 
 		//É  = É .zeros(É .m, É .n);
 		É  = É .Rand()*rho;
+		É _sv = É ;
 		//std::student_t_distribution<> dist(6.0);
 		//std::normal_distribution<> dist(0.0, 20.0);
 		//std::uniform_real_distribution<> dist(-mu_max_value, mu_max_value);
@@ -1264,10 +1345,14 @@ public:
 		if (t_p <= 6.0) t_p = 7.0;
 		std::uniform_real_distribution<> student_t_dist(6.0, t_p);
 		std::vector<int> dist_t_param(X.n);
+		std::vector<int> dist_t_param_best;
+		std::vector<int> dist_t_param_sv;
 		for (int i = 0; i < X.n; i++)
 		{
 			dist_t_param[i] = student_t_dist(engine);
 		}
+		dist_t_param_best = dist_t_param;
+		dist_t_param_sv = dist_t_param;
 
 		const char* loss = "lingam_loss.dat";
 		try
@@ -1309,6 +1394,7 @@ public:
 
 				if (accept)
 				{
+#if 10
 					for (int j = 0; j < X.m; j++)
 					{
 						double c = 1;
@@ -1322,6 +1408,19 @@ public:
 						}
 						É (j, var) += noise(engine) * c;
 					}
+#else
+					dist_t_param[var] += 0.001;
+
+					auto& dist = std::student_t_distribution<>(dist_t_param[var]);
+
+					//#pragma omp parallel for <-- óêêîÇÃèáèòÇ™ïœÇÌÇ¡ÇƒÇµÇ‹Ç§Ç©ÇÁï¿óÒâªÇµÇΩÇÁÉ_ÉÅ7
+					for (int j = 0; j < X.m; j++)
+					{
+						const double rate = distribution_rate * dist(engine);
+						É (j, var) = rate/* + noise(engine)*/;
+					}
+#endif
+
 				}
 				else
 				{
@@ -1329,12 +1428,21 @@ public:
 
 					auto& dist = std::student_t_distribution<>(dist_t_param[var]);
 
+#if 10
 					//#pragma omp parallel for <-- óêêîÇÃèáèòÇ™ïœÇÌÇ¡ÇƒÇµÇ‹Ç§Ç©ÇÁï¿óÒâªÇµÇΩÇÁÉ_ÉÅ7
 					const double rate = distribution_rate * dist(engine);
 					for (int j = 0; j < X.m; j++)
 					{
 						É (j, var) = rate + noise(engine);
 					}
+#else
+					//#pragma omp parallel for <-- óêêîÇÃèáèòÇ™ïœÇÌÇ¡ÇƒÇµÇ‹Ç§Ç©ÇÁï¿óÒâªÇµÇΩÇÁÉ_ÉÅ7
+					for (int j = 0; j < X.m; j++)
+					{
+						const double rate = distribution_rate * dist(engine);
+						É (j, var) = rate/* + noise(engine)*/;
+					}
+#endif
 				}
 
 #pragma omp parallel for
@@ -1368,7 +1476,13 @@ public:
 
 			try
 			{
-				Matrix<dnn_double>& W_ica = (ica.A.transpose()).inv();
+				int inv_error = 0;
+
+				Matrix<dnn_double>& W_ica = (ica.A.transpose()).inv(&inv_error);
+				if (inv_error != 0)
+				{
+					continue;
+				}
 				Matrix<dnn_double>& W_ica_ = Abs(W_ica).Reciprocal();
 
 				HungarianAlgorithm HungAlgo;
@@ -1385,8 +1499,13 @@ public:
 				//Substitution(replace).print("Substitution matrix");
 
 				//P^-1*Wica
-				Matrix<dnn_double>& W_ica_perm = (Substitution(replace).inv()*W_ica);
+				inv_error = 0;
+				Matrix<dnn_double>& W_ica_perm = (Substitution(replace).inv(&inv_error)*W_ica);
 				//W_ica_perm.print_e("Replacement->W_ica_perm");
+				if (inv_error != 0)
+				{
+					continue;
+				}
 
 				//D^-1
 				Matrix<dnn_double>& D = Matrix<dnn_double>().diag(W_ica_perm);
@@ -1435,8 +1554,79 @@ public:
 			}
 
 			//float r = 0.0;
+			bool cond = true;
 			{
 				auto& b = before_sorting_(B);
+
+				if (kk > 0 && prior_knowledge.size())
+				{
+					for (int k = 0; k < prior_knowledge.size() / 2; k++)
+					{
+						bool ng_edge = false;
+						int ii, jj;
+						if (prior_knowledge[2 * k] < 0)
+						{
+							ii = abs(prior_knowledge[2 * k]) - 1;
+							jj = abs(prior_knowledge[2 * k + 1]) - 1;
+							ng_edge = true;
+						}
+						else
+						{
+							ii = prior_knowledge[2 * k] - 1;
+							jj = prior_knowledge[2 * k + 1] - 1;
+						}
+						if (ng_edge)
+						{
+							if (fabs(b(ii, jj)) > 0.001)
+							{
+								cond = false;
+								break;
+							}
+							//printf("%d -> %d NG\n", jj, ii);
+						}
+						else
+						{
+							if (fabs(b(ii, jj)) > 0.001 && fabs(b(jj, ii)) < 0.001)
+							{
+								cond = false;
+								break;
+								//printf("%d -> %d NG\n", jj, ii);
+							}
+							if (fabs(b(ii, jj)) > 0.001 || fabs(b(jj, ii)) < 0.001)
+							{
+								cond = false;
+								break;
+								//printf("%d -> %d NG\n", jj, ii);
+							}
+						}
+						if (!cond)
+						{
+							if (prior_knowledge_rate < knowledge_rate(engine))
+							{
+								cond = true;
+							}
+						}
+					}
+					// Å¶ b( i, j ) = j -> i
+					////b.print("b");
+					////printf("b(0,1):%f b(0,2):%f\n", b(0, 1), b(0, 2));
+					//// # -> 0 NG
+					//if (fabs(b(0, 1)) > 0.001 || fabs(b(0, 2)) > 0.001 )
+					//{
+					//	accept_ = false;
+					//}
+					////2 -> 1 NG   1 -> 2 OK
+					//if (fabs(b(2, 1)) < fabs(b(1, 2)))
+					//{
+					//	accept_ = false;
+					//}
+
+					//if (!accept_ && a)
+					//{
+					//	b.print("NG-b");
+					//}
+				}
+
 				//b.print("b");
 #pragma omp parallel for
 				for (int j = 0; j < xs.m; j++)
@@ -1506,7 +1696,7 @@ public:
 			double rt = (double)0.1*kk / (double)confounding_factors_sampling;
 			temperature = pow(temperature_alp, rt);
 
-			if (!accept_)
+			if (!accept_ && cond)
 			{
 				double alp = acceptance_rate(engine);
 
@@ -1522,83 +1712,36 @@ public:
 						th = exp((best_min_value - value) / temperature);
 					}
 				}
-				//printf("temperature:%f  alp:%f th:%f\n", temperature, alp, th );
+				{
+					char buf[256];
+					sprintf(buf, "[%d][%f]temperature:%f  alp:%f < th:%f %s", kk, fabs((best_min_value - value)), temperature, alp, th, (alp < th) ? "true" : "false");
+					if (1)
+					{
+						DWORD  bytesWritten = 0;
+						if (alp < th)
+						{
+							SetConsoleTextAttribute(hStdout, FOREGROUND_GREEN | FOREGROUND_INTENSITY );
+						}
+						else
+						{
+							SetConsoleTextAttribute(hStdout, FOREGROUND_RED | FOREGROUND_INTENSITY);
+						}
+						WriteFile(hStdout, buf, strlen(buf), &bytesWritten, NULL);
+						SetConsoleTextAttribute(hStdout, csbi.wAttributes);
+						WriteFile(hStdout, "\n", 1, &bytesWritten, NULL);
+					}
+					else
+					{
+						printf(buf); printf("\n");
+					}
+				}
 				if (alp < th)
 				{
 					accept_ = true;
 				}
 			}
 
-			if (kk > 0 && accept_ && prior_knowledge.size())
-			{
-				auto& b = before_sorting_(B);
-
-				for (int k = 0; k < prior_knowledge.size() / 2; k++)
-				{
-					bool ng_edge = false;
-					int ii, jj;
-					if (prior_knowledge[2 * k] < 0)
-					{
-						ii = abs(prior_knowledge[2 * k]) - 1;
-						jj = abs(prior_knowledge[2 * k + 1]) - 1;
-						ng_edge = true;
-					}
-					else
-					{
-						ii = prior_knowledge[2 * k] - 1;
-						jj = prior_knowledge[2 * k + 1] - 1;
-					}
-					if (ng_edge)
-					{
-						if (fabs(b(ii, jj)) > 0.001)
-						{
-							accept_ = false;
-							break;
-						}
-						//printf("%d -> %d NG\n", jj, ii);
-					}
-					else
-					{
-						if (fabs(b(ii, jj)) > 0.001 && fabs(b(jj, ii)) < 0.001)
-						{
-							accept_ = false;
-							break;
-							//printf("%d -> %d NG\n", jj, ii);
-						}
-						if (fabs(b(ii, jj)) > 0.001 || fabs(b(jj, ii)) < 0.001)
-						{
-							accept_ = false;
-							break;
-							//printf("%d -> %d NG\n", jj, ii);
-						}
-					}
-					if (!accept_)
-					{
-						if (prior_knowledge_rate < knowledge_rate(engine))
-						{
-							accept_ = true;
-						}
-					}
-				}
-				// Å¶ b( i, j ) = j -> i
-				////b.print("b");
-				////printf("b(0,1):%f b(0,2):%f\n", b(0, 1), b(0, 2));
-				//// # -> 0 NG
-				//if (fabs(b(0, 1)) > 0.001 || fabs(b(0, 2)) > 0.001 )
-				//{
-				//	accept_ = false;
-				//}
-				////2 -> 1 NG   1 -> 2 OK
-				//if (fabs(b(2, 1)) < fabs(b(1, 2)))
-				//{
-				//	accept_ = false;
-				//}
-
-				//if (!accept_ && a)
-				//{
-				//	b.print("NG-b");
-				//}
-			}
+			if (!cond) accept_ = false;
 
 			bool best_update = false;
 			if (accept_)
@@ -1616,6 +1759,11 @@ public:
 				//	auto& b = before_sorting_(B);
 				//	b.print("accept-b");
 				//}
+
+				É _sv = É ;
+				dist_t_param_sv = dist_t_param;
+				//neighborhood_search = 20;
+
 				accept++;
 				reject = 0;
 				if (best_update)
@@ -1645,6 +1793,7 @@ public:
 					residual_error_best = residual_error;
 					residual_error_info_best = residual_error_info;
 
+					dist_t_param_best = dist_t_param;
 
 					calc_mutual_information(X, mutual_information);
 					save(std::string("lingam.model"));

@@ -667,12 +667,20 @@ int main(int argc, char** argv)
 
 	if (load_model != "")
 	{
-		if (!LiNGAM.load(load_model))
+		try
 		{
-			printf("ERROR:load_model\n");
+			if (!LiNGAM.load(load_model))
+			{
+				printf("ERROR:load_model\n");
+				return -1;
+			}
+			printf("load_model ok.\n");
+		}
+		catch (std::exception& e)
+		{
+			printf("LiNGAM load exception:%s\n", e.what());
 			return -1;
 		}
-		printf("load_model ok.\n");
 	}
 	else
 	{
@@ -804,7 +812,7 @@ int main(int argc, char** argv)
 				Matrix<dnn_double> tmp = LiNGAM.residual_error.Col(i);
 				//tmp = tmp.whitening(tmp.Mean(), tmp.Std(tmp.Mean()));
 				//tmp = tmp.Centers(tmp.Mean());
-
+				
 				int stat = shapiro.test(tmp);
 				if (stat == 0)
 				{
