@@ -1873,12 +1873,6 @@ public:
 			{
 				accept = 0;
 				reject++;
-				if (acceptance_rate(engine) > 0.75)
-				{
-					accept = 1;
-					reject = 0;
-					printf("------------------\n");
-				}
 			}
 			try
 			{
