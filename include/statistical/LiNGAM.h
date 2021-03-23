@@ -258,20 +258,12 @@ public:
 		const double k2 = 7.4129;
 		const double gamma = 0.37457;
 
-		double t = Cosh(u).mean();
-		double a;
-		if (t > 0)
-		{
-			a = log(t) - gamma;
-		}
-		else
-		{
-			a = 1;
-		}
-
+		//Hv - k1*(np.mean(np.log(np.cosh(u))) - gamma)**2 - k2 * (np.mean(u * np.exp(-1 * u**2 /2)))**2
+		double t = Log(Cosh(u)).mean() - gamma;
+		
 		double b = u.hadamard( Exp(-0.5* u.hadamard(u))).mean();
 
-		return Hv - k1 * a*a - k2 * b*b;
+		return Hv - k1 * t*t - k2 * b*b;
 	}
 
 	bool dir(Matrix<dnn_double>&x, Matrix<dnn_double>&y, double& diff)
@@ -1012,6 +1004,16 @@ public:
 		return b_csl;
 	}
 
+	Matrix<dnn_double> inv_before_sorting_(Matrix<dnn_double>& y)
+	{
+		std::vector<int> r = replacement;
+		Matrix<dnn_double> x;
+		
+		x = (Substitution(r).transpose().inv())*y*Substitution(r).inv();
+
+		return x;
+	}
+
 	int fit(Matrix<dnn_double>& X, const int max_ica_iteration = MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
 		remove("confounding_factors.txt");
@@ -1267,6 +1269,59 @@ public:
 				info(i, j) = tmp;
 			}
 		}
+	}
+
+	double dir_change(Matrix<dnn_double>& x)
+	{
+		Matrix<dnn_double>& b = this->before_sorting_(B);
+		double edge_dir = 0;
+		int dir_chk = 0;
+		do {
+			dir_chk++;
+			int num = 0;
+			int ok = 0;
+			for (int i = 0; i < x.n; i++)
+			{
+				for (int j = i + 1; j < x.n; j++)
+				{
+					if (fabs(b(i, j)) < 0.001)
+					{
+						continue;
+					}
+
+					lingam_reg reg;
+
+					num++;
+					double d;
+					if (!reg.dir(x.Col(i), x.Col(j), d))
+					{
+						b(j, i) = b(i, j);
+						b(i, j) = 0;
+						//printf("NG %d -> %d (%f)\n", i, j, d);
+					}
+					else
+					{
+						//printf("OK %d -> %d (%f)\n", i, j,d);
+						ok++;
+					}
+				}
+			}
+			edge_dir = (double)ok / (double)num;
+			printf("%d/%d (%f)\n", ok, num, 100.0*edge_dir);
+
+			if (edge_dir > 0.7)
+			{
+				this->inv_before_sorting_(b);
+				Matrix<dnn_double> b_est_tmp = b;
+				B = AlgorithmC(b_est_tmp, x.n);
+			}
+			else
+			{
+				break;
+			}
+		} while (dir_chk < 3);
+
+		return edge_dir;
 	}
 
 	int early_stopping = 0;
@@ -1553,6 +1608,15 @@ public:
 				continue;
 			}
 
+			//{
+			//	auto& b = before_sorting_(B);
+			//	b.print("b");
+			//	auto& c = inv_before_sorting_(b);
+
+			//	(B - c).print("B-c");
+			//}
+
+
 			//float r = 0.0;
 			bool cond = true;
 			{
@@ -1809,6 +1873,12 @@ public:
 			{
 				accept = 0;
 				reject++;
+				if (acceptance_rate(engine) > 0.75)
+				{
+					accept = 1;
+					reject = 0;
+					printf("------------------\n");
+				}
 			}
 			try
 			{
