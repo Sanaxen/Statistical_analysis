@@ -1271,9 +1271,38 @@ public:
 		}
 	}
 
-	double dir_change(Matrix<dnn_double>& x)
+	double res_error(Matrix<dnn_double>& xs, Matrix<dnn_double>& É , Matrix<dnn_double>& b)
 	{
+		double rerr = 0;
+		//b.print("b");
+#pragma omp parallel for
+		for (int j = 0; j < xs.m; j++)
+		{
+			Matrix<dnn_double> É T(xs.n, 1);
+			Matrix<dnn_double> x(xs.n, 1);
+			Matrix<dnn_double> y(xs.n, 1);
+			for (int i = 0; i < xs.n; i++)
+			{
+				x(i, 0) = xs(j, i);
+				É T(i, 0) = É (j, i);
+			}
+			Matrix<dnn_double>& rr = y - b * y - É T;
+			for (int i = 0; i < xs.n; i++)
+			{
+				rerr += rr(0, i);
+			}
+		}
+		return rerr;
+	}
+
+	double dir_change(Matrix<dnn_double>& x, Matrix<dnn_double>& É )
+	{
+		Matrix<dnn_double> B_sv = B;
+		std::vector<int> replacement_sv = replacement;
+		
 		Matrix<dnn_double>& b = this->before_sorting_(B);
+		double rerr = res_error(x, É , b);
+
 		double edge_dir = 0;
 		int dir_chk = 0;
 		do {
@@ -1293,16 +1322,20 @@ public:
 
 					num++;
 					double d;
-					if (!reg.dir(x.Col(i), x.Col(j), d))
+					bool r = reg.dir(x.Col(i), x.Col(j), d);
+					if (fabs(d) > 10.0)
 					{
-						b(j, i) = b(i, j);
-						b(i, j) = 0;
-						//printf("NG %d -> %d (%f)\n", i, j, d);
-					}
-					else
-					{
-						//printf("OK %d -> %d (%f)\n", i, j,d);
-						ok++;
+						if (!r)
+						{
+							b(j, i) = b(i, j);
+							b(i, j) = 0;
+							//printf("NG %d -> %d (%f)\n", i, j, d);
+						}
+						else
+						{
+							//printf("OK %d -> %d (%f)\n", i, j,d);
+							ok++;
+						}
 					}
 				}
 			}
@@ -1321,6 +1354,15 @@ public:
 			}
 		} while (dir_chk < 3);
 
+		b = this->before_sorting_(B);
+		double rerr2 = res_error(x, É , b);
+
+		if (rerr2 > rerr)
+		{
+			B_sv = B_sv;
+			replacement = replacement_sv;
+			return 0;
+		}
 		return edge_dir;
 	}
 
@@ -1359,8 +1401,10 @@ public:
 		auto residual_error_info_best = residual_error_info;
 
 		input = X;
-		double min_value = Abs(X).Min();
+		double min_value =X.Min();
 		if (min_value < 1.0e-3) min_value = 1.0e-3;
+		double max_value = X.Max();
+		if (max_value < 1.0e-3) max_value = 1.0e-3;
 
 		//std::random_device seed_gen;
 		//std::default_random_engine engine(seed_gen());
@@ -1369,7 +1413,8 @@ public:
 		std::uniform_real_distribution<> acceptance_rate(0.0, 1.0);
 		//std::uniform_real_distribution<> rate_cf(-1.0/ mu_max_value, 1.0/ mu_max_value);
 		std::uniform_real_distribution<> knowledge_rate(0.0, 1.0);
-		std::uniform_real_distribution<> noise(-min_value*0.1, min_value*0.1);
+		std::uniform_real_distribution<> noise(-fabs(min_value)*0.1, fabs(min_value)*0.1);
+		std::uniform_real_distribution<> intercept_noise(-fabs(min_value)*0.01, fabs(min_value)*0.01);
 
 		std::uniform_real_distribution<> mu_zero(0.0, 1.0);
 		std::uniform_real_distribution<> condition(0.0, 1.0);
@@ -1386,6 +1431,9 @@ public:
 		Matrix<dnn_double>É (X.m, X.n);
 		Matrix<dnn_double>É _sv;
 		std::uniform_int_distribution<> var_select(0, X.n);
+
+		Matrix<dnn_double>& intercept = Matrix<dnn_double>().zeros(X.n, 1);
+		Matrix<dnn_double> intercept_best;
 
 		double abs_residual_errormax = -1;
 
@@ -1450,19 +1498,20 @@ public:
 				if (accept)
 				{
 #if 10
+					double c = 1;
+					if (accept < 32)
+					{
+						c = 1.0 / pow(2.0, accept);
+					}
+					else
+					{
+						c = 1.0e-10;
+					}
 					for (int j = 0; j < X.m; j++)
 					{
-						double c = 1;
-						if (accept < 32)
-						{
-							c = 1.0 / pow(2.0, accept);
-						}
-						else
-						{
-							c = 1.0e-10;
-						}
 						É (j, var) += noise(engine) * c;
 					}
+					//intercept(var, 0) += intercept_noise(engine)*c;
 #else
 					dist_t_param[var] += 0.001;
 
@@ -1490,6 +1539,8 @@ public:
 					{
 						É (j, var) = rate + noise(engine);
 					}
+					//intercept(var,0) = intercept_noise(engine);
+					//intercept(var, 0) = 0;
 #else
 					//#pragma omp parallel for <-- óêêîÇÃèáèòÇ™ïœÇÌÇ¡ÇƒÇµÇ‹Ç§Ç©ÇÁï¿óÒâªÇµÇΩÇÁÉ_ÉÅ7
 					for (int j = 0; j < X.m; j++)
@@ -1706,7 +1757,7 @@ public:
 						y(i, 0) = X(j, i);
 						É T(i, 0) = É (j, i);
 					}
-					Matrix<dnn_double>& rr = y - b * y - É T;
+					Matrix<dnn_double>& rr = y - b * y - É T - intercept;
 					for (int i = 0; i < xs.n; i++)
 					{
 						//r += rr(0, i)*rr(0, i);
@@ -1813,6 +1864,8 @@ public:
 				//printf("+\n");
 				if (best_min_value >= value)
 				{
+					//dir_change(xs, É );
+
 					best_min_value = value;
 					best_residual = residual;
 					best_independ = info;
@@ -1849,6 +1902,9 @@ public:
 					{
 						printf(buf);
 					}
+
+					//intercept_best.print("intercept_best");
+					É .print("É ");
 					Mu = É ;
 					B_best_sv = B;
 					B_pre_sort = B;
@@ -1856,7 +1912,8 @@ public:
 					replacement_best = replacement;
 					residual_error_best = residual_error;
 					residual_error_info_best = residual_error_info;
-
+					
+					intercept_best = intercept;
 					dist_t_param_best = dist_t_param;
 
 					calc_mutual_information(X, mutual_information);
@@ -1867,12 +1924,27 @@ public:
 						break;
 					}
 				}
+
+				//for (int i = 0; i < xs.n; i++)
+				//{
+				//	double residual_error_mean = residual_error.Col(i).mean();
+				//	intercept(i, 0) += residual_error_mean/xs.n;
+				//}
 				fflush(stdout);
 			}
 			else
 			{
 				accept = 0;
 				reject++;
+				//if (acceptance_rate(engine) > 0.95)
+				//{
+				//	//É  = Mu;
+				//	//dist_t_param = dist_t_param_best;
+				//	//intercept = intercept_best;
+				//	accept = 1;
+				//	reject = 0;
+				//	printf("------------------\n");
+				//}
 			}
 			try
 			{
