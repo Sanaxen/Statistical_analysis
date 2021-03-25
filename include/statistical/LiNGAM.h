@@ -1430,7 +1430,7 @@ public:
 		double best_min_value = 999999999.0;
 		Matrix<dnn_double>É (X.m, X.n);
 		Matrix<dnn_double>É _sv;
-		std::uniform_int_distribution<> var_select(0, X.n);
+		std::uniform_int_distribution<> var_select(0, X.n-1);
 
 		Matrix<dnn_double>& intercept = Matrix<dnn_double>().zeros(X.n, 1);
 		Matrix<dnn_double> intercept_best;
