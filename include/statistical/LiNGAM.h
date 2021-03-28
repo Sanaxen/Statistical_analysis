@@ -503,7 +503,7 @@ public:
 	Matrix<dnn_double> mutual_information;
 	Matrix<dnn_double> Mu;
 	Matrix<dnn_double> residual_error;
-	Matrix<dnn_double> residual_error_info;
+	Matrix<dnn_double> residual_error_independ;
 	bool mutual_information_values = false;
 	int confounding_factors = 0;
 
@@ -551,7 +551,7 @@ public:
 			mutual_information.print_csv((char*)(filename + ".mutual_information.csv").c_str());
 			Mu.print_csv((char*)(filename + ".mu.csv").c_str());
 
-			residual_error_info.print_csv((char*)(filename + ".residual_error_info.csv").c_str());
+			residual_error_independ.print_csv((char*)(filename + ".residual_error_independ.csv").c_str());
 			residual_error.print_csv((char*)(filename + ".residual_error.csv").c_str());
 		}
 		catch (std::exception& e)
@@ -625,9 +625,9 @@ public:
 			Mu = csv6.toMat();
 			printf("load É \n"); fflush(stdout);
 
-			CSVReader csv7((filename + ".residual_error_info.csv"), ',', false);
-			residual_error_info = csv7.toMat();
-			printf("residual_error_info\n"); fflush(stdout);
+			CSVReader csv7((filename + ".residual_error_independ.csv"), ',', false);
+			residual_error_independ = csv7.toMat();
+			printf("residual_error_independ\n"); fflush(stdout);
 
 			CSVReader csv8((filename + ".residual_error.csv"), ',', false);
 			residual_error = csv8.toMat();
@@ -1020,7 +1020,7 @@ public:
 		error = 0;
 
 		residual_error = Matrix<dnn_double>(X.m, X.n);
-		residual_error_info = Matrix<dnn_double>(X.n, X.n);
+		residual_error_independ = Matrix<dnn_double>(X.n, X.n);
 
 		Mu = Matrix<dnn_double>().zeros(X.m, X.n);
 		input = X;
@@ -1222,11 +1222,11 @@ public:
 				}
 			}
 			//Evaluation of independence
-			calc_mutual_information( residual_error, residual_error_info);
+			calc_mutual_information( residual_error, residual_error_independ);
 		}
 		
-		double c_factors = residual_error_info.Max();
-		residual_error_info.print_csv("confounding_factors_info.csv");
+		double c_factors = residual_error_independ.Max();
+		residual_error_independ.print_csv("confounding_factors_independ.csv");
 		if (c_factors > confounding_factors_upper)
 		{
 			FILE* fp = fopen("confounding_factors.txt", "w");
@@ -1395,15 +1395,15 @@ public:
 		Matrix<dnn_double> B_best_sv;
 		auto replacement_best = replacement;
 		residual_error = Matrix<dnn_double>(X.m, X.n);
-		residual_error_info = Matrix<dnn_double>(X.n, X.n);
+		residual_error_independ = Matrix<dnn_double>(X.n, X.n);
 		
 		auto residual_error_best = residual_error;
-		auto residual_error_info_best = residual_error_info;
+		auto residual_error_independ_best = residual_error_independ;
 
 		input = X;
-		double min_value =X.Min();
+		double min_value =Abs(X).Min();
 		if (min_value < 1.0e-3) min_value = 1.0e-3;
-		double max_value = X.Max();
+		double max_value = Abs(X).Max();
 		if (max_value < 1.0e-3) max_value = 1.0e-3;
 
 		//std::random_device seed_gen;
@@ -1413,8 +1413,9 @@ public:
 		std::uniform_real_distribution<> acceptance_rate(0.0, 1.0);
 		//std::uniform_real_distribution<> rate_cf(-1.0/ mu_max_value, 1.0/ mu_max_value);
 		std::uniform_real_distribution<> knowledge_rate(0.0, 1.0);
-		std::uniform_real_distribution<> noise(-fabs(min_value)*0.1, fabs(min_value)*0.1);
-		std::uniform_real_distribution<> intercept_noise(-fabs(min_value)*0.01, fabs(min_value)*0.01);
+		//std::uniform_real_distribution<> noise(-min_value*0.1, min_value*0.1);
+		std::uniform_real_distribution<> noise(-0.1, 0.1);
+		std::uniform_real_distribution<> intercept_noise(min_value*0.01, min_value*0.01);
 
 		std::uniform_real_distribution<> mu_zero(0.0, 1.0);
 		std::uniform_real_distribution<> condition(0.0, 1.0);
@@ -1467,6 +1468,9 @@ public:
 		{
 		}
 
+		double weight1 = 1.0;
+		double weight2 = 1.0;
+		int neighborhood_search = 0;
 		for (int kk = 0; kk < confounding_factors_sampling; kk++)
 		{
 			start = std::chrono::system_clock::now();
@@ -1767,7 +1771,7 @@ public:
 				//r /= (xs.m*xs.n);
 
 				//Evaluation of independence
-				calc_mutual_information( residual_error, residual_error_info);
+				calc_mutual_information( residual_error, residual_error_independ);
 			}
 			
 			double  abs_residual_errormax_cur = Abs(residual_error).Max();
@@ -1783,32 +1787,49 @@ public:
 			//residual_error.print("residual_error");
 			//printf("residual_error max:%f\n", Abs(residual_error).Max());
 
-			double info = residual_error_info.Max();
+			double independ = residual_error_independ.Max();
 			double residual = abs_residual_errormax_cur / abs_residual_errormax;
-
-			double value = std::max(info, residual);
+			
+			{
+				double w = weight1 + weight2;
+				weight1 = weight1 / w;
+				weight2 = weight2 / w;
+			}
+			double value = std::max(weight1*independ, weight2*residual);
 
 
 			//printf("%d info:%f residual:%f -> value:%f (best_min_value:%f)\n", kk, info, residual, value, best_min_value);
 
 			bool accept_ = false;
 
-			if (best_min_value > value)
+			if (best_residual > residual && best_independ > independ)
 			{
 				accept_ = true;
 			}
+			else
+			{
+
+				if (acceptance_rate(engine) > 0.5)
+				{
+					if (best_residual > residual)
+					{
+						accept_ = true;
+					}
+				}
+				else
+					//if (acceptance_rate(engine) > 0.8)
+					{
+						if (best_independ > independ)
+						{
+							accept_ = true;
+						}
+					}
+			}
+
 			if (kk == 0) accept_ = true;
 
-			//if (!accept_ && best_residual == residual)
-			//{
-			//	if (best_min_value > info )
-			//	{
-			//		accept_ = true;
-			//	}
-			//}
 
-
-			double rt = (double)0.1*kk / (double)confounding_factors_sampling;
+			double rt = (double)kk / (double)confounding_factors_sampling;
 			temperature = pow(temperature_alp, rt);
 
 			if (!accept_ && cond)
@@ -1818,11 +1839,11 @@ public:
 				double th = -1.0;
 				if (best_min_value < value)
 				{
-					if (value - best_min_value > 1.5)
-					{
-						th = exp(-1.5 / temperature);
-					}
-					else
+					//if (value - best_min_value > 1.5)
+					//{
+					//	th = exp(-1.5 / temperature);
+					//}
+					//else
 					{
 						th = exp((best_min_value - value) / temperature);
 					}
@@ -1862,13 +1883,12 @@ public:
 			if (accept_)
 			{
 				//printf("+\n");
-				if (best_min_value >= value)
+				if (best_min_value >= value || best_residual > residual || best_independ > independ)
 				{
 					//dir_change(xs, É );
-
-					best_min_value = value;
-					best_residual = residual;
-					best_independ = info;
+					if (best_min_value > value)best_min_value = value;
+					if (best_residual > residual)best_residual = residual;
+					if (best_independ > independ)best_independ = independ;
 
 					best_update = true;
 				}
@@ -1879,7 +1899,7 @@ public:
 
 				É _sv = É ;
 				dist_t_param_sv = dist_t_param;
-				//neighborhood_search = 20;
+				neighborhood_search = xs.n;
 
 				accept++;
 				reject = 0;
@@ -1888,7 +1908,7 @@ public:
 					no_accept_count = 0;
 					update_count++;
 					char buf[256];
-					sprintf(buf, "@[%d/%d] %f (ind:%f,err:%f)accept:%d", kk, confounding_factors_sampling - 1, best_min_value, info, residual, accept);
+					sprintf(buf, "@[%d/%d] %f (ind:%f,err:%f)accept:%d", kk, confounding_factors_sampling - 1, best_min_value, independ, residual, accept);
 
 					if (1)
 					{
@@ -1904,21 +1924,21 @@ public:
 					}
 
 					//intercept_best.print("intercept_best");
-					É .print("É ");
+					//É .print("É ");
 					Mu = É ;
 					B_best_sv = B;
 					B_pre_sort = B;
 					modification_input = xs;
 					replacement_best = replacement;
 					residual_error_best = residual_error;
-					residual_error_info_best = residual_error_info;
+					residual_error_independ_best = residual_error_independ;
 					
 					intercept_best = intercept;
 					dist_t_param_best = dist_t_param;
 
 					calc_mutual_information(X, mutual_information);
 					save(std::string("lingam.model"));
-					if (info + residual < 0.000001)
+					if (independ + residual < 0.000001)
 					{
 						printf("convergence!\n");
 						break;
@@ -1936,6 +1956,20 @@ public:
 			{
 				accept = 0;
 				reject++;
+				//neighborhood_search--;
+				//if (neighborhood_search <= 0)
+				//{
+				//	neighborhood_search = 0;
+				//}
+				//else
+				//{
+				//	É  = Mu;
+				//	dist_t_param = dist_t_param_best;
+				//	intercept = intercept_best;
+				//	accept = 1;
+				//	reject = 0;
+				//	printf("------------------\n");
+				//}
 				//if (acceptance_rate(engine) > 0.95)
 				//{
 				//	//É  = Mu;
@@ -2004,14 +2038,14 @@ public:
 		}
 
 		residual_error = residual_error_best;
-		residual_error_info = residual_error_info_best;
+		residual_error_independ = residual_error_independ_best;
 		replacement = replacement_best;
 		B = B_best_sv;
 
 		calc_mutual_information(X, mutual_information);
 
-		double c_factors = residual_error_info.Max();
-		residual_error_info.print_csv("confounding_factors_info.csv");
+		double c_factors = residual_error_independ.Max();
+		residual_error_independ.print_csv("confounding_factors_info.csv");
 		if (c_factors > confounding_factors_upper)
 		{
 			FILE* fp = fopen("confounding_factors.txt", "w");
