@@ -895,10 +895,10 @@ int main(int argc, char** argv)
 	{
 		for (int j = i+1; j < LiNGAM.residual_error.n; j++)
 		{
-			printf("residual_error_info[%s,%s]:%.4f\n", header_names[i].c_str(), header_names[j].c_str(), LiNGAM.residual_error_info(i,j));
+			printf("residual_error_independ[%s,%s]:%.4f\n", header_names[i].c_str(), header_names[j].c_str(), LiNGAM.residual_error_independ(i,j));
 		}
 	}
-	printf("residual_independence:[%.4f,%.4f]\n", LiNGAM.residual_error_info.Min(), LiNGAM.residual_error_info.Max());
+	printf("residual_independence:[%.4f,%.4f]\n", LiNGAM.residual_error_independ.Min(), LiNGAM.residual_error_independ.Max());
 	printf("residual_error:[%.4f, %.4f]\n", LiNGAM.residual_error.Min(), LiNGAM.residual_error.Max());
 
 	if (resp == 0)
