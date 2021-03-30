@@ -1419,8 +1419,21 @@ struct Matrix
 		return vec;
 	}
 
+	inline void MaxMin(double &mx, double &mi) const
+	{
+		const int mn = m * n;
 
-	double Max() const
+		mx = -1.0E32;
+		mi = 1.0E32;
+
+		for (int i = 0; i < mn; i++)
+		{
+			if (mx < v[i]) mx = v[i];
+			if (mi > v[i]) mi = v[i];
+		}
+	}
+
+	inline double Max() const
 	{
 		const int mn = m*n;
 
@@ -1431,7 +1444,7 @@ struct Matrix
 		}
 		return mx;
 	}
-	double Min() const
+	inline double Min() const
 	{
 		const int mn = m*n;
 
