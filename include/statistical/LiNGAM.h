@@ -47,11 +47,17 @@ class MutualInformation
 		double max1, min1;
 		double max2, min2;
 
-		max1 = M1.Max();
-		min1 = M1.Min();
-
-		max2 = M2.Max();
-		min2 = M2.Min();
+#pragma omp parallel
+		{
+#pragma omp sections
+			{
+				M1.MaxMin(max1, min1);
+			}
+#pragma omp sections
+			{
+				M2.MaxMin(max2, min2);
+			}
+	}
 
 #if 0
 		double dx = (max1 - min1) / grid;
@@ -66,12 +72,10 @@ class MutualInformation
 #endif
 
 		//printf("dx:%f dy:%f\n", dx, dy);
-		std::vector<dnn_double> table1;
-		std::vector<dnn_double> table2;
-		Matrix<dnn_double>table12 = Matrix<dnn_double>().zeros(grid, grid);
+		std::vector<dnn_double> table1(grid, 0);
+		std::vector<dnn_double> table2(grid, 0);
+		Matrix<dnn_double>& table12 = Matrix<dnn_double>().zeros(grid, grid);
 
-		table1.resize(grid, 0);
-		table2.resize(grid, 0);
 
 #pragma omp parallel for
 		for (int k = 0; k < M1.m*M1.n; k++)
@@ -103,15 +107,22 @@ class MutualInformation
 			}
 			for (int i = 0; i < grid; i++)
 			{
+				double c = 0;
+				if (i == grid - 1) c = 0.000001;
+				bool range1 = (M2.v[k] >= min2 + dy * i && M2.v[k] < min2 + dy * (i + 1) + c);
+
+				if (!range1)
+				{
+					continue;
+				}
 				for (int j = 0; j < grid; j++)
 				{
-					double c = 0;
-					if (i == grid - 1) c = 0.000001;
 					double d = 0;
 					if (j == grid - 1) d = 0.000001;
+					
+					bool range2 = (M1.v[k] >= min1 + dx * j && M1.v[k] < min1 + dx * (j + 1) + d);
 
-					if (M1.v[k] >= min1 + dx * j && M1.v[k] < min1 + dx * (j + 1)+d &&
-						M2.v[k] >= min2 + dy * i && M2.v[k] < min2 + dy * (i + 1)+c)
+					if ( range2 )
 					{
 #pragma omp critical
 						{
@@ -1790,40 +1801,36 @@ public:
 			double independ = residual_error_independ.Max();
 			double residual = abs_residual_errormax_cur / abs_residual_errormax;
 			
+			//printf("abs_residual_errormax:%f residual:%f\n", abs_residual_errormax, residual);
+
+			//{
+			//	double w = weight1 + weight2;
+			//	weight1 = weight1 / w;
+			//	weight2 = weight2 / w;
+			//}
+
+			double w_tmp = sqrt(best_independ + best_residual);
+			weight1 = best_residual / w_tmp;
+			weight2 = best_independ / w_tmp;
+			if (kk == 0)
 			{
-				double w = weight1 + weight2;
-				weight1 = weight1 / w;
-				weight2 = weight2 / w;
+				double w_tmp = sqrt(independ + residual);
+				weight1 = residual / w_tmp;
+				weight2 = independ / w_tmp;
 			}
-			double value = std::max(weight1*independ, weight2*residual);
 
+			double value = log(1 + fabs(residual - independ) + weight1 *residual + weight2*independ);
 
-			//printf("%d info:%f residual:%f -> value:%f (best_min_value:%f)\n", kk, info, residual, value, best_min_value);
-
+			//printf("value:%f (%f) %f\n", value, log(1 + fabs(residual - independ)), weight1 *residual + weight2 * independ);
 			bool accept_ = false;
 
 			if (best_residual > residual && best_independ > independ)
 			{
 				accept_ = true;
-			}
-			else
+			}else
+			if (best_min_value > value)
 			{
-
-				if (acceptance_rate(engine) > 0.5)
-				{
-					if (best_residual > residual)
-					{
-						accept_ = true;
-					}
-				}
-				else
-					//if (acceptance_rate(engine) > 0.8)
-					{
-						if (best_independ > independ)
-						{
-							accept_ = true;
-						}
-					}
+				accept_ = true;
 			}
 
 			if (kk == 0) accept_ = true;
@@ -1839,18 +1846,11 @@ public:
 				double th = -1.0;
 				if (best_min_value < value)
 				{
-					//if (value - best_min_value > 1.5)
-					//{
-					//	th = exp(-1.5 / temperature);
-					//}
-					//else
-					{
-						th = exp((best_min_value - value) / temperature);
-					}
+					th = exp((best_min_value - value) / temperature);
 				}
 				{
 					char buf[256];
-					sprintf(buf, "[%d][%f]temperature:%f  alp:%f < th:%f %s", kk, fabs((best_min_value - value)), temperature, alp, th, (alp < th) ? "true" : "false");
+					sprintf(buf, "[%d][%f] %f:%f temperature:%f  alp:%f < th:%f %s", kk, fabs((best_min_value - value)), best_min_value, value, temperature, alp, th, (alp < th) ? "true" : "false");
 					if (1)
 					{
 						DWORD  bytesWritten = 0;
@@ -1883,12 +1883,12 @@ public:
 			if (accept_)
 			{
 				//printf("+\n");
-				if (best_min_value >= value || best_residual > residual || best_independ > independ)
+				if (best_min_value >= value|| (best_residual > residual && best_independ > independ))
 				{
 					//dir_change(xs, ƒÊ);
-					if (best_min_value > value)best_min_value = value;
-					if (best_residual > residual)best_residual = residual;
-					if (best_independ > independ)best_independ = independ;
+					best_min_value = value;
+					best_residual = residual;
+					best_independ = independ;
 
 					best_update = true;
 				}
@@ -1983,7 +1983,7 @@ public:
 			try
 			{
 				std::ofstream ofs(loss, std::ios::app);
-				ofs << best_residual << "," << best_independ << std::endl;
+				ofs << best_residual << "," << best_independ << "," << best_min_value << std::endl;
 				ofs.close();
 			}
 			catch (...)
