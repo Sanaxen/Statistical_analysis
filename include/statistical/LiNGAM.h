@@ -73,9 +73,12 @@ class MutualInformation
 
 		//printf("dx:%f dy:%f\n", dx, dy);
 		std::vector<dnn_double> table1(grid, 0);
-		std::vector<dnn_double> table2(grid, 0);
+		std::vector<dnn_double> table2 = table1;
 		Matrix<dnn_double>& table12 = Matrix<dnn_double>().zeros(grid, grid);
 
+		const int thread_num = omp_get_max_threads() + 1;
+		std::vector < std::vector<dnn_double>> tmp_table1(thread_num, std::vector<dnn_double>(grid, 0));
+		std::vector < std::vector<dnn_double>> tmp_table2 = tmp_table1;
 
 #pragma omp parallel for
 		for (int k = 0; k < M1.m*M1.n; k++)
@@ -86,10 +89,7 @@ class MutualInformation
 				if (i == grid - 1) c = 0.000001;
 				if (M1.v[k] >= min1 + dx * i && M1.v[k] < min1 + dx * (i + 1))
 				{
-#pragma omp critical
-					{
-						table1[i] += 1;
-					}
+					tmp_table1[omp_get_thread_num()][i] += 1;
 				}
 			}
 
@@ -99,10 +99,7 @@ class MutualInformation
 				if (i == grid - 1) c = 0.000001;
 				if (M2.v[k] >= min2 + dy * i && M2.v[k] < min2 + dy * (i + 1)+c)
 				{
-#pragma omp critical
-					{
-						table2[i] += 1;
-					}
+					tmp_table2[omp_get_thread_num()][i] += 1;
 				}
 			}
 			for (int i = 0; i < grid; i++)
@@ -133,6 +130,14 @@ class MutualInformation
 			}
 		}
 
+		for (int i = 0; i < grid; i++)
+		{
+			for (int j = 0; j < thread_num; j++)
+			{
+				table1[i] += tmp_table1[j][i];
+				table2[i] += tmp_table2[j][i];
+			}
+		}
 		//for (int i = 0; i < table1.size(); i++)
 		//{
 		//	printf("%d, ", (int)table1[i]);
@@ -142,8 +147,8 @@ class MutualInformation
 
 		probability1.resize(grid,0);
 		probability2.resize(grid,0);
-		probability12 = Matrix<dnn_double>().zeros(grid, grid);
-		probability1_2 = Matrix<dnn_double>().zeros(grid, grid);
+		probability12 = probability12.zeros(grid, grid);
+		probability1_2 = probability12;
 
 		double s1 = 0;
 		double s2 = 0;
@@ -214,7 +219,7 @@ public:
 	{
 		double I = 0.0;
 
-		Matrix<dnn_double> zz = Matrix<dnn_double>().zeros(grid, grid);
+		Matrix<dnn_double>& zz = Matrix<dnn_double>().zeros(grid, grid);
 
 #pragma omp parallel for
 		for (int i = 0; i < grid; i++)
@@ -1260,7 +1265,7 @@ public:
 
 	void calc_mutual_information( Matrix<dnn_double>& X, Matrix<dnn_double>& info)
 	{
-		info = Matrix<dnn_double>().zeros(X.n, X.n);
+		info = info.zeros(X.n, X.n);
 #pragma omp parallel for
 		for (int j = 0; j < X.n; j++)
 		{
