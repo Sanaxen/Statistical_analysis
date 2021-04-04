@@ -483,11 +483,25 @@ struct Matrix
 
 	static Matrix<T> unit ( const int& m, const int& n )
 	{
+#if 10
 		Matrix<T> ret(m, n);
-		ret = ret.zeros(m, n);
+#pragma omp parallel
+		{
+			const int mn = m * n;
+#pragma omp for
+			for (int i = 0; i < mn; ++i) ret.v[i] = 0.0;
 
+			const int sz = std::min(m, n);
+#pragma omp for
+			for (int i = 0; i < sz; ++i) ret(i, i) = 1.0;
+		}
+#else
+		Matrix<T>& ret = Matrix<T>().zeros(m, n);
+
+		const int sz = std::min(m, n);
 #pragma omp parallel for
-		for( int i = 0; i < std::min(m,n); ++i ) ret(i,i) = 1.0;
+		for( int i = 0; i < sz; ++i ) ret(i,i) = 1.0;
+#endif
 		return ret;
 	}
 
