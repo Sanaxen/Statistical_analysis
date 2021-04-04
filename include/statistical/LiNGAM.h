@@ -80,16 +80,20 @@ class MutualInformation
 		std::vector < std::vector<dnn_double>> tmp_table1(thread_num, std::vector<dnn_double>(grid, 0));
 		std::vector < std::vector<dnn_double>> tmp_table2 = tmp_table1;
 
+		const int sz1 = M1.m*M1.n;
 #pragma omp parallel for
-		for (int k = 0; k < M1.m*M1.n; k++)
+		for (int k = 0; k < sz1; k++)
 		{
+			const double m1_k = M1.v[k];
+			const double m2_k = M2.v[k];
+			const int thread_id = omp_get_thread_num();
 			for (int i = 0; i < grid; i++)
 			{
 				double c = 0;
 				if (i == grid - 1) c = 0.000001;
-				if (M1.v[k] >= min1 + dx * i && M1.v[k] < min1 + dx * (i + 1))
+				if (m1_k >= min1 + dx * i && m1_k < min1 + dx * (i + 1))
 				{
-					tmp_table1[omp_get_thread_num()][i] += 1;
+					tmp_table1[thread_id][i] += 1;
 				}
 			}
 
@@ -97,16 +101,16 @@ class MutualInformation
 			{
 				double c = 0;
 				if (i == grid - 1) c = 0.000001;
-				if (M2.v[k] >= min2 + dy * i && M2.v[k] < min2 + dy * (i + 1)+c)
+				if (m2_k >= min2 + dy * i && m2_k < min2 + dy * (i + 1)+c)
 				{
-					tmp_table2[omp_get_thread_num()][i] += 1;
+					tmp_table2[thread_id][i] += 1;
 				}
 			}
 			for (int i = 0; i < grid; i++)
 			{
 				double c = 0;
 				if (i == grid - 1) c = 0.000001;
-				bool range1 = (M2.v[k] >= min2 + dy * i && M2.v[k] < min2 + dy * (i + 1) + c);
+				bool range1 = (m2_k >= min2 + dy * i && m2_k < min2 + dy * (i + 1) + c);
 
 				if (!range1)
 				{
@@ -117,7 +121,7 @@ class MutualInformation
 					double d = 0;
 					if (j == grid - 1) d = 0.000001;
 					
-					bool range2 = (M1.v[k] >= min1 + dx * j && M1.v[k] < min1 + dx * (j + 1) + d);
+					bool range2 = (m1_k >= min1 + dx * j && m1_k < min1 + dx * (j + 1) + d);
 
 					if ( range2 )
 					{
