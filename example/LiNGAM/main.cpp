@@ -1,3 +1,4 @@
+//#define USE_MKL
 #define _cublas_Init_def
 #include "../../include/statistical/LiNGAM.h"
 #include "../../include/util/swilk.h"
