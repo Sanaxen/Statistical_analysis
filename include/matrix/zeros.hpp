@@ -43,10 +43,11 @@ inline void zeros_standerd(T* a, int am, int an)
 	const int m = am, n = an;
 
 	const int mn = m*n;
+	auto zero = dnn_double(0.0);
 #pragma omp parallel for
 		for (int i = 0; i < mn; ++i)
 		{
-			a[i] = dnn_double(0.0);
+			a[i] = zero;
 		}
 }
 
