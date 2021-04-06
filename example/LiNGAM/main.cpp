@@ -148,6 +148,12 @@ bool prior_knowledge(const char* filename, std::vector<std::string>& header_name
 //LiNGAMƒ‚ƒfƒ‹‚Ì„’è•û–@‚É‚Â‚¢‚Ä
 int main(int argc, char** argv)
 {
+	SigHandler_lingam(0);
+	signal(SIGINT, SigHandler_lingam);
+	signal(SIGTERM, SigHandler_lingam);
+	signal(SIGBREAK, SigHandler_lingam);
+	signal(SIGABRT, SigHandler_lingam);
+
 	int resp = commandline_args(&argc, &argv);
 	if (resp == -1)
 	{
@@ -676,6 +682,15 @@ int main(int argc, char** argv)
 				return -1;
 			}
 			printf("load_model ok.\n");
+			double c_factors = LiNGAM.residual_error_independ.Max();
+			LiNGAM.residual_error_independ.print_csv("confounding_factors_info.csv");
+			FILE* fp = fopen("confounding_factors.txt", "w");
+			if (fp)
+			{
+				fprintf(fp, "%f\n", c_factors);
+				fclose(fp);
+			}
+
 		}
 		catch (std::exception& e)
 		{
