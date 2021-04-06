@@ -5,6 +5,7 @@
 #define NOMINMAX
 #define __LINGAM_H__
 #include <chrono>
+#include <signal.h>
 
 #include "../../include/Matrix.hpp"
 #include "../../include/statistical/fastICA.h"
@@ -37,6 +38,27 @@ public:
 		return abs_dat < right.abs_dat;
 	}
 };
+
+/* シグナル受信/処理 */
+inline void SigHandler_lingam(int p_signame)
+{
+	static int sig_catch = 0;
+	if (sig_catch)
+	{
+		printf("割り込みです。終了します\n");
+		fflush(stdout);
+
+		FILE* fp = fopen("confounding_factors.txt", "w");
+		if (fp)
+		{
+			fprintf(fp, "%f\n", -99.0);
+			fclose(fp);
+		}
+		exit(0);
+	}
+	sig_catch++;
+	return;
+}
 
 /* Mutual information*/
 //https://qiita.com/hyt-sasaki/items/ffaab049e46f800f7cbf
@@ -1247,14 +1269,11 @@ public:
 		
 		double c_factors = residual_error_independ.Max();
 		residual_error_independ.print_csv("confounding_factors_independ.csv");
-		if (c_factors > confounding_factors_upper)
+		FILE* fp = fopen("confounding_factors.txt", "w");
+		if (fp)
 		{
-			FILE* fp = fopen("confounding_factors.txt", "w");
-			if (fp)
-			{
-				fprintf(fp, "Confounding factors may be present\n");
-				fclose(fp);
-			}
+			fprintf(fp, "%f\n", c_factors);
+			fclose(fp);
 		}
 
 		B_pre_sort = this->before_sorting_(B);
@@ -2055,14 +2074,11 @@ public:
 
 		double c_factors = residual_error_independ.Max();
 		residual_error_independ.print_csv("confounding_factors_info.csv");
-		if (c_factors > confounding_factors_upper)
+		FILE* fp = fopen("confounding_factors.txt", "w");
+		if (fp)
 		{
-			FILE* fp = fopen("confounding_factors.txt", "w");
-			if (fp)
-			{
-				fprintf(fp, "Confounding factors may be present\n");
-				fclose(fp);
-			}
+			fprintf(fp, "%f\n", c_factors);
+			fclose(fp);
 		}
 		B_pre_sort = this->before_sorting_(B);
 		if (update_count < 2)
