@@ -17,7 +17,8 @@
 - [x] Statistical causal search(**LiNGAM**)
 
 ----
-The current aim is to create a **non-GPL C++ implementation** of a **linear non-Gaussian aperiodic model (LiNGAM)** which is one of the statistical causality search.
+The current aim is to create a **non-GPL C++ implementation** of a **linear non-Gaussian aperiodic model (LiNGAM)** which is one of the statistical causality search.  
+[LiNGAM](../exsamle/LiNGAM/LiNGAM_md/LiNGAM.md)
 
 ***Please wait.***  
 **Execution efficiency and results are still bad.**  
