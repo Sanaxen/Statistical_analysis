@@ -18,7 +18,7 @@
 
 ----
 The current aim is to create a **non-GPL C++ implementation** of a **linear non-Gaussian aperiodic model (LiNGAM)** which is one of the statistical causality search.  
-[LiNGAM](https://github.com/Sanaxen/Statistical_analysis/blob/exsamle/LiNGAM/LiNGAM_md/LiNGAM.md)
+[LiNGAM](https://github.com/Sanaxen/Statistical_analysis/exsamle/LiNGAM/LiNGAM_md/LiNGAM.md)
 
 ***Please wait.***  
 **Execution efficiency and results are still bad.**  
