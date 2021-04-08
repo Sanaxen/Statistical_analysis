@@ -821,6 +821,10 @@ public:
 			}
 			else
 			{
+				if (this->confounding_factors)
+				{
+					utf8.fprintf(fp, "%s [fillcolor=\"#FFDF79\", style=\"filled\"]\n", item1.c_str());
+				}
 				utf8.fprintf(fp, "%s[color=blue shape=note]\n", item1.c_str());
 			}
 			
