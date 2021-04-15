@@ -1412,7 +1412,7 @@ public:
 	int early_stopping = 0;
 	double prior_knowledge_rate = 1.0;
 	std::vector<int> prior_knowledge;
-	double distribution_rate = 1.0;
+	double distribution_rate = 0.1;
 	double temperature_alp = 0.95;
 	double rho = 3.0;
 	//double mu_max_value = 10.0;
@@ -1577,14 +1577,15 @@ public:
 				{
 					dist_t_param[var] = student_t_dist(engine);
 
-					auto& dist = std::student_t_distribution<>(dist_t_param[var]);
+					//auto& dist = std::student_t_distribution<>(dist_t_param[var]);
+					auto& dist = std::normal_distribution<>(0.0, dist_t_param[var]);
 
 #if 10
 					//#pragma omp parallel for <-- —”‚Ì‡˜‚ª•Ï‚í‚Á‚Ä‚µ‚Ü‚¤‚©‚ç•À—ñ‰»‚µ‚½‚çƒ_ƒ7
 					const double rate = distribution_rate * dist(engine);
 					for (int j = 0; j < X.m; j++)
 					{
-						ƒÊ(j, var) = rate + noise(engine);
+						ƒÊ(j, var) = rate + distribution_rate * noise(engine);
 					}
 					//intercept(var,0) = intercept_noise(engine);
 					//intercept(var, 0) = 0;

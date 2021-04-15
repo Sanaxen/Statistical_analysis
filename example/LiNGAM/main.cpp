@@ -238,10 +238,10 @@ int main(int argc, char** argv)
 	double lasso_tol = TOLERANCE;
 	int lasso_itr_max = 1000000;
 	bool confounding_factors = false;
-	int confounding_factors_sampling = 4000;
+	int confounding_factors_sampling = 7000;
 	double mutual_information_cut = 0.0;
 	bool mutual_information_values = true;
-	double distribution_rate = 1.0;
+	double distribution_rate = 0.1;
 	double temperature_alp = 0.95;
 	std::string prior_knowledge_file = "";
 	double prior_knowledge_rate = 1.0;
