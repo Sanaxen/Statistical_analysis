@@ -238,6 +238,7 @@ int main(int argc, char** argv)
 	double lasso_tol = TOLERANCE;
 	int lasso_itr_max = 1000000;
 	bool confounding_factors = false;
+	bool view_confounding_factors = false;
 	int confounding_factors_sampling = 7000;
 	double mutual_information_cut = 0.0;
 	bool mutual_information_values = true;
@@ -361,6 +362,10 @@ int main(int argc, char** argv)
 				else if (argname == "--confounding_factors_upper") {
 					confounding_factors_upper = atof(argv[count + 1]);
 				}
+				else if (argname == "--view_confounding_factors") {
+					 view_confounding_factors = atoi(argv[count + 1]) == 0 ? false : true;
+				}
+				///
 				//
 				else {
 					std::cerr << "Invalid parameter specified - \"" << argname << "\""
@@ -865,7 +870,7 @@ int main(int argc, char** argv)
 	{
 		LiNGAM.linear_regression_var.push_back(y_var[0]);
 	}
-	LiNGAM.diagram(header_names, y_var, residual_flag, "digraph.txt", sideways, diaglam_size, output_diaglam_type, false, mutual_information_cut);
+	LiNGAM.diagram(header_names, y_var, residual_flag, "digraph.txt", sideways, diaglam_size, output_diaglam_type, false, mutual_information_cut, view_confounding_factors);
 	LiNGAM.report(header_names);
 
 	{
