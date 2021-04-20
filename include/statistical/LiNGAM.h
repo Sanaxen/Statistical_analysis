@@ -765,7 +765,7 @@ public:
 		"#dcdcdc"
 	};
 
-	void diagram(const std::vector<std::string>& column_names, std::vector<std::string> y_var, std::vector<int>& residual_flag, const char* filename, bool sideways = false, int size=30, char* outformat="png", bool background_Transparent=false, double mutual_information_cut = 0)
+	void diagram(const std::vector<std::string>& column_names, std::vector<std::string> y_var, std::vector<int>& residual_flag, const char* filename, bool sideways = false, int size=30, char* outformat="png", bool background_Transparent=false, double mutual_information_cut = 0, bool view_confounding_factors = false)
 	{
 		Matrix<dnn_double> B_tmp = B.chop(0.001);
 		B_tmp.print_e("remove 0.001");
@@ -806,6 +806,7 @@ public:
 		}
 		utf8.fprintf(fp, "node [fontname=\"MS UI Gothic\" layout=circo shape=note]\n");
 
+		int confounding_factors_count = 0;
 		for (int i = 0; i < B_tmp.n; i++)
 		{
 			std::string item1 = item[i];
@@ -903,6 +904,35 @@ public:
 								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=black %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i,j), style);
 							}
 						}
+				}
+				else
+				{
+					if (i < j && view_confounding_factors && B_tmp(j, i) == 0.0)
+					{
+						if (mutual_information(i, j) > confounding_factors_upper && XCor(i, j) > 0.55)
+						{
+							confounding_factors_count++;
+							std::string item1 = item[i];
+							std::string item2 = item[j];
+							if (item1.c_str()[0] != '\"')
+							{
+								item1 = "\"" + item1 + "\"";
+							}
+							if (item2.c_str()[0] != '\"')
+							{
+								item2 = "\"" + item2 + "\"";
+							}
+							std::string item3;
+							char item[80];
+							sprintf(item, "\"Unknown(%d)\"", confounding_factors_count);
+							char* style = "style=\"dotted\"";
+
+							utf8.fprintf(fp, "%s [fillcolor=\"#f5f5dc\", style=\"filled\"]\n", item);
+							//utf8.fprintf(fp, "%s-> %s [dir=\"both\" label=\"(%8.3f)%8.3f\" color=black penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), XCor(i, j), mutual_information(i, j), style);
+							utf8.fprintf(fp, "%s-> %s [label=\"---(%8.3f)%8.3f\" color=black %s]\n", item, item2.c_str(), XCor(i, j), mutual_information(i, j), style);
+							utf8.fprintf(fp, "%s-> %s [label=\"---(%8.3f)%8.3f\" color=black %s]\n", item, item1.c_str(), XCor(i, j), mutual_information(i, j), style);
+						}
+					}
 				}
 			}
 		}
@@ -1409,6 +1439,46 @@ public:
 		return edge_dir;
 	}
 
+	void dir_change_(Matrix<dnn_double>& x, Matrix<dnn_double>& É )
+	{
+		std::default_random_engine engine(123456789);
+		std::uniform_real_distribution<> rnd(0.0, 1.0);
+
+		Matrix<dnn_double> B_sv = B;
+		std::vector<int> replacement_sv = replacement;
+
+		Matrix<dnn_double>& b = this->before_sorting_(B);
+
+		bool change = false;
+		for (int i = 0; i < x.n; i++)
+		{
+			for (int j = i + 1; j < x.n; j++)
+			{
+				if (fabs(b(i, j)) < 0.0001)
+				{
+					continue;
+				}
+
+				if (rnd(engine) < 0.8)
+				{
+					continue;
+				}
+
+				b(j, i) = b(i, j);
+				b(i, j) = 0;
+				change = true;
+				break;
+			}
+			if (change) break;
+		}
+
+		this->inv_before_sorting_(b);
+		Matrix<dnn_double> b_est_tmp = b;
+		B = AlgorithmC(b_est_tmp, x.n);
+
+		b = this->before_sorting_(B);
+	}
+
 	int early_stopping = 0;
 	double prior_knowledge_rate = 1.0;
 	std::vector<int> prior_knowledge;
@@ -1715,6 +1785,7 @@ public:
 			//	(B - c).print("B-c");
 			//}
 
+			//dir_change_(xs, É );
 
 			//float r = 0.0;
 			bool cond = true;
