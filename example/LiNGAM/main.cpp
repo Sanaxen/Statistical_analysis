@@ -670,6 +670,7 @@ int main(int argc, char** argv)
 	LiNGAM.set(xs.n, mt);
 	LiNGAM.mutual_information_values = mutual_information_values;
 	LiNGAM.confounding_factors = confounding_factors? 1: 0;
+	LiNGAM.confounding_factors_upper = confounding_factors_upper;
 
 	//MutualInformation I(xs.Col(0), xs.Col(1), 30);
 	//double tmp = I.Information();
