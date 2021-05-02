@@ -920,6 +920,10 @@ int main(int argc, char** argv)
 			printf("residual_error_independ[%s,%s]:%.4f\n", header_names[i].c_str(), header_names[j].c_str(), LiNGAM.residual_error_independ(i,j));
 		}
 	}
+	if (confounding_factors)
+	{
+		printf("loss:[%.4f]\n", LiNGAM.loss_value);
+	}
 	printf("residual_independence:[%.4f,%.4f]\n", LiNGAM.residual_error_independ.Min(), LiNGAM.residual_error_independ.Max());
 	printf("residual_error:[%.4f, %.4f]\n", LiNGAM.residual_error.Min(), LiNGAM.residual_error.Max());
 
