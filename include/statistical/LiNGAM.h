@@ -583,6 +583,12 @@ public:
 			fprintf(fp, "confounding_factors:%d\n", confounding_factors);
 			fclose(fp);
 		}
+		fp = fopen((filename + ".loss").c_str(), "w");
+		if (fp)
+		{
+			fprintf(fp, "loss:%f\n", loss_value);
+			fclose(fp);
+		}
 
 		try
 		{
@@ -636,6 +642,18 @@ public:
 				if (strstr(buf, "confounding_factors:"))
 				{
 					sscanf(buf, "confounding_factors:%d\n", &confounding_factors);
+				}
+			}
+			fclose(fp);
+		}
+		fp = fopen((filename + ".loss").c_str(), "r");
+		if (fp)
+		{
+			while (fgets(buf, 256, fp) != NULL)
+			{
+				if (strstr(buf, "loss:"))
+				{
+					sscanf(buf, "loss:%lf\n", &loss_value);
 				}
 			}
 			fclose(fp);
@@ -767,6 +785,7 @@ public:
 
 	void diagram(const std::vector<std::string>& column_names, std::vector<std::string> y_var, std::vector<int>& residual_flag, const char* filename, bool sideways = false, int size=30, char* outformat="png", bool background_Transparent=false, double mutual_information_cut = 0, bool view_confounding_factors = false)
 	{
+		printf("confounding_factors_upper:%f\n", confounding_factors_upper);
 		Matrix<dnn_double> B_tmp = B.chop(0.001);
 		B_tmp.print_e("remove 0.001");
 
@@ -909,7 +928,7 @@ public:
 				{
 					if (i < j && view_confounding_factors && B_tmp(j, i) == 0.0)
 					{
-						if (mutual_information(i, j) > confounding_factors_upper && XCor(i, j) > 0.55)
+						if (mutual_information(i, j) > confounding_factors_upper )
 						{
 							confounding_factors_count++;
 							std::string item1 = item[i];
@@ -1485,6 +1504,7 @@ public:
 	double distribution_rate = 0.1;
 	double temperature_alp = 0.95;
 	double rho = 3.0;
+	double loss_value = 0.0;
 	//double mu_max_value = 10.0;
 	int fit2(Matrix<dnn_double>& X, const int max_ica_iteration= MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
@@ -1581,6 +1601,7 @@ public:
 		{
 		}
 
+		double start_value = -1.0;
 		double weight1 = 1.0;
 		double weight2 = 1.0;
 		int neighborhood_search = 0;
@@ -1924,7 +1945,12 @@ public:
 			}
 
 			double value = log(1 + fabs(residual - independ) + weight1 *residual + weight2*independ);
+			//double value = std::max(weight1*residual, weight2*independ) + 0.0001*(weight1 * residual + weight2 * independ);
 
+			if (start_value < 0)
+			{
+				start_value = value;
+			}
 			//printf("value:%f (%f) %f\n", value, log(1 + fabs(residual - independ)), weight1 *residual + weight2 * independ);
 			bool accept_ = false;
 
@@ -1987,14 +2013,34 @@ public:
 			if (accept_)
 			{
 				//printf("+\n");
-				if (best_min_value >= value|| (best_residual > residual && best_independ > independ))
+				if (best_min_value >= value|| (best_residual > residual || best_independ > independ))
 				{
-					//dir_change(xs, ƒÊ);
+					double d1 = (residual - best_residual);
+					double d2 = (independ - best_independ);
+					if (best_residual > residual && best_independ < independ || best_residual < residual && best_independ > independ )
+					{
+						if (fabs(d1)+fabs(d2) < 0.1*(1.0 - rt))
+						{
+							best_update = true;
+						}
+					}
+					else
+					{
+						if (best_residual > residual && best_independ > independ)
+						{
+							best_update = true;
+						}
+					}
+				}
+				//if (best_min_value < value)
+				//{
+				//	best_update = false;
+				//}
+				if (best_update || kk == 0)
+				{
 					best_min_value = value;
 					best_residual = residual;
 					best_independ = independ;
-
-					best_update = true;
 				}
 				//{
 				//	auto& b = before_sorting_(B);
