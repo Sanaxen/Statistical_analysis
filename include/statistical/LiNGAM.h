@@ -237,6 +237,9 @@ public:
 	MutualInformation(Matrix<dnn_double>& Col1, Matrix<dnn_double>& Col2, int grid_ = 30)
 	{
 		grid = grid_;
+		//ダイバジェンスの公式
+		//grid = (int)(log2((double)Col1.m) + 1);
+		//grid = (int)(sqrt((double)Col1.m) + 1);
 
 		gridtabel(Col1, Col2);
 	}
@@ -808,8 +811,12 @@ public:
 		}
 		Matrix<dnn_double> XCor = input.Cor();
 #endif
+		//mutual_information.print("#");
 
-		auto& mutual_information_tmp = mutual_information / mutual_information.Max();
+		double mi_max = mutual_information.Max();
+		if (mi_max == 0.0) mi_max = 1.0;
+		if (mi_max < 1.0e-10) mi_max = 1.0e-10;
+		auto& mutual_information_tmp = mutual_information / mi_max;
 
 		utf8str utf8;
 		FILE* fp = fopen(filename, "w");
@@ -1950,6 +1957,7 @@ public:
 			if (start_value < 0)
 			{
 				start_value = value;
+				loss_value = value;
 			}
 			//printf("value:%f (%f) %f\n", value, log(1 + fabs(residual - independ)), weight1 *residual + weight2 * independ);
 			bool accept_ = false;
@@ -2041,6 +2049,7 @@ public:
 					best_min_value = value;
 					best_residual = residual;
 					best_independ = independ;
+					loss_value = value;
 				}
 				//{
 				//	auto& b = before_sorting_(B);
