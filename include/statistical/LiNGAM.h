@@ -551,6 +551,7 @@ public:
 	Matrix<dnn_double> residual_error_independ;
 	bool mutual_information_values = false;
 	int confounding_factors = 0;
+	int bins = 30;
 
 	Lingam() {
 		error = -999;
@@ -1305,7 +1306,7 @@ public:
 
 		if (error == 0) B = b_est;
 
-		calc_mutual_information(X, mutual_information);
+		calc_mutual_information(X, mutual_information, bins);
 		{
 			auto& b = before_sorting_(B);
 			for (int j = 0; j < xs.m; j++)
@@ -1324,7 +1325,7 @@ public:
 				}
 			}
 			//Evaluation of independence
-			calc_mutual_information( residual_error, residual_error_independ);
+			calc_mutual_information( residual_error, residual_error_independ, bins);
 		}
 		
 		double c_factors = residual_error_independ.Max();
@@ -1346,7 +1347,7 @@ public:
 		return error;
 	}
 
-	void calc_mutual_information( Matrix<dnn_double>& X, Matrix<dnn_double>& info)
+	void calc_mutual_information( Matrix<dnn_double>& X, Matrix<dnn_double>& info, int bins = 30)
 	{
 		info = info.zeros(X.n, X.n);
 #pragma omp parallel for
@@ -1363,7 +1364,7 @@ public:
 				Matrix<dnn_double>& x = X.Col(replacement[i]);
 				Matrix<dnn_double>& y = X.Col(replacement[j]);
 
-				MutualInformation I(x, y);
+				MutualInformation I(x, y, bins);
 				double tmp = I.Information();
 				info(i, j) = tmp;
 			}
@@ -1914,7 +1915,7 @@ public:
 				//r /= (xs.m*xs.n);
 
 				//Evaluation of independence
-				calc_mutual_information( residual_error, residual_error_independ);
+				calc_mutual_information( residual_error, residual_error_independ, bins);
 			}
 			
 			double  abs_residual_errormax_cur = Abs(residual_error).Max();
@@ -2095,7 +2096,7 @@ public:
 					intercept_best = intercept;
 					dist_t_param_best = dist_t_param;
 
-					calc_mutual_information(X, mutual_information);
+					calc_mutual_information(X, mutual_information, bins);
 					save(std::string("lingam.model"));
 					if (independ + residual < 0.000001)
 					{
@@ -2201,7 +2202,7 @@ public:
 		replacement = replacement_best;
 		B = B_best_sv;
 
-		calc_mutual_information(X, mutual_information);
+		calc_mutual_information(X, mutual_information, bins);
 
 		double c_factors = residual_error_independ.Max();
 		residual_error_independ.print_csv("confounding_factors_info.csv");
