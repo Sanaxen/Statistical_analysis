@@ -250,6 +250,7 @@ int main(int argc, char** argv)
 	int early_stopping = 0;
 	int parameter_search = 0;
 	double confounding_factors_upper = 0.9;
+	int bins = 30;
 
 	std::string load_model = "";
 
@@ -355,6 +356,9 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--rho") {
 					rho = atof(argv[count + 1]);
+				}
+				else if (argname == "--bins") {
+					bins = atoi(argv[count + 1]);
 				}
 				else if (argname == "--early_stopping") {
 					early_stopping = atoi(argv[count + 1]);
@@ -671,6 +675,7 @@ int main(int argc, char** argv)
 	LiNGAM.mutual_information_values = mutual_information_values;
 	LiNGAM.confounding_factors = confounding_factors? 1: 0;
 	LiNGAM.confounding_factors_upper = confounding_factors_upper;
+	LiNGAM.bins = bins;
 
 	//MutualInformation I(xs.Col(0), xs.Col(1), 30);
 	//double tmp = I.Information();
