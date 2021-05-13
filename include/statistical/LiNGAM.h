@@ -15,6 +15,8 @@
 #include "../../include/util/utf8_printf.hpp"
 #include "../../include/util/csvreader.h"
 
+#include "../../include/util/swilk.h"
+
 //#define USE_EIGEN
 
 #ifdef USE_EIGEN
@@ -58,6 +60,43 @@ inline void SigHandler_lingam(int p_signame)
 	}
 	sig_catch++;
 	return;
+}
+
+inline bool Shapiro_wilk_test(Matrix<dnn_double>& xs, std::vector<std::string>& header_names, std::vector<int>& shapiro_wilk_test, std::vector<std::string>& shapiro_wilk_values_input)
+{
+	bool error = false;
+	
+	shapiro_wilk_test.resize(xs.n, 0);
+	{
+		printf("shapiro_wilk test(0.05) start\n");
+		shapiro_wilk shapiro;
+		for (int i = 0; i < xs.n; i++)
+		{
+
+			Matrix<dnn_double> tmp = xs.Col(i);
+			int stat = shapiro.test(tmp);
+			if (stat == 0)
+			{
+				char buf[256];
+				sprintf(buf, "w:%-4.4f p_value:%-.16g", shapiro.get_w(), shapiro.p_value());
+				shapiro_wilk_values_input.push_back(buf);
+				//printf("%s\n", buf);
+
+				printf("[%-20.20s]w:%-8.3f p_value:%-10.16f\n", header_names[i].c_str(), shapiro.get_w(), shapiro.p_value());
+				if (shapiro.p_value() > 0.05)
+				{
+					shapiro_wilk_test[i] = 1;
+					error = true;
+				}
+			}
+			else
+			{
+				printf("error shapiro.test=%d\n", stat);
+			}
+		}
+		printf("shapiro_wilk test end\n\n");
+	}
+	return error;
 }
 
 /* Mutual information*/
@@ -1609,9 +1648,12 @@ public:
 		{
 		}
 
+		double start_delta = -1.0;
 		double start_value = -1.0;
+		double start_independ = -1.0;
+		double start_residual = -1.0;
 		double weight1 = 1.0;
-		double weight2 = 1.0;
+		double weight2 = 1.5;
 		int neighborhood_search = 0;
 		for (int kk = 0; kk < confounding_factors_sampling; kk++)
 		{
@@ -1957,8 +1999,11 @@ public:
 
 			if (start_value < 0)
 			{
+				start_independ = independ;
+				start_residual = residual;
 				start_value = value;
 				loss_value = value;
+				start_delta = fabs(residual - independ);
 			}
 			//printf("value:%f (%f) %f\n", value, log(1 + fabs(residual - independ)), weight1 *residual + weight2 * independ);
 			bool accept_ = false;
