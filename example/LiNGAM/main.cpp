@@ -1,7 +1,6 @@
 //#define USE_MKL
 #define _cublas_Init_def
 #include "../../include/statistical/LiNGAM.h"
-#include "../../include/util/swilk.h"
 
 #ifdef USE_GNUPLOT
 #include "../../include/util/plot.h"
@@ -252,6 +251,7 @@ int main(int argc, char** argv)
 	double confounding_factors_upper = 0.9;
 	int bins = 30;
 
+	int pause = 0;
 	std::string load_model = "";
 
 	for (int count = 1; count + 1 < argc; count += 2) {
@@ -368,6 +368,9 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--view_confounding_factors") {
 					 view_confounding_factors = atoi(argv[count + 1]) == 0 ? false : true;
+				}
+				else if (argname == "--pause") {
+					pause = atoi(argv[count + 1]);
 				}
 				///
 				//
@@ -670,6 +673,20 @@ int main(int argc, char** argv)
 		}
 	}
 
+	std::vector<std::string> shapiro_wilk_values_input;
+	std::vector<int> shapiro_wilk_test(xs.n, 0);
+	Shapiro_wilk_test(xs, header_names, shapiro_wilk_test, shapiro_wilk_values_input);
+	{
+#ifdef USE_GNUPLOT
+		gnuPlot plot1(std::string(GNUPLOT_PATH), 3);
+		if (capture)
+		{
+			plot1.set_capture(error_distr_size, std::string("input_histgram.png"));
+		}
+		plot1.multi_histgram(std::string("input_histgram.png"), xs, header_names, shapiro_wilk_test);
+		plot1.draw();
+#endif
+	}
 
 	LiNGAM.set(xs.n, mt);
 	LiNGAM.mutual_information_values = mutual_information_values;
@@ -812,55 +829,10 @@ int main(int argc, char** argv)
 	std::vector<int> residual_flag(xs.n, 0);
 	if (error_distr)
 	{
-		//Matrix<dnn_double> r(xs.m, xs.n);
-		//for (int j = 0; j < xs.m; j++)
-		//{
-		//	Matrix<dnn_double> x(xs.n, 1);
-		//	for (int i = 0; i < xs.n; i++)
-		//	{
-		//		x(i, 0) = xs(j, i);
-		//	}
-		//	Matrix<dnn_double>& rr = x - LiNGAM.B*x;
-		//	for (int i = 0; i < xs.n; i++)
-		//	{
-		//		r(j, i) = rr(0, i);
-		//	}
-		//}
-		//r.print_csv("error_distr.csv", header_names);
-
 		LiNGAM.residual_error.print_csv("error_distr.csv", header_names);
 		std::vector<std::string> shapiro_wilk_values;
-		{
-			printf("shapiro_wilk test(0.05) start\n");
-			shapiro_wilk shapiro;
-			for (int i = 0; i < xs.n; i++)
-			{
+		Shapiro_wilk_test(LiNGAM.residual_error, header_names, residual_flag, shapiro_wilk_values);
 
-				Matrix<dnn_double> tmp = LiNGAM.residual_error.Col(i);
-				//tmp = tmp.whitening(tmp.Mean(), tmp.Std(tmp.Mean()));
-				//tmp = tmp.Centers(tmp.Mean());
-				
-				int stat = shapiro.test(tmp);
-				if (stat == 0)
-				{
-					char buf[256];
-					sprintf(buf, "w:%-4.4f p_value:%-.16g", shapiro.get_w(), shapiro.p_value());
-					shapiro_wilk_values.push_back(buf);
-					//printf("%s\n", buf);
-
-					printf("[%-20.20s]w:%-8.3f p_value:%-10.16f\n", header_names[i].c_str(), shapiro.get_w(), shapiro.p_value());
-					if (shapiro.p_value() > 0.05)
-					{
-						residual_flag[i] = 1;
-					}
-				}
-				else
-				{
-					printf("error shapiro.test=%d\n", stat);
-				}
-			}
-			printf("shapiro_wilk test end\n\n");
-		}
 #ifdef USE_GNUPLOT
 		gnuPlot plot1(std::string(GNUPLOT_PATH), 3);
 		if (capture)
@@ -939,6 +911,12 @@ int main(int argc, char** argv)
 			delete[] argv[i];
 		}
 		delete argv;
+	}
+	if (pause != 0)
+	{
+		printf("... pause ...[Hit enter key]\n");
+		fflush(stdout);
+		getchar();
 	}
 	return 0;
 }
