@@ -250,6 +250,8 @@ int main(int argc, char** argv)
 	int parameter_search = 0;
 	double confounding_factors_upper = 0.9;
 	int bins = 30;
+	int normalize_type = 0;
+	bool use_intercept = false;
 
 	int pause = 0;
 	std::string load_model = "";
@@ -371,6 +373,12 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--pause") {
 					pause = atoi(argv[count + 1]);
+				}
+				else if (argname == "--normalize_type") {
+					normalize_type = atoi(argv[count + 1]);
+				}
+				else if (argname == "--use_intercept") {
+					use_intercept = atoi(argv[count + 1]) == 0 ? false : true;
 				}
 				///
 				//
@@ -688,11 +696,22 @@ int main(int argc, char** argv)
 #endif
 	}
 
+	//use_intercept = true;
+	if (normalize_type == 1)
+	{
+		xs = xs / Abs(xs).Max();
+	}
+	if (normalize_type == 2)
+	{
+		xs = xs.Std_Normalize();
+	}
+
 	LiNGAM.set(xs.n, mt);
 	LiNGAM.mutual_information_values = mutual_information_values;
 	LiNGAM.confounding_factors = confounding_factors? 1: 0;
 	LiNGAM.confounding_factors_upper = confounding_factors_upper;
 	LiNGAM.bins = bins;
+	LiNGAM.use_intercept = use_intercept;
 
 	//MutualInformation I(xs.Col(0), xs.Col(1), 30);
 	//double tmp = I.Information();
@@ -885,6 +904,10 @@ int main(int argc, char** argv)
 		}
 	}
 
+	for (int i = 0; i < LiNGAM.intercept.m; i++)
+	{
+		printf("intercept[%s]:%.4f\n", header_names[i].c_str(), LiNGAM.intercept(i, 0));
+	}
 	for (int i = 0; i < LiNGAM.residual_error.n; i++)
 	{
 		printf("epsilon_mean[%s]:%.4f\n", header_names[i].c_str(), LiNGAM.residual_error.Col(i).Mean().v[0]);

@@ -1361,6 +1361,19 @@ struct Matrix
 		return x;
 	}
 
+	inline Matrix<dnn_double> Std_Normalize( Matrix<dnn_double>& means, Matrix<dnn_double>& sigma)
+	{
+		mean = this->Mean();
+		sigma = this->Std(mean);
+		return this->whitening(mean, sigma);
+	}
+	inline Matrix<dnn_double> Std_Normalize()
+	{
+		auto& mean = this->Mean();
+		auto& sigma = this->Std(mean);
+		return this->whitening(mean, sigma);
+	}
+
 
 	Matrix<T> DeCenters(Matrix<T>& means)
 	{

@@ -586,11 +586,13 @@ public:
 	Matrix<dnn_double> modification_input;
 	Matrix<dnn_double> mutual_information;
 	Matrix<dnn_double> Mu;
+	Matrix<dnn_double> intercept;
 	Matrix<dnn_double> residual_error;
 	Matrix<dnn_double> residual_error_independ;
 	bool mutual_information_values = false;
 	int confounding_factors = 0;
 	int bins = 30;
+	bool use_intercept = false;
 
 	Lingam() {
 		error = -999;
@@ -641,6 +643,7 @@ public:
 			modification_input.print_csv((char*)(filename + ".modification_input.csv").c_str());
 			mutual_information.print_csv((char*)(filename + ".mutual_information.csv").c_str());
 			Mu.print_csv((char*)(filename + ".mu.csv").c_str());
+			intercept.print_csv((char*)(filename + ".intercept.csv").c_str());
 
 			residual_error_independ.print_csv((char*)(filename + ".residual_error_independ.csv").c_str());
 			residual_error.print_csv((char*)(filename + ".residual_error.csv").c_str());
@@ -735,6 +738,10 @@ public:
 			CSVReader csv8((filename + ".residual_error.csv"), ',', false);
 			residual_error = csv8.toMat();
 			printf("residual_error\n"); fflush(stdout);
+
+			CSVReader csv9((filename + ".intercept.csv"), ',', false);
+			intercept = csv9.toMat();
+			printf("intercept\n"); fflush(stdout);
 		}
 		catch (std::exception& e)
 		{
@@ -1595,7 +1602,7 @@ public:
 		std::uniform_real_distribution<> knowledge_rate(0.0, 1.0);
 		//std::uniform_real_distribution<> noise(-min_value*0.1, min_value*0.1);
 		std::uniform_real_distribution<> noise(-0.1, 0.1);
-		std::uniform_real_distribution<> intercept_noise(min_value*0.01, min_value*0.01);
+		std::normal_distribution<> intercept_noise(0, 6.0);
 
 		std::uniform_real_distribution<> mu_zero(0.0, 1.0);
 		std::uniform_real_distribution<> condition(0.0, 1.0);
@@ -1613,7 +1620,7 @@ public:
 		Matrix<dnn_double>É _sv;
 		std::uniform_int_distribution<> var_select(0, X.n-1);
 
-		Matrix<dnn_double>& intercept = Matrix<dnn_double>().zeros(X.n, 1);
+		intercept = Matrix<dnn_double>().zeros(X.n, 1);
 		Matrix<dnn_double> intercept_best;
 
 		double abs_residual_errormax = -1;
@@ -1728,8 +1735,11 @@ public:
 					{
 						É (j, var) = rate + distribution_rate * noise(engine);
 					}
-					//intercept(var,0) = intercept_noise(engine);
-					//intercept(var, 0) = 0;
+					//if (use_intercept)
+					//{
+					//	intercept(var, 0) = intercept_noise(engine);
+					//	//intercept(var, 0) = 0;
+					//}
 #else
 					//#pragma omp parallel for <-- óêêîÇÃèáèòÇ™ïœÇÌÇ¡ÇƒÇµÇ‹Ç§Ç©ÇÁï¿óÒâªÇµÇΩÇÁÉ_ÉÅ7
 					for (int j = 0; j < X.m; j++)
@@ -1749,6 +1759,8 @@ public:
 					}
 				}
 			}
+
+			//intercept.print("intercept");
 
 			ICA ica;
 			ica.logmsg = false;
@@ -1932,6 +1944,15 @@ public:
 					//}
 				}
 
+				if (use_intercept)
+				{
+					//êÿï–ÇÃêÑíË
+					for (int i = 0; i < xs.n; i++)
+					{
+						intercept(i, 0) = É .Col(i).mean();
+					}
+				}
+
 				//b.print("b");
 #pragma omp parallel for
 				for (int j = 0; j < xs.m; j++)
@@ -1946,7 +1967,15 @@ public:
 						x(i, 0) = xs(j, i);
 						y(i, 0) = X(j, i);
 						É T(i, 0) = É (j, i);
+						if (use_intercept)
+						{
+							//êÿï–ÇÃï™ó£
+							É T(i, 0) = É (j, i) - intercept(i, 0);
+						}
+						// y = B*y + (É - intercept)+ e
 					}
+					// y = B*y + (É - intercept)+intercept + e
+					// y = B*y + É  + e
 					Matrix<dnn_double>& rr = y - b * y - É T - intercept;
 					for (int i = 0; i < xs.n; i++)
 					{
@@ -1959,7 +1988,7 @@ public:
 				//Evaluation of independence
 				calc_mutual_information( residual_error, residual_error_independ, bins);
 			}
-			
+
 			double  abs_residual_errormax_cur = Abs(residual_error).Max();
 			if (abs_residual_errormax < 0)
 			{
@@ -2242,6 +2271,7 @@ public:
 			fflush(stdout);
 		}
 
+		intercept = intercept_best;
 		residual_error = residual_error_best;
 		residual_error_independ = residual_error_independ_best;
 		replacement = replacement_best;
