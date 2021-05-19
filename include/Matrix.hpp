@@ -3680,4 +3680,69 @@ inline Matrix<dnn_double> MeanRow(int rows, Matrix<dnn_double>& y)
 	return yy;
 }
 
+//inline dnn_double median(std::vector<dnn_double> v) {
+//	int size = v.size();
+//	vector<dnn_double> _v(v.size());
+//	copy(v.begin(), v.end(), back_inserter(_v));
+//	float tmp;
+//	for (int i = 0; i < size - 1; i++) {
+//		for (int j = i + 1; j < size; j++) {
+//			if (_v[i] > _v[j]) {
+//				tmp = _v[i];
+//				_v[i] = _v[j];
+//				_v[j] = tmp;
+//			}
+//		}
+//	}
+//	if (size % 2 == 1) {
+//		return _v[(size - 1) / 2];
+//	}
+//	else {
+//		return (_v[(size / 2) - 1] + _v[size / 2]) / 2;
+//	}
+//}
+
+inline dnn_double median_(std::vector<dnn_double>& data)
+{
+	std::sort(std::begin(data), std::end(data));
+	size_t median_index = std::size(data) / 2;
+	double median = (std::size(data) % 2 == 0
+		? static_cast<dnn_double>(data[median_index] + data[median_index - 1]) / 2
+		: data[median_index]);
+
+	return median;
+}
+
+inline dnn_double Median(Matrix<dnn_double>& x, bool non_zero = false)
+{
+	std::vector<dnn_double> _v(x.m*x.n, 0);
+	
+	int n = 0;
+	const int sz = x.m*x.n;
+	for (int i = 0; i < sz; i++)
+	{
+		if (non_zero)
+		{
+			if (fabs(x.v[i]) < 1.0e-16) continue;
+		}
+		_v[n] = x.v[i];
+		n++;
+	}
+	_v.resize(n);
+
+	return median_(_v);
+}
+
+inline dnn_double Dot(Matrix<dnn_double>& x, Matrix<dnn_double>& y)
+{
+	double dot = 0.0;
+	const int sz = x.m*x.n;
+
+#pragma omp parallel for reduction(+:dot)
+	for (int i = 0; i < sz; i++)
+	{
+		dot = dot + x.v[i] * y.v[i];
+	}
+	return dot;
+}
 #endif

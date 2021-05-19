@@ -313,6 +313,49 @@ public:
 	}
 };
 
+inline double independ_test(const Matrix<double>& x, const Matrix<double>& y)
+{
+	auto& xx = Matrix<double>(x.v, x.m*x.n, 1);
+	auto& yy = Matrix<double>(y.v, x.m*x.n, 1);
+
+	return fabs(xx.Cor(Tanh(yy))) + fabs(yy.Cor(Tanh(xx)));
+}
+
+class HSIC
+{
+	Matrix<double> centering(Matrix<double>& k)
+	{
+		int n = k.m;
+		auto& unit = Matrix<double>().ones(n, n);
+
+		auto& I = Matrix<double>().unit(n, n);
+		auto& Q = I - unit / (double)n;
+
+		return (Q*k)*Q;
+	}
+	Matrix<double> rbf(Matrix<double>& x, double sigma = 0)
+	{
+		auto& GX = x * x.transpose();
+
+		auto& KX = x.diag(GX) - GX + (x.diag(GX) - GX).transpose();
+		if (sigma == 0)
+		{
+			double mdist = Median(KX, true);
+			sigma = sqrt(fabs(mdist));
+		}
+		KX = KX * (-0.5 / sigma / sigma);
+
+		return KX;
+	}
+public:
+	HSIC() {}
+
+	double hsic(Matrix<double>& x, Matrix<double>& y)
+	{
+		return (centering(rbf(x)).hadamard(centering(rbf(y)))).Sum();
+	}
+};
+
 class lingam_reg
 {
 public:
@@ -1170,6 +1213,7 @@ public:
 
 		residual_error = Matrix<dnn_double>(X.m, X.n);
 		residual_error_independ = Matrix<dnn_double>(X.n, X.n);
+		intercept = Matrix<dnn_double>().zeros(X.n, 1);
 
 		Mu = Matrix<dnn_double>().zeros(X.m, X.n);
 		input = X;
@@ -1393,15 +1437,16 @@ public:
 		return error;
 	}
 
-	void calc_mutual_information( Matrix<dnn_double>& X, Matrix<dnn_double>& info, int bins = 30)
+	void calc_mutual_information( Matrix<dnn_double>& X, Matrix<dnn_double>& info, int bins = 30, bool nonlinner_cor = false)
 	{
 		info = info.zeros(X.n, X.n);
 #pragma omp parallel for
 		for (int j = 0; j < X.n; j++)
 		{
-			for (int i = 0; i < X.n; i++)
+			for (int i = j+1; i < X.n; i++)
 			{
 				info(i, j) = 0;
+				info(j, i) = 0;
 				if (i == j)
 				{
 					continue;
@@ -1410,9 +1455,19 @@ public:
 				Matrix<dnn_double>& x = X.Col(replacement[i]);
 				Matrix<dnn_double>& y = X.Col(replacement[j]);
 
-				MutualInformation I(x, y, bins);
-				double tmp = I.Information();
-				info(i, j) = tmp;
+				double tmp;
+				if (nonlinner_cor)
+				{
+					tmp = independ_test(x, y);
+					//HSIC hsic;
+					//tmp = hsic.hsic(x, y);
+				}
+				else
+				{
+					MutualInformation I(x, y, bins);
+					tmp = I.Information();
+				}
+				info(i, j) = info(j, i) = tmp;
 			}
 		}
 	}
