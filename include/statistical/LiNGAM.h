@@ -1443,10 +1443,9 @@ public:
 #pragma omp parallel for
 		for (int j = 0; j < X.n; j++)
 		{
-			for (int i = j+1; i < X.n; i++)
+			for (int i = 0; i < X.n; i++)
 			{
 				info(i, j) = 0;
-				info(j, i) = 0;
 				if (i == j)
 				{
 					continue;
@@ -1467,7 +1466,7 @@ public:
 					MutualInformation I(x, y, bins);
 					tmp = I.Information();
 				}
-				info(i, j) = info(j, i) = tmp;
+				info(i, j) = tmp;
 			}
 		}
 	}
