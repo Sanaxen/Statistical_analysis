@@ -1236,11 +1236,18 @@ public:
 		Matrix<dnn_double>& W_ica = (ica.A.transpose()).inv(&inv_error);
 		if (inv_error != 0)
 		{
+			error = -1;
 			printf("ERROR:W_ica\n");
 			return error;
 		}
-		Matrix<dnn_double>& W_ica_ = Abs(W_ica).Reciprocal();
-
+		int error_ = 0;
+		Matrix<dnn_double>& W_ica_ = Abs(W_ica).Reciprocal(&error_);
+		if (error_ != 0)
+		{
+			error = -1;
+			printf("ERROR:W_ica_\n");
+			return error;
+		}
 		HungarianAlgorithm HungAlgo;
 		vector<int> replace;
 
@@ -1260,6 +1267,7 @@ public:
 		W_ica_perm.print_e("Replacement->W_ica_perm");
 		if (inv_error != 0)
 		{
+			error = -1;
 			printf("ERROR:P^-1*Wica\n");
 			return error;
 		}
@@ -1269,7 +1277,13 @@ public:
 		(D2.Reciprocal()).print_e("1/D");
 
 		//W_ica_perm_D=I - D^-1*(P^-1*Wica)
-		Matrix<dnn_double>& W_ica_perm_D = W_ica_perm.hadamard(to_vector(D2.Reciprocal()));
+		Matrix<dnn_double>& W_ica_perm_D = W_ica_perm.hadamard(to_vector(D2.Reciprocal(&error_)));
+		if (error_ != 0)
+		{
+			error = -1;
+			printf("ERROR:W_ica_perm_D\n");
+			return error;
+		}
 
 		W_ica_perm_D.print_e("W_ica_perm_D");
 
@@ -1844,7 +1858,12 @@ public:
 				{
 					continue;
 				}
-				Matrix<dnn_double>& W_ica_ = Abs(W_ica).Reciprocal();
+				int error_ = 0;
+				Matrix<dnn_double>& W_ica_ = Abs(W_ica).Reciprocal(&error_);
+				if (error_ != 0)
+				{
+					continue;
+				}
 
 				HungarianAlgorithm HungAlgo;
 				vector<int> replace;
@@ -1873,8 +1892,13 @@ public:
 				Matrix<dnn_double> D2(diag_vector(D));
 				//(D2.Reciprocal()).print_e("1/D");
 
+				error_ = 0;
 				//W_ica_perm_D=I - D^-1*(P^-1*Wica)
-				Matrix<dnn_double>& W_ica_perm_D = W_ica_perm.hadamard(to_vector(D2.Reciprocal()));
+				Matrix<dnn_double>& W_ica_perm_D = W_ica_perm.hadamard(to_vector(D2.Reciprocal(&error)));
+				if (error_ != 0)
+				{
+					continue;
+				}
 
 				//W_ica_perm_D.print_e("W_ica_perm_D");
 
