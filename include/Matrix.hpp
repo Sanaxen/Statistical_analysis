@@ -1394,12 +1394,29 @@ struct Matrix
 		return max;
 	}
 
-	Matrix<T> Reciprocal()
+	Matrix<T> Reciprocal(int *error = NULL)
 	{
 		Matrix<T> d = *this;
 		const int mn = d.m*d.n;
 
-		for (int i = 0; i < mn; i++) d.v[i] = 1.0 / d.v[i];
+		if (error != NULL)*error = 0;
+		for (int i = 0; i < mn; i++)
+		{
+			double x = d.v[i];
+			if (error != NULL)
+			{
+				if (fabs(x) < 1.0e-16)*error = -1;
+			}
+			else
+			{
+				if (fabs(x) < 1.0e-16)
+				{
+					if ( x > 0 )x = 1.0e-16;
+					else x = -1.0e-16;
+				}
+			}
+			d.v[i] = 1.0 / x;
+		}
 
 		return d;
 	}
