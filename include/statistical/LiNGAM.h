@@ -16,6 +16,7 @@
 #include "../../include/util/csvreader.h"
 
 #include "../../include/util/swilk.h"
+#include "../../include/util/Generalized_Gaussian.hpp"
 
 //#define USE_EIGEN
 
@@ -1723,6 +1724,12 @@ public:
 		{
 		}
 
+		std::uniform_real_distribution<> gg_rho(1, 30);
+		std::uniform_real_distribution<> gg_beta(1, 30);
+		std::uniform_int_distribution<> gg_seed(1, 123456789123456789);
+		double gg_rho_param = 1;
+		double gg_beta_param = 1;
+
 		double start_delta = -1.0;
 		double start_value = -1.0;
 		double start_independ = -1.0;
@@ -1780,11 +1787,15 @@ public:
 
 					auto& dist = std::student_t_distribution<>(dist_t_param[var]);
 
+					gg_rho_param += 0.0001;
+					gg_beta_param += 0.0001;
+					gg_random gg(gg_rho_param, gg_beta_param, 0);
+					gg.seed(gg_seed(engine));
 					//#pragma omp parallel for <-- 乱数の順序が変わってしまうから並列化したらダメ7
 					for (int j = 0; j < X.m; j++)
 					{
-						const double rate = distribution_rate * dist(engine);
-						μ(j, var) = rate/* + noise(engine)*/;
+						const double rate = distribution_rate * gg.rand();
+						μ(j, var) = rate /*+ noise(engine)*/;
 					}
 #endif
 
@@ -1797,11 +1808,31 @@ public:
 					auto& dist = std::normal_distribution<>(0.0, dist_t_param[var]);
 
 #if 10
-					//#pragma omp parallel for <-- 乱数の順序が変わってしまうから並列化したらダメ7
-					const double rate = distribution_rate * dist(engine);
+					//#pragma omp parallel for <-- 乱数の順序が変わってしまうから並列化したらダメ
+					
+					//Average distribution（center)
+					double rate = distribution_rate * dist(engine);
+					
+					if (1)
+					{
+						gg_rho_param = gg_rho(engine);
+						gg_beta_param = gg_beta(engine);
+					}
+					gg_random gg = gg_random(gg_rho_param, gg_beta_param, 0);
+					gg.seed(gg_seed(engine));
+
 					for (int j = 0; j < X.m; j++)
 					{
-						μ(j, var) = rate + distribution_rate * noise(engine);
+						if (1)
+						{
+							//Generalized_Gaussian distribution
+							μ(j, var) = rate + distribution_rate * gg.rand();
+						}
+						else
+						{
+							//Uniform distribution
+							μ(j, var) = rate + distribution_rate * noise(engine);
+						}
 					}
 					//if (use_intercept)
 					//{
@@ -1809,11 +1840,15 @@ public:
 					//	//intercept(var, 0) = 0;
 					//}
 #else
+					gg_rho_param = gg_rho(engine);
+					gg_beta_param = gg_beta(engine);
+					gg_random gg(gg_rho_param, gg_beta_param, 0);
+					gg.seed(gg_seed(engine));
 					//#pragma omp parallel for <-- 乱数の順序が変わってしまうから並列化したらダメ7
 					for (int j = 0; j < X.m; j++)
 					{
-						const double rate = distribution_rate * dist(engine);
-						μ(j, var) = rate/* + noise(engine)*/;
+						const double rate = distribution_rate * gg.rand();
+						μ(j, var) = rate/* + distribution_rate * noise(engine)*/;
 					}
 #endif
 				}
@@ -2169,6 +2204,7 @@ public:
 			}
 
 			if (!cond) accept_ = false;
+			if ( independ < 1.0e-4)  accept_ = false;
 
 			bool best_update = false;
 			if (accept_)
