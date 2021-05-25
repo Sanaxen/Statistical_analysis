@@ -2062,7 +2062,8 @@ public:
 					//Ø•Ğ‚Ì„’è
 					for (int i = 0; i < xs.n; i++)
 					{
-						intercept(i, 0) = ƒÊ.Col(i).mean();
+						intercept(i, 0) = Median(ƒÊ.Col(i));
+						//intercept(i, 0) = ƒÊ.Col(i).mean();
 					}
 				}
 
@@ -2331,7 +2332,17 @@ public:
 			try
 			{
 				std::ofstream ofs(loss, std::ios::app);
-				ofs << best_residual << "," << best_independ << "," << best_min_value << std::endl;
+				if (
+					best_residual == 999999999.0 &&
+					best_independ == 999999999.0 &&
+					best_min_value == 999999999.0)
+				{
+					ofs << 2 << "," << 2 << "," << 2 << std::endl;
+				}
+				else
+				{
+					ofs << best_residual << "," << best_independ << "," << best_min_value << std::endl;
+				}
 				ofs.close();
 			}
 			catch (...)
