@@ -18,4 +18,11 @@ inline FILE* fopen_util(const char* filename, const char* mode)
 	return fp;
 }
 
+inline void copyfile(const char *from_file_name, const char *to_file_name)
+{
+	ifstream is(from_file_name, ios::in | ios::binary);
+	ofstream os(to_file_name, ios::out | ios::binary);
+	os << is.rdbuf();
+}
+
 #endif
