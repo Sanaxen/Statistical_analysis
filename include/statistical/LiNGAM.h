@@ -14,6 +14,7 @@
 #include "../../include/statistical/RegularizationRegression.h"
 #include "../../include/util/utf8_printf.hpp"
 #include "../../include/util/csvreader.h"
+#include "../../include/util/file_util.hpp"
 
 #include "../../include/util/swilk.h"
 #include "../../include/util/Generalized_Gaussian.hpp"
@@ -23,6 +24,7 @@
 #ifdef USE_EIGEN
 #include "../../include/statistical/RegularizationRegression_eigen_version.h"
 #endif
+
 
 template<class T>
 class VectorIndex
@@ -678,6 +680,8 @@ public:
 			fprintf(fp, "loss:%f\n", loss_value);
 			fclose(fp);
 		}
+		copyfile("select_variables.dat", (filename + ".select_variables.dat").c_str());
+		copyfile("lingam_loss.dat", (filename + ".lingam_loss.dat").c_str());
 
 		try
 		{
@@ -748,6 +752,8 @@ public:
 			}
 			fclose(fp);
 		}
+		copyfile((filename + ".select_variables.dat").c_str(), "select_variables.dat");
+		copyfile((filename + ".lingam_loss.dat").c_str(), "lingam_loss.dat");
 
 		try
 		{
