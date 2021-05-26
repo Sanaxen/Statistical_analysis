@@ -225,6 +225,7 @@ int main(int argc, char** argv)
 	double cor_range[2] = { 0,0 };
 	double min_cor_delete = -1;
 	double min_delete = -1;
+	double min_delete_srt = -1;
 	bool error_distr = false;
 	int error_distr_size[2] = { 1,1 };
 	bool capture = true;
@@ -379,6 +380,9 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--use_intercept") {
 					use_intercept = atoi(argv[count + 1]) == 0 ? false : true;
+				}
+				else if (argname == "--min_delete_srt") {
+					min_delete_srt = atoi(argv[count + 1]);
 				}
 				///
 				//
@@ -662,6 +666,24 @@ int main(int argc, char** argv)
 #endif
 
 	{
+		FILE* fp = fopen("select_variables.dat", "w");
+		if (fp)fprintf(fp, "%d\n", y_var.size());
+		if (y_var.size())
+		{
+			if (fp)fprintf(fp, "%d,%s\n", y_var_idx[0], header_names[y_var_idx[0]].c_str());
+			for (int i = 0; i < y_var_idx.size(); i++)
+			{
+				if (fp)fprintf(fp, "%d,%s\n", y_var_idx[i], header_names[x_var_idx[i]].c_str());
+			}
+		}
+		for (int i = 0; i < x_var_idx.size(); i++)
+		{
+			if (fp)fprintf(fp, "%d,%s\n", x_var_idx[i], header_names[x_var_idx[i]].c_str());
+		}
+		if (fp)fclose(fp);
+	}
+
+	{
 		FILE* fp = fopen("error_cols.txt", "r");
 		if (fp)
 		{
@@ -717,6 +739,69 @@ int main(int argc, char** argv)
 	//double tmp = I.Information();
 	//printf("MI=%f\n", tmp);
 	//fflush(stdout);
+	//exit(0);
+
+	//Matrix<double> x(10000, 7);
+	//Matrix<double> y(10000, 7);
+	//Matrix<double> z(10000, 7);
+	//gg_random gg1(2, 1, -3);
+	//gg_random gg2(3, 1, -1);
+	//gg_random gg3(4, 1, 3);
+	//gg_random gg4(5, 1, 5);
+	//gg_random gg5(15, 1, 7);
+	//gg_random gg6(25, 1, 10);
+	//gg_random gg7(55, 1, 13);
+
+	//gg_random gg8(1, 2,  -3);
+	//gg_random gg9(1, 3, -1);
+	//gg_random gg10(1, 4,  3);
+	//gg_random gg11(1, 5, 5);
+	//gg_random gg12(1, 15, 7);
+	//gg_random gg13(1, 25, 10);
+	//gg_random gg14(1, 55, 13);
+
+	//gg_random gg15(10, 45, -3);
+	//gg_random gg16(20, 45, -1);
+	//gg_random gg17(40, 45, 3);
+	//gg_random gg18(45, 10, 5);
+	//gg_random gg19(45, 20, 7);
+	//gg_random gg20(45, 40, 10);
+	//for (int i = 0; i < 10000; i++)
+	//{
+	//	x(i, 0) = gg1.rand();
+	//	x(i, 1) = gg2.rand();
+	//	x(i, 2) = gg3.rand();
+	//	x(i, 3) = gg4.rand();
+	//	x(i, 4) = gg5.rand();
+	//	x(i, 5) = gg6.rand();
+	//	x(i, 6) = gg7.rand();
+
+	//	y(i, 0) = gg8.rand();
+	//	y(i, 1) = gg9.rand();
+	//	y(i, 2) = gg10.rand();
+	//	y(i, 3) = gg11.rand();
+	//	y(i, 4) = gg12.rand();
+	//	y(i, 5) = gg13.rand();
+	//	y(i, 6) = gg14.rand();
+
+	//	z(i, 0) = gg15.rand();
+	//	z(i, 1) = gg16.rand();
+	//	z(i, 2) = gg17.rand();
+	//	z(i, 3) = gg18.rand();
+	//	z(i, 4) = gg19.rand();
+	//	z(i, 5) = gg20.rand();
+	//	z(i, 6) = 0;
+	//}
+	//std::vector<std::string> head;
+	//head.push_back("a");
+	//head.push_back("b");
+	//head.push_back("c");
+	//head.push_back("d");
+	//head.push_back("e");
+	//head.push_back("f");
+	//x.print_csv("gg1.csv", head);
+	//y.print_csv("gg2.csv", head);
+	//z.print_csv("gg3.csv", head);
 	//exit(0);
 
 	if (load_model != "")
@@ -807,6 +892,47 @@ int main(int argc, char** argv)
 				{
 					LiNGAM.B(i, j) = 0.0;
 				}
+			}
+		}
+	}
+
+	if ( min_delete_srt > 0 )
+	{
+		struct b_data_t
+		{
+			double b;
+			int Cause;
+			int result;
+
+			bool operator<(const struct b_data_t& right) const {
+				return b <= right.b;
+			}
+		};
+		std::vector< struct b_data_t> b_data;
+		for (int i = 0; i < LiNGAM.B.m; i++)
+		{
+			for (int j = 0; j < LiNGAM.B.n; j++)
+			{
+				if (fabs(LiNGAM.B(i, j)) < 1.0e-6)
+				{
+					continue;
+				}
+
+				struct b_data_t b;
+				b.b = LiNGAM.B(i, j);
+				b.Cause = j;
+				b.result = i;
+			}
+		}
+
+		std::sort(b_data.begin(), b_data.end());
+		if (min_delete_srt < b_data.size())
+		{
+			for (int i = 0; i < min_delete_srt; i++)
+			{
+				int jj = b_data[i].result;
+				int ii = b_data[i].Cause;
+				LiNGAM.B(ii, jj) = 0.0;
 			}
 		}
 	}
