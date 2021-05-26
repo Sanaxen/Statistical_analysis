@@ -25,6 +25,7 @@ public:
 
 	double inv_rho = 1;
 	double inv_sqrt_beta = 1;
+	inline gg_random() {}
 	inline gg_random(double beta_, double rho_, double mu_)
 	{
 		beta = beta_;
