@@ -650,7 +650,7 @@ public:
 		variableNum = variableNum_;
 	}
 
-	void save(std::string& filename)
+	void save(std::string& filename, bool loss_dat = false)
 	{
 		FILE* lock = fopen("lingam.lock", "w");
 		if (lock == NULL)
@@ -681,8 +681,10 @@ public:
 			fclose(fp);
 		}
 		copyfile("select_variables.dat", (filename + ".select_variables.dat").c_str());
-		copyfile("lingam_loss.dat", (filename + ".lingam_loss.dat").c_str());
-
+		if (loss_dat)
+		{
+			copyfile("lingam_loss.dat", (filename + ".lingam_loss.dat").c_str());
+		}
 		try
 		{
 			B.print_csv((char*)(filename + ".B.csv").c_str());
@@ -1635,6 +1637,32 @@ public:
 	double rho = 3.0;
 	double loss_value = 0.0;
 	//double mu_max_value = 10.0;
+	
+	inline void fput_loss(const char* loss, double best_residual, double best_independ, double best_min_value)
+	{
+		try
+		{
+			std::ofstream ofs(loss, std::ios::app);
+			if (
+				best_residual == 999999999.0 &&
+				best_independ == 999999999.0 &&
+				best_min_value == 999999999.0)
+			{
+				ofs << 2 << "," << 2 << "," << 2 << std::endl;
+			}
+			else
+			{
+				ofs << best_residual << "," << best_independ << "," << best_min_value << std::endl;
+			}
+			ofs.flush();
+			ofs.close();
+		}
+		catch (...)
+		{
+			printf("----\n");
+			//getchar();
+		}
+	}
 	int fit2(Matrix<dnn_double>& X, const int max_ica_iteration= MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
 		printf("distribution_rate:%f\n", distribution_rate);
@@ -1819,7 +1847,7 @@ public:
 					//Average distributionÅicenter)
 					double rate = distribution_rate * dist(engine);
 					
-					if (1)
+					if (10)
 					{
 						gg_rho_param = gg_rho(engine);
 						gg_beta_param = gg_beta(engine);
@@ -1829,7 +1857,7 @@ public:
 
 					for (int j = 0; j < X.m; j++)
 					{
-						if (1)
+						if (10)
 						{
 							//Generalized_Gaussian distribution
 							É (j, var) = rate + distribution_rate * gg.rand();
@@ -1881,12 +1909,14 @@ public:
 				error = ica.getStatus();
 				if (error != 0)
 				{
+					fput_loss(loss, best_residual, best_independ, best_min_value);
 					continue;
 				}
 			}
 			catch (...)
 			{
 				//error = -99;
+				fput_loss(loss, best_residual, best_independ, best_min_value);
 				continue;
 			}
 
@@ -1897,12 +1927,14 @@ public:
 				Matrix<dnn_double>& W_ica = (ica.A.transpose()).inv(&inv_error);
 				if (inv_error != 0)
 				{
+					fput_loss(loss, best_residual, best_independ, best_min_value);
 					continue;
 				}
 				int error_ = 0;
 				Matrix<dnn_double>& W_ica_ = Abs(W_ica).Reciprocal(&error_);
 				if (error_ != 0)
 				{
+					fput_loss(loss, best_residual, best_independ, best_min_value);
 					continue;
 				}
 
@@ -1925,6 +1957,7 @@ public:
 				//W_ica_perm.print_e("Replacement->W_ica_perm");
 				if (inv_error != 0)
 				{
+					fput_loss(loss, best_residual, best_independ, best_min_value);
 					continue;
 				}
 
@@ -1938,6 +1971,7 @@ public:
 				Matrix<dnn_double>& W_ica_perm_D = W_ica_perm.hadamard(to_vector(D2.Reciprocal(&error)));
 				if (error_ != 0)
 				{
+					fput_loss(loss, best_residual, best_independ, best_min_value);
 					continue;
 				}
 
@@ -1965,17 +1999,20 @@ public:
 				else
 				{
 					printf("--------------------\n");
+					fput_loss(loss, best_residual, best_independ, best_min_value);
 					continue;
 				}
 			}
 			catch (std::exception& e)
 			{
 				printf("Exception:%s\n", e.what());
+				fput_loss(loss, best_residual, best_independ, best_min_value);
 				continue;
 			}
 			catch (...)
 			{
 				printf("Exception\n");
+				fput_loss(loss, best_residual, best_independ, best_min_value);
 				continue;
 			}
 
@@ -2335,25 +2372,7 @@ public:
 				//	printf("------------------\n");
 				//}
 			}
-			try
-			{
-				std::ofstream ofs(loss, std::ios::app);
-				if (
-					best_residual == 999999999.0 &&
-					best_independ == 999999999.0 &&
-					best_min_value == 999999999.0)
-				{
-					ofs << 2 << "," << 2 << "," << 2 << std::endl;
-				}
-				else
-				{
-					ofs << best_residual << "," << best_independ << "," << best_min_value << std::endl;
-				}
-				ofs.close();
-			}
-			catch (...)
-			{
-			}
+			fput_loss(loss, best_residual, best_independ, best_min_value);
 
 			//if ( confounding_factors_sampling >= 4000 && reject > confounding_factors_sampling / 4)
 			//{

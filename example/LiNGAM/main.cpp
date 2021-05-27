@@ -853,7 +853,7 @@ int main(int argc, char** argv)
 			LiNGAM.fit(xs, max_ica_iteration, ica_tolerance);
 		}
 		
-		LiNGAM.save(std::string("lingam.model"));
+		LiNGAM.save(std::string("lingam.model"), true);
 	}
 
 	LiNGAM.B.print_e("(#1)B");
@@ -882,7 +882,8 @@ int main(int argc, char** argv)
 			}
 		}
 	}
-	if (min_delete > 0)
+
+	if (min_delete > 0 && min_delete_srt == 0)
 	{
 		for (int i = 0; i < LiNGAM.B.m; i++)
 		{
@@ -905,7 +906,7 @@ int main(int argc, char** argv)
 			int result;
 
 			bool operator<(const struct b_data_t& right) const {
-				return b <= right.b;
+				return fabs(b) <= fabs(right.b);
 			}
 		};
 		std::vector< struct b_data_t> b_data;
@@ -920,18 +921,23 @@ int main(int argc, char** argv)
 
 				struct b_data_t b;
 				b.b = LiNGAM.B(i, j);
-				b.Cause = j;
 				b.result = i;
+				b.Cause = j;
+				b_data.push_back(b);
 			}
 		}
 
 		std::sort(b_data.begin(), b_data.end());
+		for (int i = 0; i < b_data.size(); i++)
+		{
+			printf("[%d]b(%d,%d)=%f\n", i, b_data[i].result, b_data[i].Cause, b_data[i].b);
+		}
 		if (min_delete_srt < b_data.size())
 		{
 			for (int i = 0; i < min_delete_srt; i++)
 			{
-				int jj = b_data[i].result;
-				int ii = b_data[i].Cause;
+				int ii = b_data[i].result;
+				int jj = b_data[i].Cause;
 				LiNGAM.B(ii, jj) = 0.0;
 			}
 		}

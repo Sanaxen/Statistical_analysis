@@ -1704,7 +1704,7 @@ public:
 		É  = É .Rand()*rho;
 		É _sv = É ;
 		//std::student_t_distribution<> dist(6.0);
-		std::normal_distribution<> dist(0.0, 30.0);
+		std::normal_distribution<> dist(0.0, 40.0);
 		//std::uniform_real_distribution<> dist(-mu_max_value, mu_max_value);
 
 		//double t_p = 12.0*rho;
