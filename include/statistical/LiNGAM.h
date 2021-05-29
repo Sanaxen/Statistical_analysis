@@ -710,7 +710,7 @@ public:
 		remove("lingam.lock");
 	}
 
-	bool load(std::string& filename)
+	bool load(std::string& filename, bool loss_data = false)
 	{
 		char buf[256];
 		FILE* fp = fopen((filename + ".replacement").c_str(), "r");
@@ -755,8 +755,10 @@ public:
 			fclose(fp);
 		}
 		copyfile((filename + ".select_variables.dat").c_str(), "select_variables.dat");
-		copyfile((filename + ".lingam_loss.dat").c_str(), "lingam_loss.dat");
-
+		if (loss_data)
+		{
+			copyfile((filename + ".lingam_loss.dat").c_str(), "lingam_loss.dat");
+		}
 		try
 		{
 			CSVReader csv1((filename + ".B.csv"), ',', false);
