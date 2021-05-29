@@ -253,6 +253,7 @@ int main(int argc, char** argv)
 	int bins = 30;
 	int normalize_type = 0;
 	bool use_intercept = false;
+	bool loss_data_load = true;
 
 	int pause = 0;
 	std::string load_model = "";
@@ -383,6 +384,9 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--min_delete_srt") {
 					min_delete_srt = atoi(argv[count + 1]);
+				}
+				else if (argname == "--loss_data_load") {
+					loss_data_load = atoi(argv[count + 1]) == 0 ? false : true;
 				}
 				///
 				//
@@ -808,7 +812,7 @@ int main(int argc, char** argv)
 	{
 		try
 		{
-			if (!LiNGAM.load(load_model))
+			if (!LiNGAM.load(load_model, loss_data_load))
 			{
 				printf("ERROR:load_model\n");
 				return -1;
