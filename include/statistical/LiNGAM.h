@@ -1056,8 +1056,11 @@ public:
 
 							utf8.fprintf(fp, "%s [fillcolor=\"#f5f5dc\", style=\"filled\"]\n", item);
 							//utf8.fprintf(fp, "%s-> %s [dir=\"both\" label=\"(%8.3f)%8.3f\" color=black penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), XCor(i, j), mutual_information(i, j), style);
-							utf8.fprintf(fp, "%s-> %s [label=\"---(%8.3f)%8.3f\" color=black %s]\n", item, item2.c_str(), XCor(i, j), mutual_information(i, j), style);
-							utf8.fprintf(fp, "%s-> %s [label=\"---(%8.3f)%8.3f\" color=black %s]\n", item, item1.c_str(), XCor(i, j), mutual_information(i, j), style);
+
+							//utf8.fprintf(fp, "%s-> %s [label=\"---(%8.3f)%8.3f\" color=black %s]\n", item, item2.c_str(), XCor(i, j), mutual_information(i, j), style);
+							//utf8.fprintf(fp, "%s-> %s [label=\"---(%8.3f)%8.3f\" color=black %s]\n", item, item1.c_str(), XCor(i, j), mutual_information(i, j), style);
+							utf8.fprintf(fp, "%s-> %s [color=black %s]\n", item, item2.c_str(), style);
+							utf8.fprintf(fp, "%s-> %s [color=black %s]\n", item, item1.c_str(), style);
 						}
 					}
 				}
