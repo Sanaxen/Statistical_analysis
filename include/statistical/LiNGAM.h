@@ -1765,7 +1765,9 @@ public:
 
 		std::uniform_real_distribution<> gg_rho(1, 30);
 		std::uniform_real_distribution<> gg_beta(1, 30);
-		std::uniform_int_distribution<> gg_seed(1, 123456789123456789);
+		std::uniform_int_distribution<> gg_seed(1, -1395630315);
+		//printf("*************** %d\n", (int)123456789123456789);
+
 		double gg_rho_param = 1;
 		double gg_beta_param = 1;
 
