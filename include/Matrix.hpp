@@ -1439,6 +1439,16 @@ struct Matrix
 		for (int i = 0; i < mn; i++) d.v[i] = rand01(mt);
 		return d;
 	}
+	inline Matrix<T> RandMT(std::mt19937 mt, double min, double max)
+	{
+		Matrix<T> d = *this;
+		const int mn = d.m*d.n;
+
+		std::uniform_real_distribution<> rand01(min, max);
+
+		for (int i = 0; i < mn; i++) d.v[i] = rand01(mt);
+		return d;
+	}
 
 	inline Matrix<T> one_sub_sqr(T alp)
 	{
