@@ -844,8 +844,7 @@ int main(int argc, char** argv)
 	}
 	else
 	{
-		//https://189568f5-a-62cb3a1a-s-sites.googlegroups.com/site/sshimizu06/JJSS08.pdf?attachauth=ANoY7coW5T-H5loCFXtil7jTDmShNtyspkGn5LPTjVpGMxRarbeibgFaOSL90pp-5fAywcvQm6z6KtmKOMQPefpgYXSU-5Lf520zviksPxd25xEvN-OwsMSSV6RkSzEvvXqibTDzGu-6bGrJuiHXiLE5eMQQAHOMzI70GbX9K7aOUQq3bPM_c-Vjd1z8PsfaXCb6DpHZYMNFDMb9PsZmNiGpAknh0JH0XQ%3D%3D&attredirects=0
-		//独立成分分析による線形逐次モデルの探索 清水 昌平
+		//http://www.ar.sanken.osaka-u.ac.jp/~sshimizu/papers/JJSS08.pdf
 		//	十分大きい標本サイズを集める必要がある. 
 		//　Sarela and Vigario(2003) は経験上, 
 		//　推定するパラメータ数の少なくとも 5 倍(T > 5m^2) は必要.
