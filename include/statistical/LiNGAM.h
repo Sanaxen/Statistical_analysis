@@ -316,6 +316,11 @@ public:
 	}
 };
 
+// MIC ? Maximal Information Coefficient
+// https://github.com/dspinellis/OpenMIC
+///
+
+
 inline double independ_test(const Matrix<double>& x, const Matrix<double>& y)
 {
 	auto& xx = Matrix<double>(x.v, x.m*x.n, 1);
@@ -1642,6 +1647,7 @@ public:
 	double rho = 3.0;
 	double loss_value = 0.0;
 	//double mu_max_value = 10.0;
+	int loss_function = 0;
 	
 	inline void fput_loss(const char* loss, double best_residual, double best_independ, double best_min_value)
 	{
@@ -1649,9 +1655,9 @@ public:
 		{
 			std::ofstream ofs(loss, std::ios::app);
 			if (
-				best_residual == 999999999.0 &&
-				best_independ == 999999999.0 &&
-				best_min_value == 999999999.0)
+				best_residual >= 2.0 ||
+				best_independ >= 2.0 ||
+				best_min_value >= 2.0)
 			{
 				ofs << 2 << "," << 2 << "," << 2 << std::endl;
 			}
@@ -2187,8 +2193,16 @@ public:
 				weight2 = independ / w_tmp;
 			}
 
-			double value = log(1 + fabs(residual - independ) + weight1 *residual + weight2*independ);
-			//double value = std::max(weight1*residual, weight2*independ) + 0.0001*(weight1 * residual + weight2 * independ);
+			double value;
+			if (loss_function == 0)
+			{
+				value = max(weight1*residual, weight2*independ) + 0.0001*(weight1 * residual + weight2 * independ);
+			}
+			else
+			{
+				value = log(1 + fabs(residual - independ) + weight1 *residual + weight2*independ);
+
+			}
 
 			if (start_value < 0)
 			{
@@ -2280,10 +2294,14 @@ public:
 						}
 					}
 				}
-				//if (best_min_value < value)
-				//{
-				//	best_update = false;
-				//}
+
+				if (loss_function == 0)
+				{
+					if (best_min_value < value)
+					{
+						best_update = false;
+					}
+				}
 				if (best_update || kk == 0)
 				{
 					best_min_value = value;
