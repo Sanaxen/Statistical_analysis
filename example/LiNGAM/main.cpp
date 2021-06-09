@@ -1071,6 +1071,7 @@ int main(int argc, char** argv)
 	}
 	if (confounding_factors)
 	{
+		printf("Iter:%d early_stopping:%d\n", confounding_factors_sampling, early_stopping);
 		printf("loss:[%.4f]\n", LiNGAM.loss_value);
 	}
 	printf("residual_independence:[%.4f,%.4f]\n", LiNGAM.residual_error_independ.Min(), LiNGAM.residual_error_independ.Max());
