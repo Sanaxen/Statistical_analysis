@@ -53,6 +53,7 @@ public:
 		engine = std::default_random_engine(s);
 	}
 
+	//x(i,:) = mu(i) + (1/sqrt(beta(i))) * ( mygamrnd(1/rho(i),1,1,N)).^(1/rho(i) ) .* ((rand(1,N)<0.5)*2-1)
 	inline double rand()
 	{
 		double y = gamma(engine);
