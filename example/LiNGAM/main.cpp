@@ -234,6 +234,7 @@ int main(int argc, char** argv)
 	char* output_diaglam_type = "png";
 	std::vector<std::string> x_var;
 	std::vector<std::string> y_var;
+	std::vector<std::string> c_var;
 	bool ignore_constant_value_columns = true;
 	double lasso_tol = TOLERANCE;
 	int lasso_itr_max = 1000000;
@@ -254,6 +255,7 @@ int main(int argc, char** argv)
 	int normalize_type = 0;
 	bool use_intercept = false;
 	bool loss_data_load = true;
+	int cluster = -1;
 
 	int pause = 0;
 	std::string load_model = "";
@@ -294,6 +296,12 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--y_var") {
 					y_var.push_back(argv[count + 1]);
+				}
+				else if (argname == "--c_var") {
+					c_var.push_back(argv[count + 1]);
+				}
+				else if (argname == "--cluster") {
+					cluster = atoi(argv[count + 1]);
 				}
 				else if (argname == "--error_distr") {
 					error_distr = atoi(argv[count + 1]) != 0 ? true : false;
@@ -492,6 +500,7 @@ int main(int argc, char** argv)
 
 	std::vector<int> x_var_idx;
 	std::vector<int> y_var_idx;
+	std::vector<int> c_var_idx;
 
 	if (x_var.size())
 	{
@@ -581,6 +590,48 @@ int main(int argc, char** argv)
 		}
 	}
 
+	if (c_var.size())
+	{
+		for (int i = 0; i < c_var.size(); i++)
+		{
+			for (int j = 0; j < header_names.size(); j++)
+			{
+				if (c_var[i] == header_names[j])
+				{
+					c_var_idx.push_back(j);
+				}
+				else if ("\"" + c_var[i] + "\"" == header_names[j])
+				{
+					c_var_idx.push_back(j);
+				}
+				else if ("\"" + header_names[j] + "\"" == c_var[i])
+				{
+					c_var_idx.push_back(j);
+				}
+				else
+				{
+					char buf[32];
+					sprintf(buf, "%d", j);
+					if (c_var[i] == std::string(buf))
+					{
+						c_var_idx.push_back(j);
+					}
+					sprintf(buf, "\"%d\"", j);
+					if (c_var[i] == std::string(buf))
+					{
+						c_var_idx.push_back(j);
+					}
+				}
+			}
+		}
+		if (c_var_idx.size() != c_var.size())
+		{
+			printf("--c_var ERROR\n");
+			return -1;
+		}
+	}
+	printf("c_var:%d\n", c_var.size());
+
 	if (x_var.size() == 0 )
 	{
 		for (int i = 0; i < T.n; i++)
@@ -600,15 +651,49 @@ int main(int argc, char** argv)
 	{
 		printf("y_var:%s %d\n", y_var[i].c_str(), y_var_idx[i]);
 	}
-	
+	for (int i = 0; i < c_var.size(); i++)
+	{
+		printf("c_var:%s %d\n", c_var[i].c_str(), c_var_idx[i]);
+	}
+
 	std::vector<std::string> headers_tmp;
 	std::vector<std::string> error_cols;
+
+	std::vector<int> class_index;
+	Matrix<dnn_double> col_;
+	if( c_var.size() > 0)
+	{
+		col_ = T.Col(c_var_idx[0]);
+		for (int k = 0; k < col_.m; k++)
+		{
+			if (col_(k, 0) == cluster)
+			{
+				class_index.push_back(k);
+			}
+		}
+		if (class_index.size() == 0)
+		{
+			printf("ERROR:cluster value.\n");
+			return -1;
+		}
+	}
 
 	int index_start = -1;
 	Matrix<dnn_double> col;
 	for (int i = 0; i < x_var.size(); i++)
 	{
 		col = T.Col(x_var_idx[i]);
+
+		if (class_index.size())
+		{
+			std::vector<double> tmp;
+			for (int k = 0; k < class_index.size(); k++)
+			{
+				tmp.push_back(col(class_index[k], 0));
+			}
+			col = Matrix<dnn_double>(tmp);
+		}
+
 		//printf("[%s]Max-Min:%f\n", header_names[x_var_idx[i]].c_str(), fabs(col.Max() - col.Min()));
 		if (fabs(col.Max() - col.Min()) < 1.0e-6)
 		{
@@ -633,6 +718,15 @@ int main(int argc, char** argv)
 	for (int i = index_start + 1; i < x_var.size(); i++)
 	{
 		col = T.Col(x_var_idx[i]);
+		if (class_index.size())
+		{
+			std::vector<double> tmp;
+			for (int k = 0; k < class_index.size(); k++)
+			{
+				tmp.push_back(col(class_index[k], 0));
+			}
+			col = Matrix<dnn_double>(tmp);
+		}
 		//printf("[%s]Max-Min:%f\n", header_names[x_var_idx[i]].c_str(), fabs(col.Max() - col.Min()));
 		if (fabs(col.Max() - col.Min()) < 1.0e-6)
 		{
@@ -655,6 +749,15 @@ int main(int argc, char** argv)
 		}
 		if (dup) continue;
 		col = T.Col(y_var_idx[i]);
+		if (class_index.size())
+		{
+			std::vector<double> tmp;
+			for (int k = 0; k < class_index.size(); k++)
+			{
+				tmp.push_back(col(class_index[k], 0));
+			}
+			col = Matrix<dnn_double>(tmp);
+		}
 		//printf("[%s]Max-Min:%f\n", header_names[y_var_idx[i]].c_str(),fabs(col.Max() - col.Min()));
 		if (fabs(col.Max() - col.Min()) < 1.0e-6)
 		{
@@ -677,12 +780,24 @@ int main(int argc, char** argv)
 			if (fp)fprintf(fp, "%d,%s\n", y_var_idx[0], header_names[y_var_idx[0]].c_str());
 			for (int i = 0; i < y_var_idx.size(); i++)
 			{
-				if (fp)fprintf(fp, "%d,%s\n", y_var_idx[i], header_names[x_var_idx[i]].c_str());
+				if (fp)fprintf(fp, "%d,%s\n", y_var_idx[i], header_names[y_var_idx[i]].c_str());
 			}
 		}
 		for (int i = 0; i < x_var_idx.size(); i++)
 		{
 			if (fp)fprintf(fp, "%d,%s\n", x_var_idx[i], header_names[x_var_idx[i]].c_str());
+		}
+		if (fp)fclose(fp);
+
+		fp = fopen("select_variables2.dat", "w");
+		if (fp)fprintf(fp, "%d\n", c_var.size());
+		if (c_var.size())
+		{
+			if (fp)fprintf(fp, "%d,%s\n", c_var_idx[0], header_names[c_var_idx[0]].c_str());
+			for (int i = 0; i < c_var_idx.size(); i++)
+			{
+				if (fp)fprintf(fp, "%d,%s\n", c_var_idx[i], header_names[c_var_idx[i]].c_str());
+			}
 		}
 		if (fp)fclose(fp);
 	}
