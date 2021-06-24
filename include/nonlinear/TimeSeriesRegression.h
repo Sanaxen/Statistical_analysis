@@ -1172,8 +1172,8 @@ private:
 							}
 						}
 
-						tiny_dnn::vec_t yy = predict[i];
-						tiny_dnn::vec_t y = train[i];
+						const tiny_dnn::vec_t& yy = predict[i];
+						const tiny_dnn::vec_t& y = train[i];
 						for (int k = 0; k < y_dim-1; k++)
 						{
 							fprintf(fp_predict, "%.3f,%.3f,%.3f,", (!inversion) ? yy[k]:-yy[k], y[k], yy[k]-y[k]);
@@ -1190,8 +1190,8 @@ private:
 								fprintf(fp_predict, "%.3f,", 0.0);
 							}
 						}
-						tiny_dnn::vec_t yy = predict[i];
-						tiny_dnn::vec_t y = train[iY.size()-1];
+						const tiny_dnn::vec_t& yy = predict[i];
+						const tiny_dnn::vec_t& y = train[iY.size()-1];
 						for (int k = 0; k < y_dim - 1; k++)
 						{
 							fprintf(fp_predict, "%.3f,%.3f,%.3f,", (!inversion) ? yy[k]:-yy[k], yy[k], 0.0);
@@ -1207,8 +1207,8 @@ private:
 				{
 					for (int i = 0; i < iY.size() + prophecy- use_differnce; i++)
 					{
-						tiny_dnn::vec_t y = train[i];
-						tiny_dnn::vec_t yy = predict[i];
+						const tiny_dnn::vec_t& y = train[i];
+						const tiny_dnn::vec_t& yy = predict[i];
 
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
 						//fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
@@ -1260,7 +1260,7 @@ private:
 				{
 					for (int i = 0; i < sequence_length+ TARGET_POSITON; i++)
 					{
-						tiny_dnn::vec_t y = train[i];
+						const tiny_dnn::vec_t& y = train[i];
 						//fprintf(fp_test, "%f ", timver_tmp[i]);
 						//fprintf(fp_test, "%s ", timeToStr(timver_tmp[i], timeformat, time_str, time_str_sz));
 						if (timestamp.size() > i)
@@ -1286,8 +1286,8 @@ private:
 				{
 					for (int i = sequence_length - 1; i < train_images.size() - sequence_length; i++)
 					{
-						tiny_dnn::vec_t y = train[i];
-						tiny_dnn::vec_t yy = predict[i];
+						const tiny_dnn::vec_t& y = train[i];
+						const tiny_dnn::vec_t& yy = predict[i];
 
 						//if (i < iY.size())
 						//{
@@ -1347,8 +1347,8 @@ private:
 				{
 					for (int i = iY.size() - sequence_length - 1; i < iY.size() + prophecy - use_differnce; i++)
 					{
-						tiny_dnn::vec_t y = train[i];
-						tiny_dnn::vec_t yy = predict[i];
+						const tiny_dnn::vec_t& y = train[i];
+						const tiny_dnn::vec_t& yy = predict[i];
 						//if (i < iY.size())
 						//{
 						//	y = nY[i];
@@ -1401,12 +1401,14 @@ private:
 			float cost_tot = 0.0;
 			const size_t train_sz = train_images.size();
 
+			std::vector<double> diff(y_dim * 2);
+
 #pragma omp parallel for reduction(+:cost,vari_cost,cost_tot)
 			for (int i = 0; i < iY.size(); i++)
 			{
-				std::vector<double> diff(y_dim*2);
-				tiny_dnn::vec_t y = train[i];
-				tiny_dnn::vec_t yy = predict[i];
+				diff.clear();
+				const tiny_dnn::vec_t& y = train[i];
+				const tiny_dnn::vec_t& yy = predict[i];
 				for (int k = 0; k < y_dim; k++)
 				{
 					double d = (yy[k] - y[k])*(yy[k] - y[k]);
