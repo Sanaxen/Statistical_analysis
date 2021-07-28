@@ -387,6 +387,58 @@ public:
 	}
 };
 
+class RidgeRegression :public RegressionBase
+{
+public:
+
+	RidgeRegression(const double lambda1_ = 0.001, const int max_iteration_ = 10000, const dnn_double tolerance_ = 0.001)
+	{
+		lambda1 = lambda1_;
+		max_iteration = max_iteration_;
+		tolerance = tolerance_;
+		error = 0;
+		printf("RidgeRegression\n");
+	}
+
+	virtual int fit(Matrix<dnn_double>& X, Matrix<dnn_double>& y)
+	{
+
+		means = X.Mean();
+		sigma = X.Std(means);
+		Matrix<dnn_double>& train = whitening_(X);
+		//Matrix<dnn_double> train = X;
+		Matrix<dnn_double> beta;
+
+		if (use_bias)
+		{
+			Matrix<dnn_double> bias;
+			bias = bias.ones(train.m, 1);
+
+			train = train.appendCol(bias);
+
+			//train.print("", "%.3f ");
+		}
+		beta = beta.zeros(1, train.n);
+		const int N = train.m;
+
+		int varNum = train.n;
+
+		if (use_bias)
+		{
+			varNum = train.n - 1;
+			beta(0, train.n - 1) = (y - train * beta.transpose()).Sum() / N;
+			//beta.print();
+		}
+
+		Matrix<dnn_double> I;
+		I = I.unit(train.n, train.n);
+		coef = (train.transpose() * train + lambda1 * I).inv()*train.transpose()*y;
+		coef = coef.transpose();
+
+		return error;
+	}
+};
+
 class LassoRegression:public RegressionBase
 {
 public:
@@ -401,17 +453,99 @@ public:
 		printf("LassoRegression\n");
 	}
 
+	/* ref https://github.com/cdt15/lingam/blob/master/lingam/utils/__init__.py
+		lr = LinearRegression()
+		lr.fit(X[:, predictors], X[:, target])
+		weight = np.power(np.abs(lr.coef_), gamma)
+		reg = LassoLarsIC(criterion='bic')
+		reg.fit(X[:, predictors] * weight, X[:, target])
+		return reg.coef_ * weight
+	*/
+
+	int adaptiv_fit(Matrix<dnn_double>& X, Matrix<dnn_double>& y)
+	{
+		means = X.Mean();
+		sigma = X.Std(means);
+		Matrix<dnn_double>& train = whitening_(X);
+		//Matrix<dnn_double> train = X;
+		Matrix<dnn_double> X_w = X;
+		
+		int varNum = train.n;
+
+		if (use_bias)
+		{
+			varNum = train.n - 1;
+		}
+
+		Matrix<dnn_double> weight;
+		weight = weight.ones(1, varNum);
+
+#if 10
+		RidgeRegression reg(lambda1*0);
+		reg.use_bias = use_bias;
+
+		reg.fit(X, y);
+		weight = reg.coef;
+#else
+		this->fit(X, y);
+		weight = this->coef;
+#endif
+		double gamma = 1.0;
+
+		for (int i = 0; i < varNum; i++)
+		{
+			weight.v[i] =  pow(fabs(weight.v[i]) + 1.0e-10, gamma);
+		}
+		if (use_bias)
+		{
+			weight.v[train.n - 1] = 1.0;
+		}
+
+		error = -1;
+		int n_lasso_iterations = 1;
+		for ( int k = 0; k < n_lasso_iterations; k++)
+		{
+			for (int j = 0; j < train.m; j++)
+			{
+				for (int i = 0; i < train.n; i++)
+				{
+					X_w(j, i) = X(j, i) * weight.v[i];
+				}
+			}
+
+			//use_bias = false;
+			error = fit(X_w, y);
+			if (error != 0)
+			{
+				return error;
+			}
+			error = 0;
+			//printf("%d\n", k);
+		}
+		for (int i = 0; i < varNum; i++)
+		{
+			coef(0, i) *= weight.v[i];
+		}
+		//if (use_bias)
+		//{
+		//	coef(0, train.n - 1) = 0.0;
+		//	coef(0, train.n - 1) = (y - train * coef.transpose()).Sum() / train.m;
+		//}
+
+		return error;
+	}
 
 	virtual int fit(Matrix<dnn_double>& X, Matrix<dnn_double>& y)
 	{
 		means = X.Mean();
 		sigma = X.Std(means);
 		Matrix<dnn_double>& train = whitening_(X);
+		//Matrix<dnn_double> train = X;
 		Matrix<dnn_double> beta;
 
 		printf("tolerance:%f\n", tolerance);
-		means.print("means");
-		sigma.print("sigma");
+		//means.print("means");
+		//sigma.print("sigma");
 		if (use_bias)
 		{
 			Matrix<dnn_double> bias;
@@ -589,54 +723,4 @@ public:
 
 };
 
-class RidgeRegression :public RegressionBase
-{
-public:
-
-	RidgeRegression(const double lambda1_ = 0.001, const int max_iteration_ = 10000, const dnn_double tolerance_ = 0.001)
-	{
-		lambda1 = lambda1_;
-		max_iteration = max_iteration_;
-		tolerance = tolerance_;
-		error = 0;
-		printf("RidgeRegression\n");
-	}
-
-	virtual int fit( Matrix<dnn_double>& X, Matrix<dnn_double>& y)
-	{
-
-		means = X.Mean();
-		sigma = X.Std(means);
-		Matrix<dnn_double>& train = whitening_(X);
-		Matrix<dnn_double> beta;
-
-		if (use_bias)
-		{
-			Matrix<dnn_double> bias;
-			bias = bias.ones(train.m, 1);
-
-			train = train.appendCol(bias);
-
-			//train.print("", "%.3f ");
-		}
-			beta = beta.zeros(1, train.n);
-		const int N = train.m;
-
-		int varNum = train.n;
-
-		if (use_bias)
-		{
-			varNum = train.n - 1;
-			beta(0, train.n - 1) = (y - train * beta.transpose()).Sum() / N;
-			//beta.print();
-		}
-
-		Matrix<dnn_double> I;
-		I = I.unit(train.n, train.n);
-		coef = (train.transpose() * train + lambda1*I).inv()*train.transpose()*y;
-		coef = coef.transpose();
-
-		return error;
-	}
-};
 #endif

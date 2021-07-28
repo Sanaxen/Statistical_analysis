@@ -136,7 +136,8 @@ int main(int argc, char** argv)
 
 		LassoRegression lasso_my(1.0, 1000, 0.0001);
 
-		lasso_my.fit(X, y);
+		//lasso_my.fit(X, y);
+		lasso_my.adaptiv_fit(X, y);
 		lasso_my.report(std::string(""), X, header_str);
 
 		printf("scikit-learn\n");
@@ -148,7 +149,8 @@ int main(int argc, char** argv)
 
 		LassoRegression lasso_my2(0.0, 1000, 0.0001);
 
-		lasso_my2.fit(X, y);
+		//lasso_my2.fit(X, y);
+		lasso_my2.adaptiv_fit(X, y);
 		lasso_my2.report(std::string(""), X, header_str);
 		printf("scikit-learn\n");
 		printf("22.5328063241\n"

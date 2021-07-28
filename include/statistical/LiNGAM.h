@@ -814,7 +814,7 @@ public:
 	}
 
 
-	int remove_redundancy(const dnn_double alpha = 0.01, const size_t max_ica_iteration = 1000000, const dnn_double tolerance = TOLERANCE)
+	int remove_redundancy(const dnn_double alpha = 0.01, const size_t max_ica_iteration = 1000000, const dnn_double tolerance = TOLERANCE, int use_adaptive_lasso = 1)
 	{
 		printf("remove_redundancy:lasso start\n"); fflush(stdout);
 		error = 0;
@@ -831,8 +831,19 @@ public:
 			Lasso lasso(alpha, n_iter, tolerance);
 #else
 			LassoRegression lasso(alpha, n_iter, tolerance);
+			lasso.use_bias = false;
 #endif
-			lasso.fit(X, Y);
+			if (use_adaptive_lasso)
+			{
+				//adaptive
+				lasso.adaptiv_fit(X, Y);
+			}
+			else
+			{
+				lasso.fit(X, Y);
+			}
+			
+			//lasso.fit(X, Y);
 			while (lasso.getStatus() != 0)
 			{
 				error = -1;
