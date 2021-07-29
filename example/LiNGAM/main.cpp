@@ -256,6 +256,7 @@ int main(int argc, char** argv)
 	bool use_intercept = false;
 	bool loss_data_load = true;
 	int cluster = -1;
+	int use_adaptive_lasso = 1;
 
 	int pause = 0;
 	std::string load_model = "";
@@ -396,6 +397,10 @@ int main(int argc, char** argv)
 				else if (argname == "--loss_data_load") {
 					loss_data_load = atoi(argv[count + 1]) == 0 ? false : true;
 				}
+				else if (argname == "--use_adaptive_lasso") {
+					use_adaptive_lasso = atoi(argv[count + 1]);
+				}
+				//
 				///
 				//
 				else {
@@ -991,7 +996,7 @@ int main(int argc, char** argv)
 	LiNGAM.B.print_e("(#1)B");
 	if (lasso)
 	{
-		if (LiNGAM.remove_redundancy(lasso, lasso_itr_max, lasso_tol) != 0)
+		if (LiNGAM.remove_redundancy(lasso, lasso_itr_max, lasso_tol, use_adaptive_lasso) != 0)
 		{
 			printf("ERROR:lasso(remove_redundancy)\n");
 		}
