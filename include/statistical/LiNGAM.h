@@ -645,6 +645,10 @@ public:
 	int bins = 30;
 	bool use_intercept = false;
 
+	Matrix<dnn_double> b_probability;
+	bool use_bootstrap = false;
+	double bootstrap_sample = 0.75;
+
 	Lingam() {
 		error = -999;
 	}
@@ -677,6 +681,7 @@ public:
 		if (fp)
 		{
 			fprintf(fp, "confounding_factors:%d\n", confounding_factors);
+			fprintf(fp, "use_bootstrap:%d\n", use_bootstrap?1:0);
 			fclose(fp);
 		}
 		fp = fopen((filename + ".loss").c_str(), "w");
@@ -702,6 +707,11 @@ public:
 
 			residual_error_independ.print_csv((char*)(filename + ".residual_error_independ.csv").c_str());
 			residual_error.print_csv((char*)(filename + ".residual_error.csv").c_str());
+
+			if (use_bootstrap)
+			{
+				b_probability.print_csv((char*)(filename + ".b_probability.csv").c_str());
+			}
 		}
 		catch (std::exception& e)
 		{
@@ -743,6 +753,12 @@ public:
 				if (strstr(buf, "confounding_factors:"))
 				{
 					sscanf(buf, "confounding_factors:%d\n", &confounding_factors);
+				}
+				if (strstr(buf, "use_bootstrap:"))
+				{
+					int dmy;
+					sscanf(buf, "use_bootstrap:%d\n", &dmy);
+					use_bootstrap = (dmy != 0) ? true : false;
 				}
 			}
 			fclose(fp);
@@ -801,6 +817,13 @@ public:
 			CSVReader csv9((filename + ".intercept.csv"), ',', false);
 			intercept = csv9.toMat();
 			printf("intercept\n"); fflush(stdout);
+
+			if (use_bootstrap)
+			{
+				CSVReader csv10((filename + ".b_probability.csv"), ',', false);
+				b_probability = csv10.toMat();
+				printf("b_probability\n"); fflush(stdout);
+			}
 		}
 		catch (std::exception& e)
 		{
@@ -1013,38 +1036,83 @@ public:
 					}
 					if (out_line)
 					{
-						if (mutual_information_values)
+						if (b_probability.n != 0)
 						{
-							utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.3f\" color=red penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), style);
+
+							if (mutual_information_values)
+							{
+								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.3f\\n%8.1f%%\" color=red penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), b_probability(i,j)*100.0, style);
+							}
+							else
+							{
+								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\\n%8.1f%%\" color=red penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), b_probability(i, j) * 100.0, style);
+							}
 						}
 						else
 						{
-							utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=red penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), style);
+							if (mutual_information_values)
+							{
+								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.3f\" color=red penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), style);
+							}
+							else
+							{
+								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=red penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), style);
+							}
 						}
 					}
 					else
 						if (in_line)
 						{
 							linear_regression_var.push_back(item[j]);
-							if (mutual_information_values)
+
+							if (b_probability.n != 0)
 							{
-								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.3f\" color=blue penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), style);
+								if (mutual_information_values)
+								{
+									utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.3f\\n%8.1f%%\" color=blue penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), b_probability(i,j) * 100.0, style);
+								}
+								else
+								{
+									utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\\n%8.1f%%\" color=blue penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), b_probability(i, j) * 100.0, style);
+								}
 							}
 							else
 							{
-								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=blue penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), style);
+								if (mutual_information_values)
+								{
+									utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.3f\" color=blue penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), style);
+								}
+								else
+								{
+									utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=blue penwidth=\"2\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), style);
+								}
 							}
 						}
 						else
 						{
-							if (mutual_information_values)
+							if (b_probability.n != 0)
 							{
+								if (mutual_information_values)
+								{
 
-								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.3f\" color=\"%s\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), line_colors[9 - (int)(9 * mutual_information_tmp(i, j))], style);
+									utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.3f\\n%8.1f%%\" color=\"%s\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), b_probability(i,j) * 100.0, line_colors[9 - (int)(9 * mutual_information_tmp(i, j))], style);
+								}
+								else
+								{
+									utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\\n%8.1f%%\" color=black %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), b_probability(i, j) * 100.0, style);
+								}
 							}
 							else
 							{
-								utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=black %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i,j), style);
+								if (mutual_information_values)
+								{
+
+									utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)%8.3f\" color=\"%s\" %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), mutual_information(i, j), line_colors[9 - (int)(9 * mutual_information_tmp(i, j))], style);
+								}
+								else
+								{
+									utf8.fprintf(fp, "%s-> %s [label=\"%8.3f(%8.3f)\" color=black %s]\n", item2.c_str(), item1.c_str(), B_tmp(i, j), XCor(i, j), style);
+								}
 							}
 						}
 				}
@@ -1685,7 +1753,7 @@ public:
 			//getchar();
 		}
 	}
-	int fit2(Matrix<dnn_double>& X, const int max_ica_iteration= MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
+	int fit2(Matrix<dnn_double>& X_, const int max_ica_iteration= MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
 		printf("distribution_rate:%f\n", distribution_rate);
 		printf("rho:%f\n", rho);
@@ -1703,6 +1771,25 @@ public:
 		logmsg = false;
 		error = 0;
 
+		Matrix<double> X = X_;
+
+		int bootstrapN = 0;
+
+		if (X_.m > 10 && use_bootstrap)
+		{
+			int m = X_.m * bootstrap_sample;
+			if (m < 10) m = 10;
+			X = Matrix<double>(m, X_.n);
+
+			Matrix<double> b(X.n, X.n);
+			b_probability = b.zeros(X.n, X.n);
+		}
+		else
+		{
+			b_probability = Matrix<double>();
+		}
+		std::uniform_int_distribution<> bootstrap(0, X.m - 1);
+
 		Mu = Matrix<dnn_double>().zeros(X.m, X.n);
 		Matrix<dnn_double> B_best_sv;
 		auto replacement_best = replacement;
@@ -1712,10 +1799,10 @@ public:
 		auto residual_error_best = residual_error;
 		auto residual_error_independ_best = residual_error_independ;
 
-		input = X;
-		double min_value =Abs(X).Min();
+		input = X_;
+		double min_value =Abs(X_).Min();
 		if (min_value < 1.0e-3) min_value = 1.0e-3;
-		double max_value = Abs(X).Max();
+		double max_value = Abs(X_).Max();
 		if (max_value < 1.0e-3) max_value = 1.0e-3;
 
 		//std::random_device seed_gen;
@@ -1814,6 +1901,18 @@ public:
 				printf("early_stopping!\n");
 				error = 1;
 				break;
+			}
+
+			if (use_bootstrap)
+			{
+				for (int i = 0; i < X.m; i++)
+				{
+					const int row_id = bootstrap(mt);
+					for (int j = 0; j < X.n; j++)
+					{
+						X(i, j) = X_(row_id, j);
+					}
+				}
 			}
 			Matrix<dnn_double> xs = X;
 
@@ -2285,6 +2384,22 @@ public:
 			bool best_update = false;
 			if (accept_)
 			{
+				if (use_bootstrap)
+				{
+					auto b = before_sorting_(B);
+					for (int j = 0; j < xs.n; j++)
+					{
+						for (int i = 0; i < xs.n; i++)
+						{
+							if (fabs(b(i, j)) > 0.01)
+							{
+								b_probability(i, j) += 1;
+							}
+						}
+					}
+					bootstrapN++;
+				}
+
 				//printf("+\n");
 				if (best_min_value >= value|| (best_residual > residual || best_independ > independ))
 				{
@@ -2365,7 +2480,21 @@ public:
 					dist_t_param_best = dist_t_param;
 
 					calc_mutual_information(X, mutual_information, bins);
-					save(std::string("lingam.model"));
+					
+					if (use_bootstrap)
+					{
+						auto tmp = b_probability;
+						b_probability /= bootstrapN;
+						b_probability *= 0.99;
+
+						save(std::string("lingam.model"));
+
+						b_probability = tmp;
+					}
+					else
+					{
+						save(std::string("lingam.model"));
+					}
 					if (independ + residual < 0.000001)
 					{
 						printf("convergence!\n");
@@ -2462,6 +2591,12 @@ public:
 		residual_error_independ = residual_error_independ_best;
 		replacement = replacement_best;
 		B = B_best_sv;
+
+		if (use_bootstrap)
+		{
+			b_probability /= bootstrapN;
+			b_probability *= 0.99;
+		}
 
 		calc_mutual_information(X, mutual_information, bins);
 
