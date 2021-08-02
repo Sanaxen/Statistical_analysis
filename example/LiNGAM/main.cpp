@@ -257,6 +257,7 @@ int main(int argc, char** argv)
 	bool loss_data_load = true;
 	int cluster = -1;
 	int use_adaptive_lasso = 1;
+	bool use_bootstrap = false;
 
 	int pause = 0;
 	std::string load_model = "";
@@ -399,6 +400,9 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--use_adaptive_lasso") {
 					use_adaptive_lasso = atoi(argv[count + 1]);
+				}
+				else if (argname == "--use_bootstrap") {
+					use_bootstrap = atoi(argv[count + 1]) == 0 ? false : true;
 				}
 				//
 				///
@@ -866,6 +870,7 @@ int main(int argc, char** argv)
 	LiNGAM.confounding_factors_upper = confounding_factors_upper;
 	LiNGAM.bins = bins;
 	LiNGAM.use_intercept = use_intercept;
+	LiNGAM.use_bootstrap = use_bootstrap;
 
 	//MutualInformation I(xs.Col(0), xs.Col(1), 30);
 	//double tmp = I.Information();
@@ -988,6 +993,62 @@ int main(int argc, char** argv)
 		else
 		{
 			LiNGAM.fit(xs, max_ica_iteration, ica_tolerance);
+
+			if (xs.m > 10 && LiNGAM.use_bootstrap)
+			{
+				Matrix<double> b(xs.n, xs.n);
+				b = b.zeros(xs.n, xs.n);
+
+				const int bootstrapN = 10;
+				for (int i = 0; i < bootstrapN; i++)
+				{
+					Lingam LiNGAM_tmp = LiNGAM;
+					int m = xs.m * LiNGAM.bootstrap_sample;
+					if (m < 10) m = 10;
+					Matrix<double> xs_(m, xs.n);
+
+					LiNGAM_tmp.set(xs.n, mt);
+					std::uniform_int_distribution<> select(0, xs.m - 1);
+					for (int i = 0; i < m; i++)
+					{
+						const int row_id = select(mt);
+						for (int j = 0; j < xs.n; j++)
+						{
+							xs_(i, j) = xs(row_id, j);
+						}
+					}
+					LiNGAM_tmp.fit(xs_, max_ica_iteration, ica_tolerance);
+					LiNGAM_tmp.before_sorting();
+
+					for (int j = 0; j < xs.n; j++)
+					{
+						for (int i = 0; i < xs.n; i++)
+						{
+							if (fabs(LiNGAM_tmp.B(i, j)) > 0.01)
+							{
+								b(i, j) += 1;
+							}
+						}
+					}
+				}
+				b /= bootstrapN;
+				LiNGAM.b_probability = b*0.99;
+				for (int j = 0; j < xs.n; j++)
+				{
+					for (int i = 0; i < xs.n; i++)
+					{
+						if (i == j) continue;
+						if (b(i, j) < 0.05) continue;
+
+						printf("%s->%s) ", header_names[j].c_str(), header_names[i].c_str());
+						printf("B(%d,%d):%.2f%%\n", i, j, b(i, j) * 100.0);
+					}
+				}
+			}
+			else
+			{
+				LiNGAM.b_probability = Matrix<double>();
+			}
 		}
 		
 		LiNGAM.save(std::string("lingam.model"), true);
@@ -1069,6 +1130,7 @@ int main(int argc, char** argv)
 		{
 			printf("[%d]b(%d,%d)=%f\n", i, b_data[i].result, b_data[i].Cause, b_data[i].b);
 		}
+#if 0
 		if (min_delete_srt < b_data.size())
 		{
 			for (int i = 0; i < min_delete_srt; i++)
@@ -1078,6 +1140,17 @@ int main(int argc, char** argv)
 				LiNGAM.B(ii, jj) = 0.0;
 			}
 		}
+#else
+		if (min_delete_srt+1 < b_data.size())
+		{
+			for (int i = b_data.size()- min_delete_srt - 1; i >= 0; i--)
+			{
+				int ii = b_data[i].result;
+				int jj = b_data[i].Cause;
+				LiNGAM.B(ii, jj) = 0.0;
+			}
+		}
+#endif
 	}
 
 	//mutual_information_cut = 0.001;
