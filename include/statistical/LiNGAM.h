@@ -422,6 +422,7 @@ public:
 	}
 };
 
+#define _SAMPLING 0
 /*
 S.Shimizu, P.O.Hoyer, A.Hyvarinen and A.Kerminen.
 A linear non-Gaussian acyclic model for causal discovery (2006)
@@ -647,7 +648,7 @@ public:
 
 	Matrix<dnn_double> b_probability;
 	bool use_bootstrap = false;
-	double bootstrap_sample = 0.75;
+	int bootstrap_sample = 1000;
 
 	Lingam() {
 		error = -999;
@@ -1775,12 +1776,12 @@ public:
 
 		int bootstrapN = 0;
 
-		if (X_.m > 10 && use_bootstrap)
+		if (use_bootstrap)
 		{
-			int m = X_.m * bootstrap_sample;
-			if (m < 10) m = 10;
+#if _SAMPLING
+			int m = bootstrap_sample;
 			X = Matrix<double>(m, X_.n);
-
+#endif
 			Matrix<double> b(X.n, X.n);
 			b_probability = b.zeros(X.n, X.n);
 		}
@@ -1905,6 +1906,7 @@ public:
 
 			if (use_bootstrap)
 			{
+#if _SAMPLING
 				for (int i = 0; i < X.m; i++)
 				{
 					const int row_id = bootstrap(mt);
@@ -1913,6 +1915,7 @@ public:
 						X(i, j) = X_(row_id, j);
 					}
 				}
+#endif
 			}
 			Matrix<dnn_double> xs = X;
 
@@ -2615,6 +2618,98 @@ public:
 			printf("WARNING:No valid path was found.\n");
 		}
 		return error;
+	}
+
+	void b_probability_barplot(std::vector<std::string>& header_names, double scale = 1)
+	{
+		std::vector<std::string> header_names2;
+		for (int i = 0; i < header_names.size(); i++)
+		{
+			char buf[128];
+			char buf2[128];
+			strcpy(buf, header_names[i].c_str());
+			if (buf[0] == '\"')
+			{
+				strcpy(buf2, buf + 1);
+				buf2[strlen(buf2) - 1] = '\0';
+				strcpy(buf, buf2);
+			}
+			header_names2.push_back(buf);
+		}
+
+		printf("b_probability_barplot\n");
+		FILE* fp = fopen("b_probability_barplot.r", "w");
+		if (fp == NULL)
+		{
+			return;
+		}
+
+		int plot = 1;
+		fprintf(fp, "library(ggplot2)\n");
+		fprintf(fp, "library(gridExtra)\n");
+		for (int i = 0; i < variableNum; i++)
+		{
+
+			int count = 0;
+			for (int j = 0; j < variableNum; j++)
+			{
+				if (i == j) continue;
+				if (b_probability(i, j) < 0.05) continue;
+				if (fabs(B(i, j)) < 0.001) continue;
+
+				count++;
+			}
+			if (count <= 1) continue;
+
+			fprintf(fp, "x_ <- data.frame(\n");
+			int s = 0;
+
+			fprintf(fp, "%s=c(\n", header_names2[i].c_str());
+
+			for (int j = 0; j < variableNum; j++)
+			{
+				if (i == j) continue;
+				if (b_probability(i, j) < 0.05) continue;
+				if (fabs(B(i, j)) < 0.001) continue;
+
+				if (s > 0)fprintf(fp, ",");
+				fprintf(fp, "\"%s\"", header_names2[j].c_str());
+				s++;
+			}
+			fprintf(fp, "),\n");
+
+			s = 0;
+			fprintf(fp, "probability=c(\n");
+			for (int j = 0; j < variableNum; j++)
+			{
+				if (i == j) continue;
+				if (b_probability(i, j) < 0.05) continue;
+				if (fabs(B(i, j)) < 0.001) continue;
+
+				if (s > 0)fprintf(fp, ",");
+				fprintf(fp, "%.2f", b_probability(i, j) * 100.0);
+				s++;
+			}
+			fprintf(fp, ")\n");
+			fprintf(fp, ")\n");
+
+			fprintf(fp, "g%d <- ggplot(x_, aes(x = %s, y = probability, fill = probability))\n", plot, header_names2[i].c_str());
+			fprintf(fp, "g%d <- g%d + geom_bar(stat = \"identity\")\n", plot, plot);
+			fprintf(fp, "#plot(g%d)\n", plot);
+			plot++;
+		}
+
+		fprintf(fp, "g <- grid.arrange(");
+		for (int i = 1; i < plot; i++)
+		{
+			fprintf(fp, "g%d", i);
+			if (i < plot - 1) fprintf(fp, ",");
+		}
+		fprintf(fp, ")\n");
+		fprintf(fp, "ggplot2::ggsave(\"b_probability.png\",g,width = 15*%.2f, height = 8*%.2f, units = \"cm\", dpi = 400)\n", scale, scale);
+
+		fclose(fp);
+		printf("b_probability_barplot end\n");
 	}
 };
 #endif

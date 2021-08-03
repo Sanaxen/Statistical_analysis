@@ -994,7 +994,7 @@ int main(int argc, char** argv)
 		{
 			LiNGAM.fit(xs, max_ica_iteration, ica_tolerance);
 
-			if (xs.m > 10 && LiNGAM.use_bootstrap)
+			if (LiNGAM.use_bootstrap)
 			{
 				Matrix<double> b(xs.n, xs.n);
 				b = b.zeros(xs.n, xs.n);
@@ -1003,8 +1003,7 @@ int main(int argc, char** argv)
 				for (int i = 0; i < bootstrapN; i++)
 				{
 					Lingam LiNGAM_tmp = LiNGAM;
-					int m = xs.m * LiNGAM.bootstrap_sample;
-					if (m < 10) m = 10;
+					int m = LiNGAM.bootstrap_sample;
 					Matrix<double> xs_(m, xs.n);
 
 					LiNGAM_tmp.set(xs.n, mt);
@@ -1186,6 +1185,15 @@ int main(int argc, char** argv)
 		}
 	}
 	LiNGAM.B.print_e("(#3)B");
+
+	if (use_bootstrap)
+	{
+		//printf("%d\n", error_distr_size[0]);
+		double scale = (error_distr_size[0] / 640.0);
+		if (scale < 1) scale = 1;
+		printf("scale:%f\n", scale);
+		LiNGAM.b_probability_barplot(header_names, scale);
+	}
 
 	std::vector<int> residual_flag(xs.n, 0);
 	if (error_distr)
