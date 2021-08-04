@@ -2620,8 +2620,105 @@ public:
 		return error;
 	}
 
+	void Causal_effect(std::vector<std::string>& header_names, double scale = 1)
+	{
+		std::vector<std::string> header_names2;
+		for (int i = 0; i < header_names.size(); i++)
+		{
+			char buf[128];
+			char buf2[128];
+			strcpy(buf, header_names[i].c_str());
+			if (buf[0] == '\"')
+			{
+				strcpy(buf2, buf + 1);
+				buf2[strlen(buf2) - 1] = '\0';
+				strcpy(buf, buf2);
+			}
+			header_names2.push_back(buf);
+		}
+
+		printf("Causal_effect\n");
+		FILE* fp = fopen("Causal_effect.r", "w");
+		if (fp == NULL)
+		{
+			return;
+		}
+
+		int plot = 1;
+		fprintf(fp, "library(ggplot2)\n");
+		fprintf(fp, "library(gridExtra)\n");
+		fprintf(fp, "library(RColorBrewer)\n");
+		for (int i = 0; i < variableNum; i++)
+		{
+
+			int count = 0;
+			for (int j = 0; j < variableNum; j++)
+			{
+				if (i == j) continue;
+				if (fabs(B(i, j)) < 0.001) continue;
+
+				count++;
+			}
+			if (count <= 0) continue;
+
+			fprintf(fp, "x_ <- data.frame(\n");
+			int s = 0;
+
+			fprintf(fp, "%s=c(\n", header_names2[i].c_str());
+
+			for (int j = 0; j < variableNum; j++)
+			{
+				if (i == j) continue;
+				if (fabs(B(i, j)) < 0.001) continue;
+
+				if (s > 0)fprintf(fp, ",");
+				fprintf(fp, "\"%s\"", header_names2[j].c_str());
+				s++;
+			}
+			fprintf(fp, "),\n");
+
+			s = 0;
+			fprintf(fp, "effect=c(\n");
+			for (int j = 0; j < variableNum; j++)
+			{
+				if (i == j) continue;
+				if (fabs(B(i, j)) < 0.001) continue;
+
+				if (s > 0)fprintf(fp, ",");
+				fprintf(fp, "%.2f", B(i, j));
+				s++;
+			}
+			fprintf(fp, ")\n");
+			fprintf(fp, ")\n");
+
+			fprintf(fp, "g%d <- ggplot(x_, aes(x = %s, y = effect, fill = effect))\n", plot, header_names2[i].c_str());
+			fprintf(fp, "g%d <- g%d + geom_bar(stat = \"identity\")\n", plot, plot);
+			fprintf(fp, "g%d <- g%d + labs(title = \"Causal_effect\")\n", plot, plot);
+			//fprintf(fp, "g%d <- g%d + scale_fill_gradientn( colours = rev( brewer.pal( 7, \'YlOrRd\')))\n", plot, plot);
+			fprintf(fp, "g%d <- g%d + scale_fill_gradientn( colours = rev( brewer.pal( 7, \'Spectral\')))\n", plot, plot);
+			fprintf(fp, "#plot(g%d)\n", plot);
+			plot++;
+		}
+
+		fprintf(fp, "g <- grid.arrange(");
+		for (int i = 1; i < plot; i++)
+		{
+			fprintf(fp, "g%d", i);
+			if (i < plot - 1) fprintf(fp, ",");
+		}
+		fprintf(fp, ")\n");
+		fprintf(fp, "ggplot2::ggsave(\"Causal_effect.png\",g,width = 15*%.2f, height = 8*%.2f, units = \"cm\", dpi = 400)\n", scale, scale);
+
+		fclose(fp);
+		printf("Causal_effect end\n");
+	}
+
 	void b_probability_barplot(std::vector<std::string>& header_names, double scale = 1)
 	{
+		if (b_probability.n != this->variableNum)
+		{
+			return;
+		}
 		std::vector<std::string> header_names2;
 		for (int i = 0; i < header_names.size(); i++)
 		{
@@ -2647,6 +2744,7 @@ public:
 		int plot = 1;
 		fprintf(fp, "library(ggplot2)\n");
 		fprintf(fp, "library(gridExtra)\n");
+		fprintf(fp, "library(RColorBrewer)\n");
 		for (int i = 0; i < variableNum; i++)
 		{
 
@@ -2695,6 +2793,8 @@ public:
 
 			fprintf(fp, "g%d <- ggplot(x_, aes(x = %s, y = probability, fill = probability))\n", plot, header_names2[i].c_str());
 			fprintf(fp, "g%d <- g%d + geom_bar(stat = \"identity\")\n", plot, plot);
+			fprintf(fp, "g%d <- g%d + labs(title = \"probability\")\n", plot, plot);
+			fprintf(fp, "#g%d <- g%d + scale_fill_gradientn( colours = rev( brewer.pal( 7, \'Blues\')))\n", plot, plot);
 			fprintf(fp, "#plot(g%d)\n", plot);
 			plot++;
 		}
