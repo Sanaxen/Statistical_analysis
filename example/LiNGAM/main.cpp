@@ -1186,14 +1186,16 @@ int main(int argc, char** argv)
 	}
 	LiNGAM.B.print_e("(#3)B");
 
+	//printf("%d\n", error_distr_size[0]);
+	double scale = (error_distr_size[0] / 640.0);
+	if (scale < 1) scale = 1;
+	printf("scale:%f\n", scale);
+
 	if (use_bootstrap)
 	{
-		//printf("%d\n", error_distr_size[0]);
-		double scale = (error_distr_size[0] / 640.0);
-		if (scale < 1) scale = 1;
-		printf("scale:%f\n", scale);
 		LiNGAM.b_probability_barplot(header_names, scale);
 	}
+	LiNGAM.Causal_effect(header_names, scale);
 
 	std::vector<int> residual_flag(xs.n, 0);
 	if (error_distr)
