@@ -2696,6 +2696,7 @@ public:
 			fprintf(fp, "g%d <- g%d + labs(title = \"Causal_effect\")\n", plot, plot);
 			//fprintf(fp, "g%d <- g%d + scale_fill_gradientn( colours = rev( brewer.pal( 7, \'YlOrRd\')))\n", plot, plot);
 			fprintf(fp, "g%d <- g%d + scale_fill_gradientn( colours = rev( brewer.pal( 7, \'Spectral\')))\n", plot, plot);
+			fprintf(fp, "g%d <- g%d + theme(text = element_text(size = 12))\n", plot, plot);
 			fprintf(fp, "#plot(g%d)\n", plot);
 			plot++;
 		}
@@ -2794,6 +2795,7 @@ public:
 			fprintf(fp, "g%d <- ggplot(x_, aes(x = %s, y = probability, fill = probability))\n", plot, header_names2[i].c_str());
 			fprintf(fp, "g%d <- g%d + geom_bar(stat = \"identity\")\n", plot, plot);
 			fprintf(fp, "g%d <- g%d + labs(title = \"probability\")\n", plot, plot);
+			fprintf(fp, "g%d <- g%d + theme(text = element_text(size = 12))\n", plot, plot);
 			fprintf(fp, "#g%d <- g%d + scale_fill_gradientn( colours = rev( brewer.pal( 7, \'Blues\')))\n", plot, plot);
 			fprintf(fp, "#plot(g%d)\n", plot);
 			plot++;
