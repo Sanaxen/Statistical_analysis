@@ -147,6 +147,23 @@ bool prior_knowledge(const char* filename, std::vector<std::string>& header_name
 //LiNGAMÉÇÉfÉãÇÃêÑíËï˚ñ@Ç…Ç¬Ç¢Çƒ
 int main(int argc, char** argv)
 {
+	if(0){
+		CSVReader csv1("X.csv", ',', false);
+		Matrix<dnn_double> x = csv1.toMat();
+		CSVReader csv2("Y.csv", ',', false);
+		Matrix<dnn_double> y = csv2.toMat();
+
+		double tmp = _MutualInformation(x, y);
+		printf("MI=%f\n", tmp);
+		x = _normalize(x);
+		y = _normalize(y);
+		MutualInformation I(x, y, 30);
+		tmp = I.Information();
+		printf("MI=%f\n", tmp);
+		fflush(stdout);
+		exit(0);
+	}
+
 	SigHandler_lingam(0);
 	signal(SIGINT, SigHandler_lingam);
 	signal(SIGTERM, SigHandler_lingam);
@@ -703,10 +720,26 @@ int main(int argc, char** argv)
 			col = Matrix<dnn_double>(tmp);
 		}
 
-		//printf("[%s]Max-Min:%f\n", header_names[x_var_idx[i]].c_str(), fabs(col.Max() - col.Min()));
-		if (fabs(col.Max() - col.Min()) < 1.0e-6)
+		// Category check
+		bool category = true;
 		{
-			if (ignore_constant_value_columns) continue;
+			for (int i = 0; i < col.m * col.n; i++)
+			{
+				double x = col.v[i];
+				int xx = (int)x;
+				double e = fabs(x - (double)xx);
+				if (e > 1.0e-6)
+				{
+					category = false;
+					break;
+				}
+			}
+		}
+		double colMaxMin = fabs(col.Max() - col.Min());
+		//printf("[%s]Max-Min:%f\n", header_names[x_var_idx[i]].c_str(), fabs(col.Max() - col.Min()));
+		if (category || colMaxMin  < 1.0e-6)
+		{
+			if (colMaxMin < 1.0e-6 && ignore_constant_value_columns) continue;
 			error_cols.push_back(header_names[x_var_idx[i]]);
 			col = col + col.RandMT(mt)*0.001;
 			break;
@@ -736,10 +769,27 @@ int main(int argc, char** argv)
 			}
 			col = Matrix<dnn_double>(tmp);
 		}
-		//printf("[%s]Max-Min:%f\n", header_names[x_var_idx[i]].c_str(), fabs(col.Max() - col.Min()));
-		if (fabs(col.Max() - col.Min()) < 1.0e-6)
+		// Category check
+		bool category = true;
 		{
-			if (ignore_constant_value_columns) continue;
+			for (int i = 0; i < col.m * col.n; i++)
+			{
+				double x = col.v[i];
+				int xx = (int)x;
+				double e = fabs(x - (double)xx);
+				if (e > 1.0e-6)
+				{
+					category = false;
+					break;
+				}
+			}
+		}
+
+		double colMaxMin = fabs(col.Max() - col.Min());
+		//printf("[%s]Max-Min:%f\n", header_names[x_var_idx[i]].c_str(), fabs(col.Max() - col.Min()));
+		if (category || colMaxMin < 1.0e-6)
+		{
+			if (colMaxMin < 1.0e-6 && ignore_constant_value_columns) continue;
 			error_cols.push_back(header_names[x_var_idx[i]]);
 			col = col + col.RandMT(mt)*0.001;
 		}
@@ -767,10 +817,27 @@ int main(int argc, char** argv)
 			}
 			col = Matrix<dnn_double>(tmp);
 		}
-		//printf("[%s]Max-Min:%f\n", header_names[y_var_idx[i]].c_str(),fabs(col.Max() - col.Min()));
-		if (fabs(col.Max() - col.Min()) < 1.0e-6)
+		// Category check
+		bool category = true;
 		{
-			if (ignore_constant_value_columns) continue;
+			for (int i = 0; i < col.m * col.n; i++)
+			{
+				double x = col.v[i];
+				int xx = (int)x;
+				double e = fabs(x - (double)xx);
+				if (e > 1.0e-6)
+				{
+					category = false;
+					break;
+				}
+			}
+		}
+
+		double colMaxMin = fabs(col.Max() - col.Min());
+		//printf("[%s]Max-Min:%f\n", header_names[y_var_idx[i]].c_str(),fabs(col.Max() - col.Min()));
+		if (category || colMaxMin < 1.0e-6)
+		{
+			if (colMaxMin < 1.0e-6 && ignore_constant_value_columns) continue;
 			error_cols.push_back(header_names[y_var_idx[i]]);
 			col = col + col.RandMT(mt)*0.001;
 		}
@@ -863,6 +930,7 @@ int main(int argc, char** argv)
 			}
 		}
 	}
+	xs.print_csv("xs.csv");
 
 	LiNGAM.set(xs.n, mt);
 	LiNGAM.mutual_information_values = mutual_information_values;
@@ -872,12 +940,21 @@ int main(int argc, char** argv)
 	LiNGAM.use_intercept = use_intercept;
 	LiNGAM.use_bootstrap = use_bootstrap;
 
-	//MutualInformation I(xs.Col(0), xs.Col(1), 30);
-	//double tmp = I.Information();
-	//printf("MI=%f\n", tmp);
-	//fflush(stdout);
-	//exit(0);
+	{
+		//CSVReader csv1(csvfile, ',', header);
+		//Matrix<dnn_double> x = csv1.toMat();
+		//CSVReader csv2(csvfile, ',', header);
+		//Matrix<dnn_double> y = csv2.toMat();
 
+		//lingam_reg a;
+		//double tmp = _MutualInformation(x, y);
+		//printf("MI=%f\n", tmp);
+		//MutualInformation I(xs.Col(0), xs.Col(1), 30);
+		//double tmp = I.Information();
+		//printf("MI=%f\n", tmp);
+		//fflush(stdout);
+		//exit(0);
+	}
 	//Matrix<double> x(10000, 7);
 	//Matrix<double> y(10000, 7);
 	//Matrix<double> z(10000, 7);
