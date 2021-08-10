@@ -364,6 +364,47 @@ public:
 	}
 };
 
+inline Matrix<dnn_double> _normalize(Matrix<dnn_double>& x)
+{
+	auto& x_mean = x.Mean();
+
+	return (x - x_mean.v[0]) / (x.Std(x_mean).v[0] + 1.0e-10);
+}
+
+//Fast and Robust Fixed-Point Algorithms for Independent Component Analysis
+//New approximations of differential entropy for independent co ÅN mponent analysis and projection pursuit
+inline double _entropy(Matrix<dnn_double>& u)
+{
+	auto Hv = (1 + log(2 * M_PI)) / 2.0;
+	const double k1 = 79.047;
+	const double k2 = 7.4129;		//	36/(8*sqrt(3)-9)
+	const double gamma = 0.37457;
+
+	//Hv - k1*(np.mean(np.log(np.cosh(u))) - gamma)**2 
+	// - k2 * (np.mean(u * np.exp(-1 * u**2 /2)))**2
+	double G2 = Log(Cosh(u)).mean() - gamma;
+
+	double G1 = u.hadamard(Exp(-0.5 * u.hadamard(u))).mean();
+
+	return Hv - k1 * G2 * G2 - k2 * G1 * G1;
+}
+
+inline double _MutualInformation(Matrix<dnn_double>& x, Matrix<dnn_double>& y, bool normalize = false)
+{
+	auto xx = _normalize(x);
+	auto yy = _normalize(y);
+	auto z = x.appendRow(y);
+	auto zz = _normalize(z);
+
+	double mi = _entropy(xx) + _entropy(yy) - _entropy(zz);
+
+	if (normalize)
+	{
+		return mi/( sqrt(_entropy(xx)* _entropy(yy)+.0e-10));
+	}
+	return mi;
+}
+
 class lingam_reg
 {
 public:
@@ -380,26 +421,6 @@ public:
 		return;
 	}
 
-	Matrix<dnn_double> normalize(Matrix<dnn_double>& x)
-	{
-		auto& x_mean = x.Mean();
-
-		return (x - x_mean.v[0]) / x.Std(x_mean).v[0];
-	}
-	double entropy(Matrix<dnn_double>& u)
-	{
-		auto Hv = (1 + log(2 * M_PI)) / 2.0;
-		const double k1 = 79.047;
-		const double k2 = 7.4129;
-		const double gamma = 0.37457;
-
-		//Hv - k1*(np.mean(np.log(np.cosh(u))) - gamma)**2 - k2 * (np.mean(u * np.exp(-1 * u**2 /2)))**2
-		double t = Log(Cosh(u)).mean() - gamma;
-		
-		double b = u.hadamard( Exp(-0.5* u.hadamard(u))).mean();
-
-		return Hv - k1 * t*t - k2 * b*b;
-	}
 
 	bool dir(Matrix<dnn_double>&x, Matrix<dnn_double>&y, double& diff)
 	{
@@ -410,8 +431,8 @@ public:
 
 		auto& xr_mean = xr.Mean();
 		auto& yr_mean = yr.Mean();
-		double m = entropy(normalize(x)) + entropy(normalize(xr) / xr.Std(xr_mean))
-			- entropy(normalize(y)) - entropy(normalize(yr) / yr.Std(yr_mean));
+		double m = _entropy(_normalize(x)) + _entropy(_normalize(xr) / xr.Std(xr_mean))
+			- _entropy(_normalize(y)) - _entropy(_normalize(yr) / yr.Std(yr_mean));
 		
 		diff = m;
 		if (m >= 0)
