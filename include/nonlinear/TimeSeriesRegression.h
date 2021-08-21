@@ -972,7 +972,7 @@ private:
 						y[k] = YY[i + sequence_length + j + TARGET_POSITON][k];
 
 						//need this
-						if (i + sequence_length + j + TARGET_POSITON < train_images.size())
+						if (i + sequence_length + j + TARGET_POSITON < train_images.size() + sequence_length + out_sequence_length + TARGET_POSITON)
 						{
 							y[k] = nY[i + sequence_length + j + TARGET_POSITON][k];
 						}
@@ -999,7 +999,7 @@ private:
 					{
 						for (int j = 0; j < out_sequence_length; j++)
 						{
-							if (i + sequence_length + j + TARGET_POSITON >= train_images.size()*use_latest_observations)
+							if (i + sequence_length + j + TARGET_POSITON >= train_images.size()*use_latest_observations + sequence_length + out_sequence_length + TARGET_POSITON)
 							{
 								for (int k = 0; k < y_dim; k++)
 								{
