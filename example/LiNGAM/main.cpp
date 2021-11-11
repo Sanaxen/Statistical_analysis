@@ -783,6 +783,21 @@ int main(int argc, char** argv)
 					break;
 				}
 			}
+			if (!category)
+			{
+				std::vector<double> v(col.m * col.n);
+				for (int i = 0; i < col.m * col.n; i++)
+				{
+					v[i] = col.v[i];
+				}
+				std::sort(v.begin(), v.end());
+				v.erase(std::unique(v.begin(), v.end()), v.end());
+				if (v.size() < col.m * col.n * 0.2)
+				{
+					category = true;
+				}
+			}
+
 		}
 
 		double colMaxMin = fabs(col.Max() - col.Min());
@@ -831,6 +846,20 @@ int main(int argc, char** argv)
 					break;
 				}
 			}
+			if (!category)
+			{
+				std::vector<double> v((int)col.m * (int)col.n);
+				for (int i = 0; i < col.m * col.n; i++)
+				{
+					v[i] = col.v[i];
+				}
+				std::sort(v.begin(), v.end());
+				v.erase(std::unique(v.begin(), v.end()), v.end());
+				if (v.size() < (double)col.m * (double)col.n * 0.2)
+				{
+					category = true;
+				}
+			}
 		}
 
 		double colMaxMin = fabs(col.Max() - col.Min());
@@ -839,7 +868,7 @@ int main(int argc, char** argv)
 		{
 			if (colMaxMin < 1.0e-6 && ignore_constant_value_columns) continue;
 			error_cols.push_back(header_names[y_var_idx[i]]);
-			col = col + col.RandMT(mt) * ((colMaxMin < 1.0e-6) ? 0.001 : colMaxMin * 0.01);
+			col = col + col.RandMT(mt) * ((colMaxMin < 1.0e-6) ? 0.0001 : colMaxMin * 0.0001);
 		}
 		xs = xs.appendCol(col);
 		headers_tmp.push_back(header_names[y_var_idx[i]]);
