@@ -2624,7 +2624,7 @@ public:
 					*error_stat = -1;
 				}
 			}
-			Ws(i, i) = 1.0 / Sigma(i, i);
+			Ws(i, i) = 1.0 / (Sigma(i, i) + 1.0e-8);
 		}
 		Matrix<T>& Ut = U.transpose(U);
 #if 0
