@@ -706,6 +706,7 @@ int main(int argc, char** argv)
 
 	int index_start = -1;
 	Matrix<dnn_double> col;
+#if 0
 	for (int i = 0; i < x_var.size(); i++)
 	{
 		col = T.Col(x_var_idx[i]);
@@ -721,22 +722,26 @@ int main(int argc, char** argv)
 		}
 
 		// Category check
-		bool category = true;
+		bool category = false;
 		{
-			for (int i = 0; i < col.m * col.n; i++)
+			if (true)
 			{
-				double x = col.v[i];
-				int xx = (int)x;
-				double e = fabs(x - (double)xx);
-				if (e > 1.0e-6)
+				std::vector<double> v(col.m * col.n);
+				for (int i = 0; i < col.m * col.n; i++)
 				{
-					category = false;
-					break;
+					v[i] = col.v[i];
+				}
+				std::sort(v.begin(), v.end());
+				v.erase(std::unique(v.begin(), v.end()), v.end());
+				if (v.size() < col.m * col.n * 0.2)
+				{
+					category = true;
 				}
 			}
 		}
 		double colMaxMin = fabs(col.Max() - col.Min());
-		//printf("[%s]Max-Min:%f\n", header_names[x_var_idx[i]].c_str(), fabs(col.Max() - col.Min()));
+		printf("[%s] category:%s\n", header_names[x_var_idx[i]].c_str(), category ? "true" : "false");
+		printf("[%s]Max-Min:%f\n", header_names[x_var_idx[i]].c_str(), fabs(col.Max() - col.Min()));
 		if (category || colMaxMin  < 1.0e-6)
 		{
 			if (colMaxMin < 1.0e-6 && ignore_constant_value_columns) continue;
@@ -756,7 +761,14 @@ int main(int argc, char** argv)
 		printf("ERROR:to many constant value columns.\n");
 		return -1;
 	}
-	Matrix<dnn_double> xs = col;
+#else
+	if (index_start == -1) {
+		col = T.Col(x_var_idx[0]);
+		index_start = -1;
+	}
+#endif
+
+	Matrix<dnn_double> xs;
 	for (int i = index_start + 1; i < x_var.size(); i++)
 	{
 		col = T.Col(x_var_idx[i]);
@@ -770,20 +782,9 @@ int main(int argc, char** argv)
 			col = Matrix<dnn_double>(tmp);
 		}
 		// Category check
-		bool category = true;
+		bool category = false;
 		{
-			for (int i = 0; i < col.m * col.n; i++)
-			{
-				double x = col.v[i];
-				int xx = (int)x;
-				double e = fabs(x - (double)xx);
-				if (e > 1.0e-6)
-				{
-					category = false;
-					break;
-				}
-			}
-			if (!category)
+			if (true)
 			{
 				std::vector<double> v(col.m * col.n);
 				for (int i = 0; i < col.m * col.n; i++)
@@ -792,8 +793,9 @@ int main(int argc, char** argv)
 				}
 				std::sort(v.begin(), v.end());
 				v.erase(std::unique(v.begin(), v.end()), v.end());
-				if (v.size() < col.m * col.n * 0.2)
+				if (v.size() < col.m * col.n * 0.05)
 				{
+					printf("unique size:%d <- size:%d\n", v.size(), col.m* col.n);
 					category = true;
 				}
 			}
@@ -801,15 +803,24 @@ int main(int argc, char** argv)
 		}
 
 		double colMaxMin = fabs(col.Max() - col.Min());
-		//printf("[%s]Max-Min:%f\n", header_names[x_var_idx[i]].c_str(), fabs(col.Max() - col.Min()));
+		printf("[%s] category:%s\n", header_names[x_var_idx[i]].c_str(), category ? "true" : "false");
+		printf("[%s]Max-Min:%f\n", header_names[x_var_idx[i]].c_str(), fabs(col.Max() - col.Min()));
 		if (category || colMaxMin < 1.0e-6)
 		{
 			if (colMaxMin < 1.0e-6 && ignore_constant_value_columns) continue;
 			error_cols.push_back(header_names[x_var_idx[i]]);
 			col = col +  col.RandMT(mt) * ((colMaxMin < 1.0e-6)?0.001: colMaxMin *0.01);
 		}
-		xs = xs.appendCol(col);
+		if (xs.n == 0)
+		{
+			xs = col;
+		}
+		else
+		{
+			xs = xs.appendCol(col);
+		}
 		headers_tmp.push_back(header_names[x_var_idx[i]]);
+		printf("[%s]\n", header_names[x_var_idx[i]].c_str());
 	}
 	for (int i = 0; i < y_var.size(); i++)
 	{
@@ -833,20 +844,9 @@ int main(int argc, char** argv)
 			col = Matrix<dnn_double>(tmp);
 		}
 		// Category check
-		bool category = true;
+		bool category = false;
 		{
-			for (int i = 0; i < col.m * col.n; i++)
-			{
-				double x = col.v[i];
-				int xx = (int)x;
-				double e = fabs(x - (double)xx);
-				if (e > 1.0e-6)
-				{
-					category = false;
-					break;
-				}
-			}
-			if (!category)
+			if (true)
 			{
 				std::vector<double> v((int)col.m * (int)col.n);
 				for (int i = 0; i < col.m * col.n; i++)
@@ -855,9 +855,10 @@ int main(int argc, char** argv)
 				}
 				std::sort(v.begin(), v.end());
 				v.erase(std::unique(v.begin(), v.end()), v.end());
-				if (v.size() < (double)col.m * (double)col.n * 0.2)
+				if (v.size() < (double)col.m * (double)col.n * 0.05)
 				{
 					category = true;
+					printf("unique size:%d <- size:%d\n", v.size(), col.m* col.n);
 				}
 			}
 		}
@@ -872,9 +873,14 @@ int main(int argc, char** argv)
 		}
 		xs = xs.appendCol(col);
 		headers_tmp.push_back(header_names[y_var_idx[i]]);
+		printf("[%s]\n", header_names[x_var_idx[i]].c_str());
 	}
 	std::vector<std::string> header_names_org = header_names;
 	header_names = headers_tmp;
+	for (int i = 0; i < header_names.size(); i++)
+	{
+		printf("[%d] %s\n", i, header_names[i].c_str());
+	}
 #endif
 
 	{
