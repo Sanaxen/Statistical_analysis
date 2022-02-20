@@ -1,4 +1,8 @@
+//#define _HAS_STD_BYTE 0
 //#define USE_MKL
+#define NOMINMAX
+int use_libtorch = 1;
+
 #define _cublas_Init_def
 #include "../../include/statistical/LiNGAM.h"
 
@@ -7,6 +11,48 @@
 
 #endif
 #include "../../include/util/cmdline_args.h"
+
+#define USE_LIBTORCH
+#ifdef USE_LIBTORCH
+//#include "../../../include/util/dnn_util.hpp"
+#include <algorithm>
+#include <random>
+#include <string>
+//#include "tiny_dnn/tiny_dnn.h"
+//#include "tiny_dnn/util/util.h"
+
+
+
+void __dumy_func_compile_test(Matrix<dnn_double>& x, Matrix<dnn_double>& y)
+{
+	tiny_dnn::tensor_t X, Y;
+	MatrixToTensor(x, X);
+	MatrixToTensor(y, Y);
+}
+
+void libtorch_init(std::string device_name)
+{
+#ifdef USE_LIBTORCH
+	if (use_libtorch)
+	{
+		torch_train_init();
+		torch_setDevice(device_name.c_str());
+	}
+#endif
+}
+
+void libtorch_term()
+{
+#ifdef USE_LIBTORCH
+	if (use_libtorch)
+	{
+		torch_delete_model();
+	}
+#endif
+}
+//#include "../../example/fitting/pytorch_cpp/tiny_dnn2libtorch_dll.h"
+#pragma comment(lib, "../../example/fitting/pytorch_cpp/lib/rnn6.lib")
+#endif
 
 vector<string> split(string str, string separator) 
 {
@@ -1100,7 +1146,8 @@ int main(int argc, char** argv)
 			LiNGAM.confounding_factors_upper = confounding_factors_upper;
 			LiNGAM.rho = rho;
 
-			LiNGAM.fit2(xs, max_ica_iteration, ica_tolerance);
+			//LiNGAM.fit2(xs, max_ica_iteration, ica_tolerance);
+			LiNGAM.fit3(xs, max_ica_iteration, ica_tolerance);
 		}
 		else
 		{

@@ -25,6 +25,121 @@
 #include "../../include/statistical/RegularizationRegression_eigen_version.h"
 #endif
 
+extern int use_libtorch;
+namespace tiny_dnn
+{
+	typedef std::vector<float_t> vec_t;
+	typedef std::vector<vec_t> tensor_t;
+};
+inline void MatrixToTensor(Matrix<dnn_double>& X, tiny_dnn::tensor_t& T, int read_max = -1)
+{
+	size_t rd_max = read_max < 0 ? X.m : min(read_max, X.m);
+	for (int i = 0; i < rd_max; i++)
+	{
+		tiny_dnn::vec_t x;
+		for (int j = 0; j < X.n; j++)
+		{
+			x.push_back(X(i, j));
+		}
+		T.push_back(x);
+	}
+}
+
+inline void TensorToMatrix(tiny_dnn::tensor_t& T, Matrix<dnn_double>& X)
+{
+	X = Matrix<dnn_double>(T.size(), T[0].size());
+	for (int i = 0; i < T.size(); i++)
+	{
+		for (int j = 0; j < T[i].size(); j++)
+		{
+			X(i, j) = T[i][j];
+		}
+	}
+}
+
+inline void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::vector<float_t>& sigma)
+{
+	mean = std::vector<float_t>(X[0].size(), 0.0);
+	sigma = std::vector<float_t>(X[0].size(), 0.0);
+
+	for (int i = 0; i < X.size(); i++)
+	{
+		for (int k = 0; k < X[0].size(); k++)
+		{
+			mean[k] += X[i][k];
+		}
+	}
+	for (int k = 0; k < X[0].size(); k++)
+	{
+		mean[k] /= X.size();
+	}
+	for (int i = 0; i < X.size(); i++)
+	{
+		for (int k = 0; k < X[0].size(); k++)
+		{
+			sigma[k] += (X[i][k] - mean[k]) * (X[i][k] - mean[k]);
+		}
+	}
+	for (int k = 0; k < X[0].size(); k++)
+	{
+		sigma[k] /= (X.size() - 1);
+		sigma[k] = sqrt(sigma[k]);
+	}
+
+
+	for (int i = 0; i < X.size(); i++)
+	{
+		for (int k = 0; k < X[0].size(); k++)
+		{
+			X[i][k] = (X[i][k] - mean[k]) / (sigma[k] + 1.0e-10);
+		}
+	}
+}
+#define _LIBRARY_EXPORTS __declspec(dllimport)
+
+extern "C" _LIBRARY_EXPORTS int cuda_is_available();
+extern "C" _LIBRARY_EXPORTS int torch_train_init(void);
+extern "C" _LIBRARY_EXPORTS void torch_setDevice(const char* device_name);
+extern "C" _LIBRARY_EXPORTS void torch_delete_model();
+extern  _LIBRARY_EXPORTS tiny_dnn::vec_t torch_predict(tiny_dnn::vec_t x);
+extern "C" _LIBRARY_EXPORTS float torch_get_Loss(int batch);
+
+extern "C" _LIBRARY_EXPORTS void torch_params(
+	int n_train_epochs_,
+	int n_minibatch_,
+	int input_size_,
+
+	int n_layers_,
+	int dropout_,
+	int n_hidden_size_,
+	int fc_hidden_size_,
+	float learning_rate_,
+
+	float clip_gradients_,
+	int use_cnn_,
+	int use_add_bn_,
+	int use_cnn_add_bn_,
+	int residual_,
+	int padding_prm_,
+
+	int classification_,
+	char* weight_init_type_,
+	char* activation_fnc_,
+	int early_stopping_,
+	char* opt_type_,
+	bool batch_shuffle_,
+	int test_mode_
+);
+extern "C" _LIBRARY_EXPORTS void torch_train_fc(
+	std::vector<tiny_dnn::vec_t>&train_images_,
+	std::vector<tiny_dnn::vec_t>&train_labels_,
+	int n_minibatch,
+	int n_train_epochs,
+	char* regression,
+	std::function <void(void)> on_enumerate_minibatch,
+	std::function <void(void)> on_enumerate_epoch
+);
+
 
 template<class T>
 class VectorIndex
@@ -889,7 +1004,7 @@ public:
 			}
 			
 			//lasso.fit(X, Y);
-			while (lasso.getStatus() != 0)
+			if (lasso.getStatus() != 0)
 			{
 				error = -1;
 				//return error;
@@ -897,7 +1012,7 @@ public:
 				//n_iter *= 2;
 				//lasso.fit(X, Y, n_iter, tolerance);
 				printf("n_iter=%d error_eps=%f\n", lasso.num_iteration, lasso.error_eps);
-				break;
+				//break;
 			}
 
 #ifdef USE_EIGEN
@@ -913,12 +1028,12 @@ public:
 				error = -1;
 				//break;
 			}
-			else
+			//else
 			{
 				const Matrix<dnn_double>& c = lasso.coef;
 				for (int k = 0; k < i; k++)
 				{
-					B(i, k) = c.v[k] / lasso.sigma(0, k);
+					B(i, k) = c.v[k] / (lasso.sigma(0, k) + 1.0e-10);
 				}
 			}
 #endif
@@ -1571,6 +1686,40 @@ public:
 		return error;
 	}
 
+	void calc_mutual_information_r(Matrix<dnn_double>& X, Matrix<dnn_double>& rerr, Matrix<dnn_double>& info, int bins = 30, bool nonlinner_cor = false)
+	{
+		info = info.zeros(X.n, rerr.n);
+		printf("info %d x %d\n", info.m, info.n);
+#pragma omp parallel for
+		for (int j = 0; j < X.n; j++)
+		{
+			for (int i = 0; i < rerr.n; i++)
+			{
+				info(i, j) = 0;
+				if (i == j)
+				{
+					continue;
+				}
+
+				Matrix<dnn_double>& x = X.Col(i);
+				Matrix<dnn_double>& y = rerr.Col(j);
+
+				double tmp;
+				if (nonlinner_cor)
+				{
+					tmp = independ_test(x, y);
+					//HSIC hsic;
+					//tmp = hsic.hsic(x, y);
+				}
+				else
+				{
+					MutualInformation I(x, y, bins);
+					tmp = I.Information();
+				}
+				info(i, j) = tmp;
+			}
+		}
+	}
 	void calc_mutual_information( Matrix<dnn_double>& X, Matrix<dnn_double>& info, int bins = 30, bool nonlinner_cor = false)
 	{
 		info = info.zeros(X.n, X.n);
@@ -2607,6 +2756,1054 @@ public:
 				continue;
 			}
 			printf("[%d/%d]Total elapsed time:%.3f[years] Estimated end time:%.3f[years] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave*0.001 /60 / 60 / 24.0 / 365.0, t1, reject);
+			fflush(stdout);
+		}
+
+		intercept = intercept_best;
+		residual_error = residual_error_best;
+		residual_error_independ = residual_error_independ_best;
+		replacement = replacement_best;
+		B = B_best_sv;
+
+		if (use_bootstrap)
+		{
+			b_probability /= bootstrapN;
+			b_probability *= 0.99;
+		}
+
+		calc_mutual_information(X, mutual_information, bins);
+
+		double c_factors = residual_error_independ.Max();
+		residual_error_independ.print_csv("confounding_factors_info.csv");
+		FILE* fp = fopen("confounding_factors.txt", "w");
+		if (fp)
+		{
+			fprintf(fp, "%f\n", c_factors);
+			fclose(fp);
+		}
+		B_pre_sort = this->before_sorting_(B);
+		if (update_count < 2)
+		{
+			error = 1;
+			printf("WARNING:No valid path was found.\n");
+		}
+		return error;
+	}
+
+	int fit3(Matrix<dnn_double>& X_, const int max_ica_iteration = MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
+	{
+		//if ( use_libtorch) torch_setDevice("gpu:0");
+
+		printf("distribution_rate:%f\n", distribution_rate);
+		printf("rho:%f\n", rho);
+
+		remove("confounding_factors.txt");
+
+		CONSOLE_SCREEN_BUFFER_INFO csbi;
+		HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+		GetConsoleScreenBufferInfo(hStdout, &csbi);
+
+		std::chrono::system_clock::time_point  start, end;
+		double elapsed;
+		double elapsed_ave = 0.0;
+
+		logmsg = false;
+		error = 0;
+
+		Matrix<double> X = X_;
+
+		int bootstrapN = 0;
+
+		if (use_bootstrap)
+		{
+#if _SAMPLING
+			int m = bootstrap_sample;
+			X = Matrix<double>(m, X_.n);
+#endif
+			Matrix<double> b(X.n, X.n);
+			b_probability = b.zeros(X.n, X.n);
+		}
+		else
+		{
+			b_probability = Matrix<double>();
+		}
+		std::uniform_int_distribution<> bootstrap(0, X.m - 1);
+
+		Mu = Matrix<dnn_double>().zeros(X.m, X.n);
+		Matrix<dnn_double> B_best_sv;
+		auto replacement_best = replacement;
+		residual_error = Matrix<dnn_double>(X.m, X.n);
+		residual_error_independ = Matrix<dnn_double>(X.n, X.n);
+
+		auto residual_error_best = residual_error;
+		auto residual_error_independ_best = residual_error_independ;
+
+		input = X_;
+		double min_value = Abs(X_).Min();
+		if (min_value < 1.0e-3) min_value = 1.0e-3;
+		double max_value = Abs(X_).Max();
+		if (max_value < 1.0e-3) max_value = 1.0e-3;
+
+		//std::random_device seed_gen;
+		//std::default_random_engine engine(seed_gen());
+		std::default_random_engine engine(123456789);
+		//std::student_t_distribution<> dist(12.0);
+		std::uniform_real_distribution<> acceptance_rate(0.0, 1.0);
+		//std::uniform_real_distribution<> rate_cf(-1.0/ mu_max_value, 1.0/ mu_max_value);
+		std::uniform_real_distribution<> knowledge_rate(0.0, 1.0);
+		//std::uniform_real_distribution<> noise(-min_value*0.1, min_value*0.1);
+		std::uniform_real_distribution<> noise(-0.1, 0.1);
+		std::normal_distribution<> intercept_noise(0, 6.0);
+
+		std::uniform_real_distribution<> mu_zero(0.0, 1.0);
+		std::uniform_real_distribution<> condition(0.0, 1.0);
+
+
+		int no_accept_count = 0;
+		int update_count = 0;
+		int reject = 0;
+		int accept = 0;
+		double temperature = 0.0;
+
+		double best_residual = 999999999.0;
+		double best_independ = 999999999.0;
+		double best_min_value = 999999999.0;
+		Matrix<dnn_double>μ(X.m, X.n);
+		Matrix<dnn_double>μ_sv;
+		std::uniform_int_distribution<> var_select(0, X.n - 1);
+
+		intercept = Matrix<dnn_double>().zeros(X.n, 1);
+		Matrix<dnn_double> intercept_best;
+
+		double abs_residual_errormax = -1;
+
+		//μ = μ.zeros(μ.m, μ.n);
+		μ = μ.Rand() * rho;
+		μ_sv = μ;
+		//std::student_t_distribution<> dist(6.0);
+		//std::normal_distribution<> dist(0.0, 20.0);
+		//std::uniform_real_distribution<> dist(-mu_max_value, mu_max_value);
+
+		double t_p = 12.0 * rho;
+		if (t_p <= 6.0) t_p = 7.0;
+		std::uniform_real_distribution<> student_t_dist(6.0, t_p);
+		std::vector<int> dist_t_param(X.n);
+		std::vector<int> dist_t_param_best;
+		std::vector<int> dist_t_param_sv;
+		for (int i = 0; i < X.n; i++)
+		{
+			dist_t_param[i] = student_t_dist(engine);
+		}
+		dist_t_param_best = dist_t_param;
+		dist_t_param_sv = dist_t_param;
+
+		const char* loss = "lingam_loss.dat";
+		try
+		{
+			std::ofstream ofs(loss, std::ios::out);
+			ofs.close();
+		}
+		catch (...)
+		{
+		}
+
+		std::uniform_real_distribution<> gg_rho(1, 30);
+		std::uniform_real_distribution<> gg_beta(1, 30);
+		std::uniform_int_distribution<> gg_seed(1, -1395630315);
+		//printf("*************** %d\n", (int)123456789123456789);
+
+		double gg_rho_param = 1;
+		double gg_beta_param = 1;
+
+		double start_delta = -1.0;
+		double start_value = -1.0;
+		double start_independ = -1.0;
+		double start_residual = -1.0;
+		double weight1 = 1.0;
+		double weight2 = 1.5;
+		int neighborhood_search = 0;
+		for (int kk = 0; kk < confounding_factors_sampling; kk++)
+		{
+			start = std::chrono::system_clock::now();
+
+			//parameter_search mode!!
+			if (early_stopping < 0)
+			{
+				if (update_count > 2 || kk > abs(early_stopping))
+				{
+					break;
+				}
+			}
+
+			no_accept_count++;
+			if (early_stopping > 0 && no_accept_count > early_stopping)
+			{
+				printf("early_stopping!\n");
+				error = 1;
+				break;
+			}
+
+			if (use_bootstrap)
+			{
+#if _SAMPLING
+				for (int i = 0; i < X.m; i++)
+				{
+					const int row_id = bootstrap(mt);
+					for (int j = 0; j < X.n; j++)
+					{
+						X(i, j) = X_(row_id, j);
+					}
+				}
+#endif
+			}
+			Matrix<dnn_double> xs = X;
+
+
+			//if (kk > 0)
+			{
+				int var = var_select(engine);
+				//printf("var:%d\n", var);
+
+				if (accept)
+				{
+#if 10
+					double c = 1;
+					if (accept < 32)
+					{
+						c = 1.0 / pow(2.0, accept);
+					}
+					else
+					{
+						c = 1.0e-10;
+					}
+					for (int j = 0; j < X.m; j++)
+					{
+						μ(j, var) += noise(engine) * c;
+					}
+					//intercept(var, 0) += intercept_noise(engine)*c;
+#else
+					dist_t_param[var] += 0.001;
+
+					auto& dist = std::student_t_distribution<>(dist_t_param[var]);
+
+					gg_rho_param += 0.0001;
+					gg_beta_param += 0.0001;
+					gg_random gg(gg_rho_param, gg_beta_param, 0);
+					gg.seed(gg_seed(engine));
+					//#pragma omp parallel for <-- 乱数の順序が変わってしまうから並列化したらダメ7
+					for (int j = 0; j < X.m; j++)
+					{
+						const double rate = distribution_rate * gg.rand();
+						μ(j, var) = rate /*+ noise(engine)*/;
+					}
+#endif
+
+				}
+				else
+				{
+					dist_t_param[var] = student_t_dist(engine);
+
+					//auto& dist = std::student_t_distribution<>(dist_t_param[var]);
+					auto& dist = std::normal_distribution<>(0.0, dist_t_param[var]);
+
+#if 10
+					//#pragma omp parallel for <-- 乱数の順序が変わってしまうから並列化したらダメ
+
+					//Average distribution（center)
+					double rate = distribution_rate * dist(engine);
+
+					if (10)
+					{
+						gg_rho_param = gg_rho(engine);
+						gg_beta_param = gg_beta(engine);
+					}
+					gg_random gg = gg_random(gg_rho_param, gg_beta_param, 0);
+					gg.seed(gg_seed(engine));
+
+					for (int j = 0; j < X.m; j++)
+					{
+						if (10)
+						{
+							//Generalized_Gaussian distribution
+							μ(j, var) = rate + distribution_rate * gg.rand();
+						}
+						else
+						{
+							//Uniform distribution
+							μ(j, var) = rate + distribution_rate * noise(engine);
+						}
+					}
+					//if (use_intercept)
+					//{
+					//	intercept(var, 0) = intercept_noise(engine);
+					//	//intercept(var, 0) = 0;
+					//}
+#else
+					gg_rho_param = gg_rho(engine);
+					gg_beta_param = gg_beta(engine);
+					gg_random gg(gg_rho_param, gg_beta_param, 0);
+					gg.seed(gg_seed(engine));
+					//#pragma omp parallel for <-- 乱数の順序が変わってしまうから並列化したらダメ7
+					for (int j = 0; j < X.m; j++)
+					{
+						const double rate = distribution_rate * gg.rand();
+						μ(j, var) = rate/* + distribution_rate * noise(engine)*/;
+					}
+#endif
+				}
+
+#pragma omp parallel for
+				for (int j = 0; j < X.m; j++)
+				{
+					for (int i = 0; i < X.n; i++)
+					{
+						xs(j, i) -= μ(j, i);
+					}
+				}
+			}
+
+			//intercept.print("intercept");
+
+			ICA ica;
+			ica.logmsg = false;
+			ica.set(variableNum);
+			try
+			{
+				ica.fit(xs, max_ica_iteration, tolerance);
+				//(ica.A.transpose()).inv().print_e();
+				error = ica.getStatus();
+				if (error != 0)
+				{
+					fput_loss(loss, best_residual, best_independ, best_min_value);
+					continue;
+				}
+			}
+			catch (...)
+			{
+				//error = -99;
+				fput_loss(loss, best_residual, best_independ, best_min_value);
+				continue;
+			}
+
+			try
+			{
+				int inv_error = 0;
+
+				Matrix<dnn_double>& W_ica = (ica.A.transpose()).inv(&inv_error);
+				if (inv_error != 0)
+				{
+					fput_loss(loss, best_residual, best_independ, best_min_value);
+					continue;
+				}
+				int error_ = 0;
+				Matrix<dnn_double>& W_ica_ = Abs(W_ica).Reciprocal(&error_);
+				if (error_ != 0)
+				{
+					fput_loss(loss, best_residual, best_independ, best_min_value);
+					continue;
+				}
+
+				HungarianAlgorithm HungAlgo;
+				vector<int> replace;
+
+				double cost = HungAlgo.Solve(W_ica_, replace);
+
+				//for (int x = 0; x < W_ica_.m; x++)
+				//	std::cout << x << "," << replace[x] << "\t";
+				//printf("\n");
+
+				Matrix<dnn_double>& ixs = toMatrix(replace);
+				//ixs.print();
+				//Substitution(replace).print("Substitution matrix");
+
+				//P^-1*Wica
+				inv_error = 0;
+				Matrix<dnn_double>& W_ica_perm = (Substitution(replace).inv(&inv_error) * W_ica);
+				//W_ica_perm.print_e("Replacement->W_ica_perm");
+				if (inv_error != 0)
+				{
+					fput_loss(loss, best_residual, best_independ, best_min_value);
+					continue;
+				}
+
+				//D^-1
+				Matrix<dnn_double>& D = Matrix<dnn_double>().diag(W_ica_perm);
+				Matrix<dnn_double> D2(diag_vector(D));
+				//(D2.Reciprocal()).print_e("1/D");
+
+				error_ = 0;
+				//W_ica_perm_D=I - D^-1*(P^-1*Wica)
+				Matrix<dnn_double>& W_ica_perm_D = W_ica_perm.hadamard(to_vector(D2.Reciprocal(&error)));
+				if (error_ != 0)
+				{
+					fput_loss(loss, best_residual, best_independ, best_min_value);
+					continue;
+				}
+
+				//W_ica_perm_D.print_e("W_ica_perm_D");
+
+				//B=I - D^-1*(P^-1*Wica)
+				Matrix<dnn_double>& b_est = Matrix<dnn_double>().unit(W_ica_perm_D.m, W_ica_perm_D.n) - W_ica_perm_D;
+				//b_est.print_e("b_est");
+
+				//https://www.cs.helsinki.fi/u/ahyvarin/papers/JMLR06.pdf
+				const int n = W_ica_perm_D.m;
+				Matrix<dnn_double> b_est_tmp = b_est;
+				b_est = AlgorithmC(b_est_tmp, n);
+
+				//for (int x = 0; x < replacement.size(); x++)
+				//	std::cout << x << "," << replacement[x] << "\t";
+				//printf("\n");
+				//b_est.print_e();
+				//fflush(stdout);
+
+				if (error == 0)
+				{
+					B = b_est;
+				}
+				else
+				{
+					printf("--------------------\n");
+					fput_loss(loss, best_residual, best_independ, best_min_value);
+					continue;
+				}
+			}
+			catch (std::exception& e)
+			{
+				printf("Exception:%s\n", e.what());
+				fput_loss(loss, best_residual, best_independ, best_min_value);
+				continue;
+			}
+			catch (...)
+			{
+				printf("Exception\n");
+				fput_loss(loss, best_residual, best_independ, best_min_value);
+				continue;
+			}
+
+			//{
+			//	auto& b = before_sorting_(B);
+			//	b.print("b");
+			//	auto& c = inv_before_sorting_(b);
+
+			//	(B - c).print("B-c");
+			//}
+
+			//dir_change_(xs, μ);
+			double error_dag = 0.0;
+
+			//float r = 0.0;
+			bool cond = true;
+			{
+				auto& b = before_sorting_(B);
+
+				if (kk > 0 && prior_knowledge.size())
+				{
+					for (int k = 0; k < prior_knowledge.size() / 2; k++)
+					{
+						bool ng_edge = false;
+						int ii, jj;
+						if (prior_knowledge[2 * k] < 0)
+						{
+							ii = abs(prior_knowledge[2 * k]) - 1;
+							jj = abs(prior_knowledge[2 * k + 1]) - 1;
+							ng_edge = true;
+						}
+						else
+						{
+							ii = prior_knowledge[2 * k] - 1;
+							jj = prior_knowledge[2 * k + 1] - 1;
+						}
+						if (ng_edge)
+						{
+							if (fabs(b(ii, jj)) > 0.001)
+							{
+								cond = false;
+								break;
+							}
+							//printf("%d -> %d NG\n", jj, ii);
+						}
+						else
+						{
+							if (fabs(b(ii, jj)) > 0.001 && fabs(b(jj, ii)) < 0.001)
+							{
+								cond = false;
+								break;
+								//printf("%d -> %d NG\n", jj, ii);
+							}
+							if (fabs(b(ii, jj)) > 0.001 || fabs(b(jj, ii)) < 0.001)
+							{
+								cond = false;
+								break;
+								//printf("%d -> %d NG\n", jj, ii);
+							}
+						}
+						if (!cond)
+						{
+							if (prior_knowledge_rate < knowledge_rate(engine))
+							{
+								cond = true;
+							}
+						}
+					}
+					// ※ b( i, j ) = j -> i
+					////b.print("b");
+					////printf("b(0,1):%f b(0,2):%f\n", b(0, 1), b(0, 2));
+					//// # -> 0 NG
+					//if (fabs(b(0, 1)) > 0.001 || fabs(b(0, 2)) > 0.001 )
+					//{
+					//	accept_ = false;
+					//}
+					////2 -> 1 NG   1 -> 2 OK
+					//if (fabs(b(2, 1)) < fabs(b(1, 2)))
+					//{
+					//	accept_ = false;
+					//}
+
+					//if (!accept_ && a)
+					//{
+					//	b.print("NG-b");
+					//}
+				}
+
+				if (use_intercept)
+				{
+					//切片の推定
+					for (int i = 0; i < xs.n; i++)
+					{
+						intercept(i, 0) = Median(μ.Col(i));
+						//intercept(i, 0) = μ.Col(i).mean();
+					}
+				}
+
+				bool nonlinear = true;
+				// nonlinear
+				if (nonlinear)
+				{
+					std::vector<float_t> mean_x;
+					std::vector<float_t> sigma_x;
+					std::vector<float_t> mean_y;
+					std::vector<float_t> sigma_y;
+
+					for (int i = 0; i < xs.m; i++)
+					{
+						residual_error(i, 0) = 0;
+					}
+
+					//b.print("b");
+					Matrix<dnn_double> x;
+					Matrix<dnn_double> y;
+					for (int i = 0; i < B.n; i++)
+					{
+						// y = B*y + μ + e
+						x = Matrix<dnn_double>();
+						y = X.Col(this->replacement[i]);
+
+						for (int k = 0; k < B.n; k++)
+						{
+							if (k == i)continue;
+							if (fabs(B(i, k)) > 0.01)
+							{
+								if (x.m == 0) x = X.Col(this->replacement[k]);
+								else x = x.appendCol(X.Col(this->replacement[k]));
+							}
+						}
+
+						for (int i = 0; i < B.n; i++)
+						{
+							if (x.m == 0) x = μ.Col(this->replacement[i]) * condition(engine);
+							else x = x.appendCol(μ.Col(this->replacement[i])) * condition(engine);
+						}
+
+						if (x.n == 0)
+						{
+							for (int j = 0; j < xs.m; j++)
+							{
+								residual_error(j, i) = 0;
+							}
+							continue;
+						}
+						//printf("\n");
+						//y.print("y");
+						//x.print("x");
+
+						tiny_dnn::tensor_t tx;
+						tiny_dnn::tensor_t ty;
+						MatrixToTensor(x, tx);
+						MatrixToTensor(y, ty);
+
+						normalizeZ(tx, mean_x, sigma_x);
+						normalizeZ(ty, mean_y, sigma_y);
+
+						int n_train_epochs_ = 60;
+						int n_minibatch_ = x.m > 1000 ? 256: x.m/ 10;
+						if (n_minibatch_ < 1) n_minibatch_ = 1;
+						int input_size_ = 16;
+
+						int n_layers_ = 3;
+						int dropout_ = 0.0;
+						int n_hidden_size_ = 32;
+						int fc_hidden_size_ = 32;
+						float learning_rate_ = 0.1;
+
+						float clip_gradients_ = 0;
+						int use_cnn_ = 0;
+						int use_add_bn_ = 0;
+						int use_cnn_add_bn_ = 0;
+						int residual_ = 0;
+						int padding_prm_ = 0;
+
+						int classification_ = 0;
+						char* weight_init_type_ = "xavier";
+						char* activation_fnc_ = "tanh";
+						int early_stopping_ = 10;
+						char* opt_type_ = "adam_";
+						bool batch_shuffle_ = true;
+						int test_mode_ = 0;
+
+						torch_params(
+							n_train_epochs_,
+							n_minibatch_,
+							input_size_,
+
+							n_layers_,
+							dropout_,
+							n_hidden_size_,
+							fc_hidden_size_,
+							learning_rate_,
+
+							clip_gradients_,
+							use_cnn_,
+							use_add_bn_,
+							use_cnn_add_bn_,
+							residual_,
+							padding_prm_,
+
+							classification_,
+							weight_init_type_,
+							activation_fnc_,
+							early_stopping_,
+							opt_type_,
+							batch_shuffle_,
+							test_mode_
+						);
+
+#if 10
+						auto on_enumerate_epoch = [&]() {};
+						auto on_enumerate_minibatch = [&]() {};
+#else
+						int epoch = 1;
+						// create callback
+						auto on_enumerate_epoch = [&]() {
+							std::cout << "\nEpoch " << epoch << "/" << n_train_epochs_ << " finished. " << std::endl;
+							float loss = torch_get_Loss(n_minibatch_);
+							std::cout << "loss :" << loss << std::endl;
+							++epoch;
+						};
+						auto on_enumerate_minibatch = [&]() {};
+#endif
+						torch_train_init();
+						try {
+							torch_train_fc(tx, ty, n_minibatch_, n_train_epochs_, "", on_enumerate_minibatch, on_enumerate_epoch);
+						}
+						catch (std::exception& err)
+						{
+							std::cout << err.what() << std::endl;
+						}
+						catch (...)
+						{
+							printf("exception!\n");
+						}
+
+						for (int j = 0; j < x.m; j++)
+						{
+							tiny_dnn::vec_t& predict_y = torch_predict(tx[j]);
+
+							double prd_y = (double)predict_y[0] * sigma_y[0] + mean_y[0];
+							double obs_y = (double)ty[j][0] * sigma_y[0] + mean_y[0];
+							residual_error(j, i) = (obs_y - prd_y);
+						}
+						residual_error.print("residual_error");
+						torch_delete_model();
+						printf("Evaluation of independence\n");
+
+						//Evaluation of independence
+						calc_mutual_information_r(x, residual_error.Col(i), residual_error_independ, bins, true);
+						if (error_dag < residual_error_independ.Max())
+						{
+							error_dag = residual_error_independ.Max();
+						}
+					}
+
+					printf("error_dag:%f\n", error_dag);
+					if (error_dag > 1.0) {
+						std::cout << "残差と説明変数が独立ではないため間違ったDAGのためキャンセル" << std::endl;
+						continue;
+					}
+
+					printf("Evaluation of independence\n");
+					//Evaluation of independence
+					//calc_mutual_information(residual_error, residual_error_independ, bins);
+					calc_mutual_information(residual_error, residual_error_independ, bins, true);
+				}
+
+				if (!nonlinear)
+				{
+					//b.print("b");
+#pragma omp parallel for
+					for (int j = 0; j < xs.m; j++)
+					{
+						Matrix<dnn_double> μT(xs.n, 1);
+						Matrix<dnn_double> x(xs.n, 1);
+						Matrix<dnn_double> y(xs.n, 1);
+						for (int i = 0; i < xs.n; i++)
+						{
+							//x(i, 0) = xs(j, replacement[i]);
+							//y(i, 0) = X(j, replacement[i]);
+							x(i, 0) = xs(j, i);
+							y(i, 0) = X(j, i);
+							μT(i, 0) = μ(j, i);
+							if (use_intercept)
+							{
+								//切片の分離
+								μT(i, 0) = μ(j, i) - intercept(i, 0);
+							}
+							// y = B*y + (μ- intercept)+ e
+						}
+						// y = B*y + (μ- intercept)+intercept + e
+						// y = B*y + μ + e
+						Matrix<dnn_double>& rr = y - b * y - μT - intercept;
+						for (int i = 0; i < xs.n; i++)
+						{
+							//r += rr(0, i)*rr(0, i);
+							residual_error(j, i) = rr(0, i);
+						}
+					}
+					//r /= (xs.m*xs.n);
+
+					//Evaluation of independence
+					calc_mutual_information(residual_error, residual_error_independ, bins);
+				}
+			}
+			double  abs_residual_errormax_cur = Abs(residual_error).Max();
+			if (abs_residual_errormax < 0)
+			{
+				abs_residual_errormax = abs_residual_errormax_cur;
+			}
+			if (abs_residual_errormax < 1.0e-10)
+			{
+				abs_residual_errormax = 1.0e-10;
+			}
+
+			//if (abs_residual_errormax < abs_residual_errormax_cur)
+			//{
+			//	abs_residual_errormax = abs_residual_errormax_cur;
+			//}
+			//residual_error.print("residual_error");
+			//printf("residual_error max:%f\n", Abs(residual_error).Max());
+
+			double independ = max(error_dag, residual_error_independ.Max());
+			double residual = abs_residual_errormax_cur / abs_residual_errormax;
+
+			printf("abs_residual_errormax:%f residual:%f independ:%f\n", abs_residual_errormax, residual, independ);
+
+			//{
+			//	double w = weight1 + weight2;
+			//	weight1 = weight1 / w;
+			//	weight2 = weight2 / w;
+			//}
+
+			double w_tmp = sqrt(best_independ + best_residual);
+			weight1 = best_residual / w_tmp;
+			weight2 = best_independ / w_tmp;
+			if (kk == 0)
+			{
+				double w_tmp = sqrt(independ + residual);
+				weight1 = residual / w_tmp;
+				weight2 = independ / w_tmp;
+			}
+
+			double value;
+			if (loss_function == 0)
+			{
+				value = max(weight1 * residual, weight2 * independ) + 0.0001 * (weight1 * residual + weight2 * independ);
+			}
+			else
+			{
+				value = log(1 + fabs(residual - independ) + weight1 * residual + weight2 * independ);
+
+			}
+
+			if (start_value < 0)
+			{
+				start_independ = independ;
+				start_residual = residual;
+				start_value = value;
+				loss_value = value;
+				start_delta = fabs(residual - independ);
+			}
+			//printf("value:%f (%f) %f\n", value, log(1 + fabs(residual - independ)), weight1 *residual + weight2 * independ);
+			bool accept_ = false;
+
+			if (best_residual > residual && best_independ > independ)
+			{
+				accept_ = true;
+			}
+			else
+				if (best_min_value > value)
+				{
+					accept_ = true;
+				}
+
+			if (kk == 0) accept_ = true;
+
+
+			double rt = (double)kk / (double)confounding_factors_sampling;
+			temperature = pow(temperature_alp, rt);
+
+			if (!accept_ && cond)
+			{
+				double alp = acceptance_rate(engine);
+
+				double th = -1.0;
+				if (best_min_value < value)
+				{
+					th = exp((best_min_value - value) / temperature);
+				}
+				{
+					char buf[256];
+					sprintf(buf, "[%d][%f] %f:%f temperature:%f  alp:%f < th:%f %s", kk, fabs((best_min_value - value)), best_min_value, value, temperature, alp, th, (alp < th) ? "true" : "false");
+					if (1)
+					{
+						DWORD  bytesWritten = 0;
+						if (alp < th)
+						{
+							SetConsoleTextAttribute(hStdout, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+						}
+						else
+						{
+							SetConsoleTextAttribute(hStdout, FOREGROUND_RED | FOREGROUND_INTENSITY);
+						}
+						WriteFile(hStdout, buf, strlen(buf), &bytesWritten, NULL);
+						SetConsoleTextAttribute(hStdout, csbi.wAttributes);
+						WriteFile(hStdout, "\n", 1, &bytesWritten, NULL);
+					}
+					else
+					{
+						printf(buf); printf("\n");
+					}
+				}
+				if (alp < th)
+				{
+					accept_ = true;
+				}
+			}
+
+			if (!cond) accept_ = false;
+			if (independ < 1.0e-4)  accept_ = false;
+
+			bool best_update = false;
+			if (accept_)
+			{
+				if (use_bootstrap)
+				{
+					auto b = before_sorting_(B);
+					for (int j = 0; j < xs.n; j++)
+					{
+						for (int i = 0; i < xs.n; i++)
+						{
+							if (fabs(b(i, j)) > 0.01)
+							{
+								b_probability(i, j) += 1;
+							}
+						}
+					}
+					bootstrapN++;
+				}
+
+				//printf("+\n");
+				if (best_min_value >= value || (best_residual > residual || best_independ > independ))
+				{
+					double d1 = (residual - best_residual);
+					double d2 = (independ - best_independ);
+					if (best_residual > residual && best_independ < independ || best_residual < residual && best_independ > independ)
+					{
+						if (fabs(d1) + fabs(d2) < 0.1 * (1.0 - rt))
+						{
+							best_update = true;
+						}
+					}
+					else
+					{
+						if (best_residual > residual && best_independ > independ)
+						{
+							best_update = true;
+						}
+					}
+				}
+
+				if (loss_function == 0)
+				{
+					if (best_min_value < value)
+					{
+						best_update = false;
+					}
+				}
+				if (best_update || kk == 0)
+				{
+					best_min_value = value;
+					best_residual = residual;
+					best_independ = independ;
+					loss_value = value;
+				}
+				//{
+				//	auto& b = before_sorting_(B);
+				//	b.print("accept-b");
+				//}
+
+				μ_sv = μ;
+				dist_t_param_sv = dist_t_param;
+				neighborhood_search = xs.n;
+
+				accept++;
+				reject = 0;
+				if (best_update)
+				{
+					no_accept_count = 0;
+					update_count++;
+					char buf[256];
+					sprintf(buf, "@[%d/%d] %f (ind:%f,err:%f)accept:%d", kk, confounding_factors_sampling - 1, best_min_value, independ, residual, accept);
+
+					if (1)
+					{
+						DWORD  bytesWritten = 0;
+						SetConsoleTextAttribute(hStdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_BLUE | BACKGROUND_INTENSITY);
+						WriteFile(hStdout, buf, strlen(buf), &bytesWritten, NULL);
+						SetConsoleTextAttribute(hStdout, csbi.wAttributes);
+						printf("\n");
+					}
+					else
+					{
+						printf(buf);
+					}
+
+					//intercept_best.print("intercept_best");
+					//μ.print("μ");
+					Mu = μ;
+					B_best_sv = B;
+					B_pre_sort = B;
+					modification_input = xs;
+					replacement_best = replacement;
+					residual_error_best = residual_error;
+					residual_error_independ_best = residual_error_independ;
+
+					intercept_best = intercept;
+					dist_t_param_best = dist_t_param;
+
+					calc_mutual_information(X, mutual_information, bins);
+
+					if (use_bootstrap)
+					{
+						auto tmp = b_probability;
+						b_probability /= bootstrapN;
+						b_probability *= 0.99;
+
+						save(std::string("lingam.model"));
+
+						b_probability = tmp;
+					}
+					else
+					{
+						save(std::string("lingam.model"));
+					}
+					if (independ + residual < 0.000001)
+					{
+						printf("convergence!\n");
+						break;
+					}
+				}
+
+				//for (int i = 0; i < xs.n; i++)
+				//{
+				//	double residual_error_mean = residual_error.Col(i).mean();
+				//	intercept(i, 0) += residual_error_mean/xs.n;
+				//}
+				fflush(stdout);
+			}
+			else
+			{
+				accept = 0;
+				reject++;
+				//neighborhood_search--;
+				//if (neighborhood_search <= 0)
+				//{
+				//	neighborhood_search = 0;
+				//}
+				//else
+				//{
+				//	μ = Mu;
+				//	dist_t_param = dist_t_param_best;
+				//	intercept = intercept_best;
+				//	accept = 1;
+				//	reject = 0;
+				//	printf("------------------\n");
+				//}
+				//if (acceptance_rate(engine) > 0.95)
+				//{
+				//	//μ = Mu;
+				//	//dist_t_param = dist_t_param_best;
+				//	//intercept = intercept_best;
+				//	accept = 1;
+				//	reject = 0;
+				//	printf("------------------\n");
+				//}
+			}
+			fput_loss(loss, best_residual, best_independ, best_min_value);
+
+			//if ( confounding_factors_sampling >= 4000 && reject > confounding_factors_sampling / 4)
+			//{
+			//	break;
+			//}
+
+			end = std::chrono::system_clock::now();
+			elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+			//printf("[%d/%d]%8.3f[msec]\n", kk, confounding_factors_sampling - 1, elapsed);
+
+			elapsed_ave += elapsed;
+			double t1 = (confounding_factors_sampling - 1 - kk) * (elapsed_ave * 0.001 / (kk + 1));
+			if (kk != 0 && elapsed_ave * 0.001 / (kk + 1) < 1 && kk % 20)
+			{
+				continue;
+			}
+
+			if (t1 < 60)
+			{
+				printf("[%d/%d]Total elapsed time:%.3f[sec] Estimated end time:%.3f[sec] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001, t1, accept);
+				fflush(stdout);
+				continue;
+			}
+			t1 /= 60.0;
+			if (t1 < 60)
+			{
+				printf("[%d/%d]Total elapsed time:%.3f[min] Estimated end time:%.3f[min] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001 / 60.0, t1, reject);
+				fflush(stdout);
+				continue;
+			}
+			t1 /= 60.0;
+			if (t1 < 24)
+			{
+				printf("[%d/%d]Total elapsed time:%.3f[h] Estimated end time:%.3f[h] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001 / 60.0 / 60.0, t1, reject);
+				fflush(stdout);
+				continue;
+			}
+			t1 /= 365;
+			if (t1 < 365)
+			{
+				printf("[%d/%d]Total elapsed time:%.3f[days] Estimated end time:%.3f[days] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001 / 60 / 60 / 24.0 / 365.0, t1, reject);
+				fflush(stdout);
+				continue;
+			}
+			printf("[%d/%d]Total elapsed time:%.3f[years] Estimated end time:%.3f[years] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001 / 60 / 60 / 24.0 / 365.0, t1, reject);
 			fflush(stdout);
 		}
 

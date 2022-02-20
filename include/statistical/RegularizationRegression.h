@@ -432,7 +432,7 @@ public:
 
 		Matrix<dnn_double> I;
 		I = I.unit(train.n, train.n);
-		coef = (train.transpose() * train + lambda1 * I).inv()*train.transpose()*y;
+		coef = (train.transpose() * train + lambda1 * I).inv(&error)*train.transpose()*y;
 		coef = coef.transpose();
 
 		return error;
@@ -517,9 +517,13 @@ public:
 			error = fit(X_w, y);
 			if (error != 0)
 			{
-				return error;
+				printf("error:adaptiv_fit\n");
+				//return error;
 			}
-			error = 0;
+			else
+			{
+				error = 0;
+			}
 			//printf("%d\n", k);
 		}
 		for (int i = 0; i < varNum; i++)
