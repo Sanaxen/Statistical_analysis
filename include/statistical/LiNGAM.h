@@ -18,6 +18,7 @@
 
 #include "../../include/util/swilk.h"
 #include "../../include/util/Generalized_Gaussian.hpp"
+#include "../../include/statistical/Independence.h"
 
 //#define USE_EIGEN
 
@@ -95,6 +96,9 @@ inline void normalizeZ(tiny_dnn::tensor_t& X, std::vector<float_t>& mean, std::v
 		}
 	}
 }
+
+#ifdef USE_LIBTORCH
+
 #define _LIBRARY_EXPORTS __declspec(dllimport)
 
 extern "C" _LIBRARY_EXPORTS int cuda_is_available();
@@ -139,7 +143,7 @@ extern "C" _LIBRARY_EXPORTS void torch_train_fc(
 	std::function <void(void)> on_enumerate_minibatch,
 	std::function <void(void)> on_enumerate_epoch
 );
-
+#endif
 
 template<class T>
 class VectorIndex
@@ -217,308 +221,6 @@ inline bool Shapiro_wilk_test(Matrix<dnn_double>& xs, std::vector<std::string>& 
 	return error;
 }
 
-/* Mutual information*/
-//https://qiita.com/hyt-sasaki/items/ffaab049e46f800f7cbf
-class MutualInformation
-{
-	void gridtabel(Matrix<dnn_double>& M1, Matrix<dnn_double>& M2)
-	{
-		double max1, min1;
-		double max2, min2;
-
-#pragma omp parallel
-		{
-#pragma omp sections
-			{
-				M1.MaxMin(max1, min1);
-			}
-#pragma omp sections
-			{
-				M2.MaxMin(max2, min2);
-			}
-	}
-
-#if 0
-		double dx = (max1 - min1) / grid;
-		double dy = (max2 - min2) / grid;
-#else
-		max1 = (max1 > max2) ? max1 : max2;
-		min1 = (min1 < min2) ? min1 : min2;
-		max2 = max1;
-		min2 = min1;
-		double dx = (max1 - min1) / grid;
-		double dy = (max2 - min2) / grid;
-#endif
-
-		//printf("dx:%f dy:%f\n", dx, dy);
-		std::vector<dnn_double> table1(grid, 0);
-		std::vector<dnn_double> table2 = table1;
-		Matrix<dnn_double>& table12 = Matrix<dnn_double>().zeros(grid, grid);
-
-		const int thread_num = omp_get_max_threads() + 1;
-		std::vector < std::vector<dnn_double>> tmp_table1(thread_num, std::vector<dnn_double>(grid, 0));
-		std::vector < std::vector<dnn_double>> tmp_table2 = tmp_table1;
-
-		const int sz1 = M1.m*M1.n;
-#pragma omp parallel for
-		for (int k = 0; k < sz1; k++)
-		{
-			const double m1_k = M1.v[k];
-			const double m2_k = M2.v[k];
-			const int thread_id = omp_get_thread_num();
-			for (int i = 0; i < grid; i++)
-			{
-				double c = 0;
-				if (i == grid - 1) c = 0.000001;
-				if (m1_k >= min1 + dx * i && m1_k < min1 + dx * (i + 1))
-				{
-					tmp_table1[thread_id][i] += 1;
-				}
-			}
-
-			for (int i = 0; i < grid; i++)
-			{
-				double c = 0;
-				if (i == grid - 1) c = 0.000001;
-				if (m2_k >= min2 + dy * i && m2_k < min2 + dy * (i + 1)+c)
-				{
-					tmp_table2[thread_id][i] += 1;
-				}
-			}
-			for (int i = 0; i < grid; i++)
-			{
-				double c = 0;
-				if (i == grid - 1) c = 0.000001;
-				bool range1 = (m2_k >= min2 + dy * i && m2_k < min2 + dy * (i + 1) + c);
-
-				if (!range1)
-				{
-					continue;
-				}
-				for (int j = 0; j < grid; j++)
-				{
-					double d = 0;
-					if (j == grid - 1) d = 0.000001;
-					
-					bool range2 = (m1_k >= min1 + dx * j && m1_k < min1 + dx * (j + 1) + d);
-
-					if ( range2 )
-					{
-#pragma omp critical
-						{
-							table12(i, j) += 1;
-						}
-					}
-				}
-			}
-		}
-
-		for (int i = 0; i < grid; i++)
-		{
-			for (int j = 0; j < thread_num; j++)
-			{
-				table1[i] += tmp_table1[j][i];
-				table2[i] += tmp_table2[j][i];
-			}
-		}
-		//for (int i = 0; i < table1.size(); i++)
-		//{
-		//	printf("%d, ", (int)table1[i]);
-		//}
-		//printf("\n");
-		//printf("dx:%f\n", dx);
-
-		probability1.resize(grid,0);
-		probability2.resize(grid,0);
-		probability12 = probability12.zeros(grid, grid);
-		probability1_2 = probability12;
-
-		double s1 = 0;
-		double s2 = 0;
-		for (int i = 0; i < grid; i++)
-		{
-			probability1[i] = table1[i];
-			probability2[i] = table2[i];
-			s1 += probability1[i];
-			s2 += probability2[i];
-		}
-		double s12 = 0;
-		for (int i = 0; i < grid; i++)
-		{
-			for (int j = 0; j < grid; j++)
-			{
-				probability12(i, j) = table12(i, j);
-				s12 += probability12(i, j);
-			}
-		}
-
-		if (s1 == 0.0) s1 = 1;
-		if (s2 == 0.0) s2 = 1;
-		if (s12 == 0.0) s12 = 1;
-		for (int i = 0; i < grid; i++)
-		{
-			probability1[i] /= s1;
-			probability2[i] /= s2;
-		}
-		probability12 = probability12 / s12;
-
-		s12 = 0;
-		for (int i = 0; i < grid; i++)
-		{
-			for (int j = 0; j < grid; j++)
-			{
-				probability1_2(i, j) = probability1[i]* probability2[j];
-				s12 += probability1_2(i, j);
-			}
-		}
-		//probability1_2 = probability1_2 / s12;
-
-		//dump
-		//Matrix<dnn_double> tmp1(probability1);
-		//Matrix<dnn_double> tmp2(probability2);
-
-		//tmp1.print_csv("p1.csv");
-		//tmp2.print_csv("p2.csv");
-		//probability12.print_csv("p12.csv");		//p(x,y)
-		//probability1_2.print_csv("p1_2.csv");	//p(x)*p(y)
-	}
-
-public:
-	int grid;
-	std::vector<dnn_double> probability1;	//p(x)
-	std::vector<dnn_double> probability2;	//p(y)
-	Matrix<dnn_double> probability12;		//p(x,y)
-	Matrix<dnn_double> probability1_2;		//p(x)*p(y)
-
-
-	MutualInformation(Matrix<dnn_double>& Col1, Matrix<dnn_double>& Col2, int grid_ = 30)
-	{
-		grid = grid_;
-		//ダイバジェンスの公式
-		//grid = (int)(log2((double)Col1.m) + 1);
-		//grid = (int)(sqrt((double)Col1.m) + 1);
-
-		gridtabel(Col1, Col2);
-	}
-
-	double Information()
-	{
-		double I = 0.0;
-
-		Matrix<dnn_double>& zz = Matrix<dnn_double>().zeros(grid, grid);
-
-#pragma omp parallel for
-		for (int i = 0; i < grid; i++)
-		{
-			for (int j = 0; j < grid; j++)
-			{
-				if (probability1_2(i,j) < 1.0e-32 || probability12(i, j) < 1.0e-32)
-				{
-					//continue;
-				}
-				else
-				{
-					double z = probability12(i, j) / probability1_2(i,j);
-					if (z > 0)
-					{
-						zz(i, j) = probability12(i, j)*log(z);
-					}
-				}
-			}
-		}
-		I = zz.Sum();
-		return I;
-	}
-};
-
-// MIC ? Maximal Information Coefficient
-// https://github.com/dspinellis/OpenMIC
-///
-
-
-inline double independ_test(const Matrix<double>& x, const Matrix<double>& y)
-{
-	auto& xx = Matrix<double>(x.v, x.m*x.n, 1);
-	auto& yy = Matrix<double>(y.v, x.m*x.n, 1);
-
-	return fabs(xx.Cor(Tanh(yy))) + fabs(yy.Cor(Tanh(xx)));
-}
-
-class HSIC
-{
-	Matrix<double> centering(Matrix<double>& k)
-	{
-		int n = k.m;
-		auto& unit = Matrix<double>().ones(n, n);
-
-		auto& I = Matrix<double>().unit(n, n);
-		auto& Q = I - unit / (double)n;
-
-		return (Q*k)*Q;
-	}
-	Matrix<double> rbf(Matrix<double>& x, double sigma = 0)
-	{
-		auto& GX = x * x.transpose();
-
-		auto& KX = x.diag(GX) - GX + (x.diag(GX) - GX).transpose();
-		if (sigma == 0)
-		{
-			double mdist = Median(KX, true);
-			sigma = sqrt(fabs(mdist));
-		}
-		KX = KX * (-0.5 / sigma / sigma);
-
-		return KX;
-	}
-public:
-	HSIC() {}
-
-	double hsic(Matrix<double>& x, Matrix<double>& y)
-	{
-		return (centering(rbf(x)).hadamard(centering(rbf(y)))).Sum();
-	}
-};
-
-inline Matrix<dnn_double> _normalize(Matrix<dnn_double>& x)
-{
-	auto& x_mean = x.Mean();
-
-	return (x - x_mean.v[0]) / (x.Std(x_mean).v[0] + 1.0e-10);
-}
-
-//Fast and Robust Fixed-Point Algorithms for Independent Component Analysis
-//New approximations of differential entropy for independent co ¨ mponent analysis and projection pursuit
-inline double _entropy(Matrix<dnn_double>& u)
-{
-	auto Hv = (1 + log(2 * M_PI)) / 2.0;
-	const double k1 = 79.047;
-	const double k2 = 7.4129;		//	36/(8*sqrt(3)-9)
-	const double gamma = 0.37457;
-
-	//Hv - k1*(np.mean(np.log(np.cosh(u))) - gamma)**2 
-	// - k2 * (np.mean(u * np.exp(-1 * u**2 /2)))**2
-	double G2 = Log(Cosh(u)).mean() - gamma;
-
-	double G1 = u.hadamard(Exp(-0.5 * u.hadamard(u))).mean();
-
-	return Hv - k1 * G2 * G2 - k2 * G1 * G1;
-}
-
-inline double _MutualInformation(Matrix<dnn_double>& x, Matrix<dnn_double>& y, bool normalize = false)
-{
-	auto xx = _normalize(x);
-	auto yy = _normalize(y);
-	auto z = x.appendRow(y);
-	auto zz = _normalize(z);
-
-	double mi = _entropy(xx) + _entropy(yy) - _entropy(zz);
-
-	if (normalize)
-	{
-		return mi/( sqrt(_entropy(xx)* _entropy(yy)+.0e-10));
-	}
-	return mi;
-}
 
 class lingam_reg
 {
@@ -1707,9 +1409,9 @@ public:
 				double tmp;
 				if (nonlinner_cor)
 				{
-					tmp = independ_test(x, y);
-					//HSIC hsic;
-					//tmp = hsic.hsic(x, y);
+					//tmp = independ_test(x, y);
+					HSIC hsic;
+					tmp = hsic.value_(x, y, 30, 50);
 				}
 				else
 				{
@@ -2792,8 +2494,9 @@ public:
 
 	int fit3(Matrix<dnn_double>& X_, const int max_ica_iteration = MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
+#ifdef USE_LIBTORCH
 		//if ( use_libtorch) torch_setDevice("gpu:0");
-
+#endif
 		printf("distribution_rate:%f\n", distribution_rate);
 		printf("rho:%f\n", rho);
 
@@ -3276,7 +2979,9 @@ public:
 					}
 				}
 
-				bool nonlinear = true;
+				bool nonlinear = false;
+#ifdef USE_LIBTORCH
+				nonlinear = true;
 				// nonlinear
 				if (nonlinear)
 				{
@@ -3436,7 +3141,7 @@ public:
 					}
 
 					printf("error_dag:%f\n", error_dag);
-					if (error_dag > 1.0) {
+					if (error_dag > 0.1) { // HSICを使う場合は0.1,そうでない場合は1.0(?)
 						std::cout << "残差と説明変数が独立ではないため間違ったDAGのためキャンセル" << std::endl;
 						continue;
 					}
@@ -3446,7 +3151,7 @@ public:
 					//calc_mutual_information(residual_error, residual_error_independ, bins);
 					calc_mutual_information(residual_error, residual_error_independ, bins, true);
 				}
-
+#endif
 				if (!nonlinear)
 				{
 					//b.print("b");

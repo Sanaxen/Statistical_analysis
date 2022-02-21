@@ -12,7 +12,7 @@ int use_libtorch = 1;
 #endif
 #include "../../include/util/cmdline_args.h"
 
-#define USE_LIBTORCH
+//#define USE_LIBTORCH
 #ifdef USE_LIBTORCH
 //#include "../../../include/util/dnn_util.hpp"
 #include <algorithm>
@@ -193,20 +193,59 @@ bool prior_knowledge(const char* filename, std::vector<std::string>& header_name
 //LiNGAMモデルの推定方法について
 int main(int argc, char** argv)
 {
-	if(0){
-		CSVReader csv1("X.csv", ',', false);
+	if(0){	//Independent inspection
+		printf("csvファイルsuffix:");
+		char name[128];
+		name[0] = '#';// dummy
+		fgets(&name[1], 128, stdin);
+		char* p = strchr(name, '\n');
+		*p = '\0';
+
+		name[0] = 'X';
+		CSVReader csv1(std::string(name)+std::string(".csv"), ',', false);
 		Matrix<dnn_double> x = csv1.toMat();
-		CSVReader csv2("Y.csv", ',', false);
+		name[0] = 'Y';
+		CSVReader csv2(std::string(name) + std::string(".csv"), ',', false);
 		Matrix<dnn_double> y = csv2.toMat();
 
+		chrono::system_clock::time_point start, end;
+
+		start = chrono::system_clock::now();
 		double tmp = _MutualInformation(x, y);
-		printf("MI=%f\n", tmp);
+		end = chrono::system_clock::now();
+
+		printf("MI=%f ", tmp);
+		double time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+		printf("time %lf[ms]\n", time);
+
 		x = _normalize(x);
 		y = _normalize(y);
+
+		start = chrono::system_clock::now();
 		MutualInformation I(x, y, 30);
 		tmp = I.Information();
-		printf("MI=%f\n", tmp);
+		end = chrono::system_clock::now();
+
+		printf("MI=%f ", tmp);
+		time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+		printf("time %lf[ms]\n", time);
 		fflush(stdout);
+
+		//HSIC_ref hsic;
+		//printf("HSIC=%f\n", hsic.HSIC_value(x, y));
+
+		HSIC hsic_;
+		start = chrono::system_clock::now();
+		printf("HSIC=%f ", hsic_.value_(x, y, 30, 50));
+		end = chrono::system_clock::now();
+		time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+		printf("time %lf[ms]\n", time);
+
+		start = chrono::system_clock::now();
+		printf("HSIC=%f ", hsic_.value(x, y, 500));
+		end = chrono::system_clock::now();
+		time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+		printf("time %lf[ms]\n", time);
 		exit(0);
 	}
 
@@ -321,6 +360,7 @@ int main(int argc, char** argv)
 	int cluster = -1;
 	int use_adaptive_lasso = 1;
 	bool use_bootstrap = false;
+	bool nonlinear = false;
 
 	int pause = 0;
 	std::string load_model = "";
@@ -467,6 +507,10 @@ int main(int argc, char** argv)
 				else if (argname == "--use_bootstrap") {
 					use_bootstrap = atoi(argv[count + 1]) == 0 ? false : true;
 				}
+				else if (argname == "--nonlinear") {
+					nonlinear = (atoi(argv[count + 1]) != 0) ? true : false;
+				}
+
 				//
 				///
 				//
@@ -1146,8 +1190,14 @@ int main(int argc, char** argv)
 			LiNGAM.confounding_factors_upper = confounding_factors_upper;
 			LiNGAM.rho = rho;
 
-			//LiNGAM.fit2(xs, max_ica_iteration, ica_tolerance);
-			LiNGAM.fit3(xs, max_ica_iteration, ica_tolerance);
+			if (!nonlinear)
+			{
+				LiNGAM.fit2(xs, max_ica_iteration, ica_tolerance);
+			}
+			else
+			{
+				LiNGAM.fit3(xs, max_ica_iteration, ica_tolerance);
+			}
 		}
 		else
 		{
