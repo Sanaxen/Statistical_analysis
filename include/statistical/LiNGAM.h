@@ -487,6 +487,8 @@ public:
 	Matrix<dnn_double> b_probability;
 	bool use_bootstrap = false;
 	int bootstrap_sample = 1000;
+	bool use_hsic = false;
+	bool use_gpu = false;
 
 	Lingam() {
 		error = -999;
@@ -1409,9 +1411,16 @@ public:
 				double tmp;
 				if (nonlinner_cor)
 				{
-					//tmp = independ_test(x, y);
-					HSIC hsic;
-					tmp = hsic.value_(x, y, 30, 50);
+					if (use_hsic)
+					{
+						HSIC hsic;
+						//tmp = fabs(hsic.value_(x, y, 30, 50));
+						tmp = fabs(hsic.value(x, y, 200));
+					}
+					else
+					{
+						tmp = independ_test(x, y);
+					}
 				}
 				else
 				{
@@ -1442,9 +1451,16 @@ public:
 				double tmp;
 				if (nonlinner_cor)
 				{
-					tmp = independ_test(x, y);
-					//HSIC hsic;
-					//tmp = hsic.hsic(x, y);
+					if (use_hsic)
+					{
+						HSIC hsic;
+						//tmp = fabs(hsic.value_(x, y, 30, 50));
+						tmp = fabs(hsic.value(x, y, 200));
+					}
+					else
+					{
+						tmp = independ_test(x, y);
+					}
 				}
 				else
 				{
@@ -2495,7 +2511,7 @@ public:
 	int fit3(Matrix<dnn_double>& X_, const int max_ica_iteration = MAX_ITERATIONS, const dnn_double tolerance = TOLERANCE)
 	{
 #ifdef USE_LIBTORCH
-		//if ( use_libtorch) torch_setDevice("gpu:0");
+		if ( use_gpu) torch_setDevice("gpu:0");
 #endif
 		printf("distribution_rate:%f\n", distribution_rate);
 		printf("rho:%f\n", rho);
@@ -2579,6 +2595,7 @@ public:
 		Matrix<dnn_double> intercept_best;
 
 		double abs_residual_errormax = -1;
+		double abs_independ_max = -1;
 
 		//μ = μ.zeros(μ.m, μ.n);
 		μ = μ.Rand() * rho;
@@ -3041,7 +3058,8 @@ public:
 						normalizeZ(ty, mean_y, sigma_y);
 
 						int n_train_epochs_ = 60;
-						int n_minibatch_ = x.m > 1000 ? 256: x.m/ 10;
+						int n_minibatch_ = x.m/ 5;
+						if (n_minibatch_ > 2048)  n_minibatch_ = 2048;
 						if (n_minibatch_ < 1) n_minibatch_ = 1;
 						int input_size_ = 16;
 
@@ -3107,7 +3125,11 @@ public:
 						};
 						auto on_enumerate_minibatch = [&]() {};
 #endif
+						chrono::system_clock::time_point start, end;
+
 						torch_train_init();
+
+						start = chrono::system_clock::now();
 						try {
 							torch_train_fc(tx, ty, n_minibatch_, n_train_epochs_, "", on_enumerate_minibatch, on_enumerate_epoch);
 						}
@@ -3119,7 +3141,9 @@ public:
 						{
 							printf("exception!\n");
 						}
-
+						end = chrono::system_clock::now();
+						printf("fitting %lf[ms]\n", static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0));
+#pragma omp parallel for
 						for (int j = 0; j < x.m; j++)
 						{
 							tiny_dnn::vec_t& predict_y = torch_predict(tx[j]);
@@ -3132,16 +3156,24 @@ public:
 						torch_delete_model();
 						printf("Evaluation of independence\n");
 
+						start = chrono::system_clock::now();
+						
 						//Evaluation of independence
 						calc_mutual_information_r(x, residual_error.Col(i), residual_error_independ, bins, true);
+						
+						end = chrono::system_clock::now();
+						printf("independence check %lf[ms]\n", static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0));
+
 						if (error_dag < residual_error_independ.Max())
 						{
 							error_dag = residual_error_independ.Max();
 						}
 					}
 
-					printf("error_dag:%f\n", error_dag);
-					if (error_dag > 0.1) { // HSICを使う場合は0.1,そうでない場合は1.0(?)
+					printf("error_dag:%f (%s)\n", error_dag, (use_hsic) ? "HSIC" : "corr(x,tanh(y)");
+					double error_dag_treshold = 1.0;
+					if (use_hsic) error_dag_treshold = 0.1;
+					if (error_dag > error_dag_treshold) {
 						std::cout << "残差と説明変数が独立ではないため間違ったDAGのためキャンセル" << std::endl;
 						continue;
 					}
@@ -3149,7 +3181,7 @@ public:
 					printf("Evaluation of independence\n");
 					//Evaluation of independence
 					//calc_mutual_information(residual_error, residual_error_independ, bins);
-					calc_mutual_information(residual_error, residual_error_independ, bins, true);
+					calc_mutual_information(residual_error, residual_error_independ, bins/*, true*/);
 				}
 #endif
 				if (!nonlinear)
@@ -3200,6 +3232,17 @@ public:
 				abs_residual_errormax = 1.0e-10;
 			}
 
+			double  abs_independ_max_cur = max(error_dag, residual_error_independ.Max());
+			
+			if (abs_independ_max < 0)
+			{
+				abs_independ_max = abs_independ_max_cur;
+				if (!use_hsic) abs_independ_max = 1.0;
+			}
+			if (abs_independ_max < 1.0e-10)
+			{
+				abs_independ_max = 1.0e-10;
+			}			
 			//if (abs_residual_errormax < abs_residual_errormax_cur)
 			//{
 			//	abs_residual_errormax = abs_residual_errormax_cur;
@@ -3207,7 +3250,7 @@ public:
 			//residual_error.print("residual_error");
 			//printf("residual_error max:%f\n", Abs(residual_error).Max());
 
-			double independ = max(error_dag, residual_error_independ.Max());
+			double independ = max(error_dag, residual_error_independ.Max())/ abs_independ_max;
 			double residual = abs_residual_errormax_cur / abs_residual_errormax;
 
 			printf("abs_residual_errormax:%f residual:%f independ:%f\n", abs_residual_errormax, residual, independ);

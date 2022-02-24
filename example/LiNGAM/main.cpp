@@ -210,13 +210,16 @@ int main(int argc, char** argv)
 
 		chrono::system_clock::time_point start, end;
 
-		start = chrono::system_clock::now();
-		double tmp = _MutualInformation(x, y);
-		end = chrono::system_clock::now();
+		double tmp;
+		double time;
+		//end = chro;
+		//start = chrono::system_clock::now();
+		//tmp = _MutualInformation(x, y);
+		//end = chrono::system_clock::now();
 
-		printf("MI=%f ", tmp);
-		double time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
-		printf("time %lf[ms]\n", time);
+		//printf("MI=%f ", tmp);
+		//double time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+		//printf("time %lf[ms]\n", time);
 
 		x = _normalize(x);
 		y = _normalize(y);
@@ -227,6 +230,14 @@ int main(int argc, char** argv)
 		end = chrono::system_clock::now();
 
 		printf("MI=%f ", tmp);
+		time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+		printf("time %lf[ms]\n", time);
+		fflush(stdout);
+
+		start = chrono::system_clock::now();
+		tmp = independ_test(x, y);
+		end = chrono::system_clock::now();
+		printf("cor(tanh)=%f ", tmp);
 		time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
 		printf("time %lf[ms]\n", time);
 		fflush(stdout);
@@ -361,6 +372,8 @@ int main(int argc, char** argv)
 	int use_adaptive_lasso = 1;
 	bool use_bootstrap = false;
 	bool nonlinear = false;
+	bool use_hsic = false;
+	bool use_gpu = false;
 
 	int pause = 0;
 	std::string load_model = "";
@@ -509,6 +522,12 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--nonlinear") {
 					nonlinear = (atoi(argv[count + 1]) != 0) ? true : false;
+				}
+				else if (argname == "--use_hsic") {
+					use_hsic = (atoi(argv[count + 1]) != 0) ? true : false;
+				}
+				else if (argname == "--use_gpu") {
+					use_gpu = (atoi(argv[count + 1]) != 0) ? true : false;
 				}
 
 				//
@@ -1196,6 +1215,8 @@ int main(int argc, char** argv)
 			}
 			else
 			{
+				LiNGAM.use_hsic = use_hsic;
+				LiNGAM.use_gpu = use_gpu;
 				LiNGAM.fit3(xs, max_ica_iteration, ica_tolerance);
 			}
 		}
@@ -1476,11 +1497,23 @@ int main(int argc, char** argv)
 
 	for (int i = 0; i < LiNGAM.residual_error.n; i++)
 	{
-		for (int j = i+1; j < LiNGAM.residual_error.n; j++)
+		for (int j = i + 1; j < LiNGAM.residual_error.n; j++)
 		{
-			printf("residual_error_independ[%s,%s]:%.4f\n", header_names[i].c_str(), header_names[j].c_str(), LiNGAM.residual_error_independ(i,j));
+			printf("residual_error_independ(MI)[%s,%s]:%.4f\n", header_names[i].c_str(), header_names[j].c_str(), LiNGAM.residual_error_independ(i, j));
 		}
 	}
+
+	bool hsic = LiNGAM.use_hsic;
+	LiNGAM.use_hsic = true;
+	LiNGAM.calc_mutual_information(LiNGAM.residual_error, LiNGAM.residual_error_independ, 30, true);
+	for (int i = 0; i < LiNGAM.residual_error.n; i++)
+	{
+		for (int j = i+1; j < LiNGAM.residual_error.n; j++)
+		{
+			printf("residual_error_independ(HSIC)[%s,%s]:%.4f\n", header_names[i].c_str(), header_names[j].c_str(), LiNGAM.residual_error_independ(i,j));
+		}
+	}
+	LiNGAM.use_hsic = hsic;
 	if (confounding_factors)
 	{
 		printf("Iter:%d early_stopping:%d\n", confounding_factors_sampling, early_stopping);
