@@ -374,6 +374,12 @@ int main(int argc, char** argv)
 	bool nonlinear = false;
 	bool use_hsic = false;
 	bool use_gpu = false;
+	int n_epoch = 160;
+	int n_unit = 16;
+	int n_layer = 3;
+	std::string activation_fnc = "tanh";
+	float learning_rate = 0.0001;
+
 
 	int pause = 0;
 	std::string load_model = "";
@@ -528,6 +534,24 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--use_gpu") {
 					use_gpu = (atoi(argv[count + 1]) != 0) ? true : false;
+				}
+				else if (argname == "--n_epoch") {
+					n_epoch = atoi(argv[count + 1]);
+					if (n_epoch <= 0) n_epoch = 120;
+				}
+				else if (argname == "--n_unit") {
+					n_unit = atoi(argv[count + 1]);
+					if (n_unit <= 0) n_unit = 16;
+				}
+				else if (argname == "--n_layer") {
+					n_layer = atoi(argv[count + 1]);
+					if (n_layer <= 0) n_layer = 3;
+				}
+				else if (argname == "--activation_fnc") {
+					activation_fnc = std::string(argv[count + 1]);
+				}
+				else if (argname == "--learning_rate") {
+					learning_rate = atof(argv[count + 1]);
 				}
 
 				//
@@ -1215,8 +1239,16 @@ int main(int argc, char** argv)
 			}
 			else
 			{
+				LiNGAM.nonlinear = nonlinear;
 				LiNGAM.use_hsic = use_hsic;
 				LiNGAM.use_gpu = use_gpu;
+				LiNGAM.n_epoch = n_epoch;
+				LiNGAM.n_unit = n_unit;
+				LiNGAM.n_layer = n_layer;
+				LiNGAM.activation_fnc = activation_fnc;
+				LiNGAM.colnames = header_names;
+				LiNGAM.learning_rate = learning_rate;
+
 				LiNGAM.fit3(xs, max_ica_iteration, ica_tolerance);
 			}
 		}
@@ -1417,7 +1449,7 @@ int main(int argc, char** argv)
 	LiNGAM.B.print_e("(#3)B");
 
 	//printf("%d\n", error_distr_size[0]);
-	double scale = (error_distr_size[0] / 640.0);
+	double scale = (error_distr_size[0]);
 	if (scale < 1) scale = 1;
 	printf("scale:%f\n", scale);
 

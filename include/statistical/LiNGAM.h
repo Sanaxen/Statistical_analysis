@@ -487,8 +487,20 @@ public:
 	Matrix<dnn_double> b_probability;
 	bool use_bootstrap = false;
 	int bootstrap_sample = 1000;
+
+	bool nonlinear = false;
 	bool use_hsic = false;
 	bool use_gpu = false;
+	int n_epoch = 160;
+	int n_unit = 16;
+	int n_layer = 3;
+	float learning_rate = 0.0001;
+	std::vector<std::string> exper;
+	std::vector<std::string> colnames;
+	std::string activation_fnc = "tanh";
+	std::vector<std::vector<double>> observed;
+	std::vector<std::vector<double>> predict;
+	std::vector< std::vector<int>> colnames_id;
 
 	Lingam() {
 		error = -999;
@@ -517,6 +529,18 @@ public:
 				fprintf(fp, "%d\n", replacement[i]);
 			}
 			fclose(fp);
+		}
+		if (this->exper.size() > 0)
+		{
+			fp = fopen((filename + ".Non-linear_regression_equation").c_str(), "w");
+			if (fp)
+			{
+				for (int i = 0; i < exper.size(); i++)
+				{
+					fprintf(fp, "%s\n", exper[i].c_str());
+				}
+				fclose(fp);
+			}
 		}
 		fp = fopen((filename + ".option").c_str(), "w");
 		if (fp)
@@ -549,9 +573,20 @@ public:
 			residual_error_independ.print_csv((char*)(filename + ".residual_error_independ.csv").c_str());
 			residual_error.print_csv((char*)(filename + ".residual_error.csv").c_str());
 
-			if (use_bootstrap)
+			if (nonlinear)
 			{
-				b_probability.print_csv((char*)(filename + ".b_probability.csv").c_str());
+				fit_state(colnames_id, predict, observed);
+
+				auto B_sv = B;
+				before_sorting();
+
+				if (use_bootstrap)
+				{
+					b_probability.print_csv((char*)(filename + ".b_probability.csv").c_str());
+					b_probability_barplot(this->colnames, 1.0);
+				}
+				Causal_effect(this->colnames, 1.0);
+				B = B_sv;
 			}
 		}
 		catch (std::exception& e)
@@ -2584,6 +2619,7 @@ public:
 		int accept = 0;
 		double temperature = 0.0;
 
+		std::vector<std::string> best_exper;
 		double best_residual = 999999999.0;
 		double best_independ = 999999999.0;
 		double best_min_value = 999999999.0;
@@ -2911,6 +2947,10 @@ public:
 
 			//dir_change_(xs, É );
 			double error_dag = 0.0;
+			std::vector<std::vector<double>> observed_tmp;
+			std::vector<std::vector<double>> predict_tmp;
+			std::vector< std::vector<int>> name_id;
+			std::vector<std::string> exper_tmp;
 
 			//float r = 0.0;
 			bool cond = true;
@@ -3013,31 +3053,79 @@ public:
 					}
 
 					//b.print("b");
+					//B.print("B");
+
+					if (10)
+					{
+						char buf[256] = { '\0' };
+						for (int i = 0; i < B.n; i++)
+						{
+							char tmp_buf[256];
+
+							sprintf(tmp_buf, "%d [%s] ", this->replacement[i], colnames[this->replacement[i]].c_str());
+							strcat(buf, tmp_buf);
+						}
+						DWORD  bytesWritten = 0;
+						SetConsoleTextAttribute(hStdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_RED | BACKGROUND_BLUE | BACKGROUND_INTENSITY);
+						WriteFile(hStdout, buf, strlen(buf), &bytesWritten, NULL);
+						SetConsoleTextAttribute(hStdout, csbi.wAttributes);
+						WriteFile(hStdout, "\n", 1, &bytesWritten, NULL);
+					}
+					else
+					{
+						printf("\n-----------\n");
+						for (int i = 0; i < B.n; i++)
+						{
+							printf("%d [%s] ", this->replacement[i], colnames[this->replacement[i]].c_str());
+						}
+						printf("\n-----------\n");
+					}
 					Matrix<dnn_double> x;
 					Matrix<dnn_double> y;
 					for (int i = 0; i < B.n; i++)
 					{
-						// y = B*y + É  + e
+						// y = f(X/y, É ) + e
 						x = Matrix<dnn_double>();
-						y = X.Col(this->replacement[i]);
+						y = X.Col(i);
 
+						std::vector<int> xv;
+						xv.push_back(i);
 						for (int k = 0; k < B.n; k++)
 						{
 							if (k == i)continue;
-							if (fabs(B(i, k)) > 0.01)
+
+							if (i != 0 && condition(engine) > 0.95)
 							{
-								if (x.m == 0) x = X.Col(this->replacement[k]);
-								else x = x.appendCol(X.Col(this->replacement[k]));
+								if (x.m == 0) x = X.Col(k);
+								else x = x.appendCol(X.Col(k));
+
+								xv.push_back(k);
+							}
+							else
+							{
+								if (fabs(b(i, k)) > 0.000001)
+								{
+									if (x.m == 0) x = X.Col(k);
+									else x = x.appendCol(X.Col(k));
+
+									xv.push_back(k);
+								}
 							}
 						}
+						//printf("\n-----------\n");
+						//for (int ii = 0; ii < xv.size(); ii++)
+						//{
+						//	printf("%d ", xv[ii]);
+						//}
+						//printf("\n-----------\n");
 
 						for (int i = 0; i < B.n; i++)
 						{
-							if (x.m == 0) x = É .Col(this->replacement[i]) * condition(engine);
-							else x = x.appendCol(É .Col(this->replacement[i])) * condition(engine);
+							if (x.m == 0) x = É .Col(i) * condition(engine);
+							else x = x.appendCol(É .Col(i)) * condition(engine);
 						}
 
-						if (x.n == 0)
+						if (xv.size() <= 1)
 						{
 							for (int j = 0; j < xs.m; j++)
 							{
@@ -3057,17 +3145,17 @@ public:
 						normalizeZ(tx, mean_x, sigma_x);
 						normalizeZ(ty, mean_y, sigma_y);
 
-						int n_train_epochs_ = 60;
+						int n_train_epochs_ = this->n_epoch;
 						int n_minibatch_ = x.m/ 5;
 						if (n_minibatch_ > 2048)  n_minibatch_ = 2048;
 						if (n_minibatch_ < 1) n_minibatch_ = 1;
-						int input_size_ = 16;
+						int input_size_ = this->n_unit;
 
-						int n_layers_ = 3;
+						int n_layers_ = this->n_layer;
 						int dropout_ = 0.0;
 						int n_hidden_size_ = 32;
 						int fc_hidden_size_ = 32;
-						float learning_rate_ = 0.1;
+						float learning_rate_ = this->learning_rate;
 
 						float clip_gradients_ = 0;
 						int use_cnn_ = 0;
@@ -3077,11 +3165,15 @@ public:
 						int padding_prm_ = 0;
 
 						int classification_ = 0;
-						char* weight_init_type_ = "xavier";
-						char* activation_fnc_ = "tanh";
-						int early_stopping_ = 10;
-						char* opt_type_ = "adam_";
-						bool batch_shuffle_ = true;
+						
+						char weight_init_type_[16];
+						strcpy(weight_init_type_,"xavier");
+						char activation_fnc_[16];
+						strcpy(activation_fnc_, activation_fnc.c_str());
+						
+						int early_stopping_ = 0;
+						char opt_type_[] = "adam_";
+						bool batch_shuffle_ = false;
 						int test_mode_ = 0;
 
 						torch_params(
@@ -3143,6 +3235,11 @@ public:
 						}
 						end = chrono::system_clock::now();
 						printf("fitting %lf[ms]\n", static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0));
+
+						std::vector<double> observed_;
+						std::vector<double> predict_;
+						int nn = x.m / 100;
+						if (nn <= 1) nn = x.m;
 #pragma omp parallel for
 						for (int j = 0; j < x.m; j++)
 						{
@@ -3151,9 +3248,44 @@ public:
 							double prd_y = (double)predict_y[0] * sigma_y[0] + mean_y[0];
 							double obs_y = (double)ty[j][0] * sigma_y[0] + mean_y[0];
 							residual_error(j, i) = (obs_y - prd_y);
+
+							if (j % nn == 0)
+							{
+#pragma omp critical
+								{
+									observed_.push_back(obs_y);
+									predict_.push_back(prd_y);
+								}
+							}
 						}
+						observed_tmp.push_back(observed_);
+						predict_tmp.push_back(predict_);
+						name_id.push_back(xv);
+
 						residual_error.print("residual_error");
 						torch_delete_model();
+						printf("xv:%d\n", xv.size());
+						fflush(stdout);
+
+						if (xv.size() >= 1)
+						{
+							char tmp_buf[256];
+							std::string tmp_buf2;
+							sprintf(tmp_buf, "x(%d:[%s]) = f_{%d}(x(%d:[%s])", xv[0]+1, colnames[xv[0]].c_str(), xv[0] + 1, xv[1] + 1, colnames[xv[1]].c_str());
+							tmp_buf2 = std::string(tmp_buf);
+							for (int kk = 2; kk < xv.size(); kk++)
+							{
+								sprintf(tmp_buf, ",x(%d:[%s])", xv[kk]+1, colnames[xv[kk]].c_str());
+								tmp_buf2 += std::string(tmp_buf);
+							}
+							sprintf(tmp_buf, ")");
+							tmp_buf2 += std::string(tmp_buf);
+							auto eps = Median(residual_error.Col(i));
+							sprintf(tmp_buf, " %c %.4f", (eps<0)?'-':'+', fabs(eps));
+							tmp_buf2 += std::string(tmp_buf);
+							exper_tmp.push_back(tmp_buf2);
+						}
+
 						printf("Evaluation of independence\n");
 
 						start = chrono::system_clock::now();
@@ -3182,6 +3314,11 @@ public:
 					//Evaluation of independence
 					//calc_mutual_information(residual_error, residual_error_independ, bins);
 					calc_mutual_information(residual_error, residual_error_independ, bins/*, true*/);
+
+					for (int ii = 0; ii < exper_tmp.size(); ii++)
+					{
+						printf("%s\n", exper_tmp[ii].c_str());
+					}
 				}
 #endif
 				if (!nonlinear)
@@ -3253,8 +3390,21 @@ public:
 			double independ = max(error_dag, residual_error_independ.Max())/ abs_independ_max;
 			double residual = abs_residual_errormax_cur / abs_residual_errormax;
 
-			printf("abs_residual_errormax:%f residual:%f independ:%f\n", abs_residual_errormax, residual, independ);
+			if(10)
+			{
+				char buf[256];
+				sprintf(buf, "abs_residual_errormax:%f residual:%f independ:%f\n", abs_residual_errormax, residual, independ);
 
+				DWORD  bytesWritten = 0;
+				SetConsoleTextAttribute(hStdout, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+				WriteFile(hStdout, buf, strlen(buf), &bytesWritten, NULL);
+				SetConsoleTextAttribute(hStdout, csbi.wAttributes);
+				WriteFile(hStdout, "\n", 1, &bytesWritten, NULL);
+			}
+			else
+			{
+				printf("abs_residual_errormax:%f residual:%f independ:%f\n", abs_residual_errormax, residual, independ);
+			}
 			//{
 			//	double w = weight1 + weight2;
 			//	weight1 = weight1 / w;
@@ -3338,7 +3488,8 @@ public:
 					}
 					else
 					{
-						printf(buf); printf("\n");
+						printf(buf); 
+						printf("\n");
 					}
 				}
 				if (alp < th)
@@ -3399,10 +3550,15 @@ public:
 				}
 				if (best_update || kk == 0)
 				{
+					best_exper = exper_tmp;
 					best_min_value = value;
 					best_residual = residual;
 					best_independ = independ;
 					loss_value = value;
+					for (int ii = 0; ii < best_exper.size(); ii++)
+					{
+						printf("%s\n", best_exper[ii].c_str());
+					}
 				}
 				//{
 				//	auto& b = before_sorting_(B);
@@ -3444,10 +3600,15 @@ public:
 					replacement_best = replacement;
 					residual_error_best = residual_error;
 					residual_error_independ_best = residual_error_independ;
+					
+					observed = observed_tmp;
+					predict = predict_tmp;
+					colnames_id = name_id;
 
 					intercept_best = intercept;
 					dist_t_param_best = dist_t_param;
 
+					exper = best_exper;
 					calc_mutual_information(X, mutual_information, bins);
 
 					if (use_bootstrap)
@@ -3469,6 +3630,7 @@ public:
 						printf("convergence!\n");
 						break;
 					}
+
 				}
 
 				//for (int i = 0; i < xs.n; i++)
@@ -3586,6 +3748,40 @@ public:
 		return error;
 	}
 
+	void fit_state(std::vector<std::vector<int>>& name_id, std::vector<std::vector<double>>& predict_y, std::vector<std::vector<double>>& observed_y)
+	{
+		FILE* fp = fopen("fit.r", "w");
+		fprintf(fp, "library(ggplot2)\n");
+		fprintf(fp, "library(gridExtra)\n");
+		fprintf(fp, "n <- %d\n", predict_y[0].size());
+		for (int i = 0; i < predict_y.size(); i++)
+		{
+			fprintf(fp, "df%d<- data.frame(", name_id[i][0]);
+			fprintf(fp, "x=c(1:n), y%d=c(%.3f", name_id[i][0], observed_y[i][0]);
+			for (int j = 1; j < observed_y[i].size(); j++)
+			{
+				fprintf(fp, ",%.3f", observed_y[i][j]);
+			}
+			fprintf(fp, "), y%d_fit=c(%.3f", name_id[i][0], predict_y[i][0]);
+			for (int j = 1; j < predict_y[i].size(); j++)
+			{
+				fprintf(fp, ",%.3f", predict_y[i][j]);
+			}
+			fprintf(fp, "))\n");
+			fprintf(fp, "g%d <- ggplot(df%d)\n", i, name_id[i][0]);
+			fprintf(fp, "g%d <- g%d + geom_line(aes(x = x, y = y%d, colour =\"y%d\"))\n", i, i, name_id[i][0], name_id[i][0]);
+			fprintf(fp, "g%d <- g%d + geom_line(aes(x = x, y = y%d_fit, colour =\"y%d_fit\"))\n", i, i, name_id[i][0], name_id[i][0]);
+		}
+		fprintf(fp, "g <- grid.arrange(g%d", 0);
+		for (int i = 1; i < predict_y.size(); i++)
+		{
+			fprintf(fp, ",g%d", i);
+		}
+		fprintf(fp, ", nrow = %d)\n", predict_y.size());
+		fprintf(fp, "ggplot2::ggsave(\"fit.png\",g,width = 6.4*3.00, height = 4.8*%d, units = \"cm\", dpi = 100, limitsize=F)\n", predict_y.size());
+		fclose(fp);
+	}
+
 	void Causal_effect(std::vector<std::string>& header_names, double scale = 1)
 	{
 		std::vector<std::string> header_names2;
@@ -3673,8 +3869,8 @@ public:
 			fprintf(fp, "g%d", i);
 			if (i < plot - 1) fprintf(fp, ",");
 		}
-		fprintf(fp, ")\n");
-		fprintf(fp, "ggplot2::ggsave(\"Causal_effect.png\",g,width = 15*%.2f, height = 8*%.2f, units = \"cm\", dpi = 400)\n", scale, scale);
+		fprintf(fp, ", nrow = %d)\n", plot);
+		fprintf(fp, "ggplot2::ggsave(\"Causal_effect.png\",g,width = 6.4*2*%.2f, height = 4.8*%.2f, units = \"cm\", dpi = 100, limitsize=F)\n", 1.0, (double)plot);
 
 		fclose(fp);
 		printf("Causal_effect end\n");
@@ -3719,12 +3915,12 @@ public:
 			for (int j = 0; j < variableNum; j++)
 			{
 				if (i == j) continue;
-				if (b_probability(i, j) < 0.05) continue;
-				if (fabs(B(i, j)) < 0.001) continue;
+				if (b_probability(i, j) < 0.001) continue;
+				//if (fabs(B(i, j)) < 0.001) continue;
 
 				count++;
 			}
-			if (count <= 1) continue;
+			if (count < 1) continue;
 
 			fprintf(fp, "x_ <- data.frame(\n");
 			int s = 0;
@@ -3734,8 +3930,8 @@ public:
 			for (int j = 0; j < variableNum; j++)
 			{
 				if (i == j) continue;
-				if (b_probability(i, j) < 0.05) continue;
-				if (fabs(B(i, j)) < 0.001) continue;
+				if (b_probability(i, j) < 0.001) continue;
+				//if (fabs(B(i, j)) < 0.001) continue;
 
 				if (s > 0)fprintf(fp, ",");
 				fprintf(fp, "\"%s\"", header_names2[j].c_str());
@@ -3748,7 +3944,7 @@ public:
 			for (int j = 0; j < variableNum; j++)
 			{
 				if (i == j) continue;
-				if (b_probability(i, j) < 0.05) continue;
+				if (b_probability(i, j) < 0.001) continue;
 				if (fabs(B(i, j)) < 0.001) continue;
 
 				if (s > 0)fprintf(fp, ",");
@@ -3773,8 +3969,8 @@ public:
 			fprintf(fp, "g%d", i);
 			if (i < plot - 1) fprintf(fp, ",");
 		}
-		fprintf(fp, ")\n");
-		fprintf(fp, "ggplot2::ggsave(\"b_probability.png\",g,width = 15*%.2f, height = 8*%.2f, units = \"cm\", dpi = 400)\n", scale, scale);
+		fprintf(fp, ", nrow = %d)\n", plot);
+		fprintf(fp, "ggplot2::ggsave(\"b_probability.png\",g,width = 6.4*2*%.2f, height = 4.8*%.2f, units = \"cm\", dpi = 100, limitsize=F)\n", 1.0, (double)plot);
 
 		fclose(fp);
 		printf("b_probability_barplot end\n");
