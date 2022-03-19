@@ -379,6 +379,8 @@ int main(int argc, char** argv)
 	int n_layer = 3;
 	std::string activation_fnc = "tanh";
 	float learning_rate = 0.0001;
+	std::string R_cmd_path = "";
+	std::string optimizer = "adam_";
 
 
 	int pause = 0;
@@ -553,6 +555,13 @@ int main(int argc, char** argv)
 				else if (argname == "--learning_rate") {
 					learning_rate = atof(argv[count + 1]);
 				}
+				else if (argname == "--R_cmd_path") {
+					R_cmd_path = std::string(argv[count + 1]);
+				}
+				else if (argname == "--optimizer") {
+					optimizer = std::string(argv[count + 1]);
+				}
+				//
 
 				//
 				///
@@ -1108,6 +1117,10 @@ int main(int argc, char** argv)
 	LiNGAM.use_intercept = use_intercept;
 	LiNGAM.use_bootstrap = use_bootstrap;
 
+	LiNGAM.nonlinear = nonlinear;
+	LiNGAM.colnames = header_names;
+	LiNGAM.R_cmd_path = R_cmd_path;
+
 	{
 		//CSVReader csv1(csvfile, ',', header);
 		//Matrix<dnn_double> x = csv1.toMat();
@@ -1186,10 +1199,12 @@ int main(int argc, char** argv)
 	//z.print_csv("gg3.csv", head);
 	//exit(0);
 
+	printf("input:[%s]\n", csvfile.c_str());
 	if (load_model != "")
 	{
 		try
 		{
+			LiNGAM.eval_mode = true;
 			if (!LiNGAM.load(load_model, loss_data_load))
 			{
 				printf("ERROR:load_model\n");
@@ -1214,6 +1229,8 @@ int main(int argc, char** argv)
 	}
 	else
 	{
+		LiNGAM.eval_mode = false;
+
 		//http://www.ar.sanken.osaka-u.ac.jp/~sshimizu/papers/JJSS08.pdf
 		//	十分大きい標本サイズを集める必要がある. 
 		//　Sarela and Vigario(2003) は経験上, 
@@ -1239,7 +1256,6 @@ int main(int argc, char** argv)
 			}
 			else
 			{
-				LiNGAM.nonlinear = nonlinear;
 				LiNGAM.use_hsic = use_hsic;
 				LiNGAM.use_gpu = use_gpu;
 				LiNGAM.n_epoch = n_epoch;
@@ -1248,6 +1264,7 @@ int main(int argc, char** argv)
 				LiNGAM.activation_fnc = activation_fnc;
 				LiNGAM.colnames = header_names;
 				LiNGAM.learning_rate = learning_rate;
+				LiNGAM.optimizer = optimizer;
 
 				LiNGAM.fit3(xs, max_ica_iteration, ica_tolerance);
 			}
@@ -1323,8 +1340,28 @@ int main(int argc, char** argv)
 			printf("ERROR:lasso(remove_redundancy)\n");
 		}
 	}
+
+	auto B_sv = LiNGAM.B;
+
+	if (LiNGAM.R_cmd_path != "")
+	{
+		bool eval_mode = LiNGAM.eval_mode;
+
+		LiNGAM.eval_mode = true;
+		LiNGAM.importance_B = LiNGAM.importance();
+		LiNGAM.importance_B.print("LiNGAM.importance_B");
+
+		LiNGAM.before_sorting(LiNGAM.importance_B);
+		LiNGAM.eval_mode = eval_mode;
+	}
 	LiNGAM.before_sorting(LiNGAM.mutual_information);
 	LiNGAM.before_sorting();
+
+	if (LiNGAM.R_cmd_path != "" && LiNGAM.nonlinear)
+	{
+		LiNGAM.B = LiNGAM.importance_B;
+	}
+
 
 	LiNGAM.B.print_e("(#2)B");
 	if (min_cor_delete > 0)
