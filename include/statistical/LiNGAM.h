@@ -3313,19 +3313,28 @@ public:
 							y = X.Col(i);
 							xv.push_back(this->replacement[i]);
 
+							std::vector<int>xv_id;
+							double max_b = 0;
 							for (int k = 0; k < B.n; k++)
 							{
 								if (k >= i) break;
+								if (fabs(B(k, i)) > max_b) max_b = fabs(B(k, i));
+								xv_id.push_back(k);
+							}
+							std::shuffle(xv_id.begin(), xv_id.end(), engine);
 
-								if (fabs(B(i, k)) > 0.015)
+							for (int k = 0; k < xv_id.size(); k++)
+							{
+								if (x.n < 2 )
 								{
-									//printf("|B(%d,%d)|:%.16f\n", i, k, fabs(B(i, k)));
-									if (x.n == 0) x = X.Col(k);
-									else x = x.appendCol(X.Col(k));
-									xv.push_back(this->replacement[k]);
-								}
-								else {
-									printf("|B(%d,%d)|:%.16f\n", i, k, fabs(B(i, k)));
+									if (x.n == 0) x = X.Col(xv_id[k]);
+									else x = x.appendCol(X.Col(xv_id[k]));
+									xv.push_back(this->replacement[xv_id[k]]);
+								}else if ( fabs(B(i, xv_id[k])) > 0.01)
+								{
+									if (x.n == 0) x = X.Col(xv_id[k]);
+									else x = x.appendCol(X.Col(xv_id[k]));
+									xv.push_back(this->replacement[xv_id[k]]);
 								}
 							}
 							if (xv.size() == 1)
@@ -3396,8 +3405,8 @@ public:
 						normalizeZ(ty, mean_y, sigma_y);
 
 						int n_train_epochs_ = this->n_epoch;
-						int n_minibatch_ = tx.size()/ 5;
-						if (n_minibatch_ > 2048)  n_minibatch_ = 2048;
+						int n_minibatch_ = tx.size()/ 10;
+						if (n_minibatch_ > 1024)  n_minibatch_ = 1024;
 						if (n_minibatch_ < 1) n_minibatch_ = 1;
 						int input_size_ = this->n_unit;
 
@@ -3424,10 +3433,10 @@ public:
 						int early_stopping_ = 0;
 						char opt_type_[16];
 						strcpy(opt_type_, optimizer.c_str());
-						bool batch_shuffle_ = false;
+						bool batch_shuffle_ = true;
 						int test_mode_ = 0;
 
-						const int max_epohc_srch = 3;
+						const int max_epohc_srch = 1;
 						for (int jj = 0; jj < max_epohc_srch; jj ++ )
 						{
 							torch_params(
@@ -3675,6 +3684,34 @@ public:
 			{
 				if (0)
 				{
+					Matrix<double> mse_median(1, X.n);
+
+					for (int i = 0; i < X.n; i++)
+					{
+						double max = Abs(residual_error.Col(i)).Max();
+						double median = Median(Abs(residual_error).Col(i));
+						double s = (max - median)/30.0;
+
+						double sum = 0;
+						int n = 0;
+						for (int j = 0; j < X.m; j++)
+						{
+							if (fabs(residual_error.Col(i)(j, 0)) < max - s)
+							{
+								sum += fabs(residual_error.Col(i)(j, 0));
+								n++;
+							}
+						}
+						mse_median(0, i) = sum / (double)n;
+					}
+					mse_median(0, 0) = 0.0;
+					mse_median.print("mse_median");
+					printf("mse_median max:%f\n", mse_median.Max());
+
+					abs_residual_errormax_cur = mse_median.Max();
+				}
+				if (0)
+				{
 					Matrix<double> mae(1, X.n);
 					for (int i = 0; i < X.n; i++)
 					{
@@ -3769,6 +3806,10 @@ public:
 			//printf("residual_error max:%f\n", Abs(residual_error).Max());
 
 			double independ = max(error_dag, residual_error_independ.Max())/ abs_independ_max;
+			if (nonlinear)
+			{
+				independ = error_dag;
+			}
 			double residual = abs_residual_errormax_cur / abs_residual_errormax;
 
 			if(10)
