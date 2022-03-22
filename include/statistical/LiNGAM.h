@@ -3318,19 +3318,14 @@ public:
 							for (int k = 0; k < B.n; k++)
 							{
 								if (k >= i) break;
-								if (fabs(B(k, i)) > max_b) max_b = fabs(B(k, i));
+								if (fabs(B(i, k)) > max_b) max_b = fabs(B(k, i));
 								xv_id.push_back(k);
 							}
-							std::shuffle(xv_id.begin(), xv_id.end(), engine);
+							//std::shuffle(xv_id.begin(), xv_id.end(), engine);
 
 							for (int k = 0; k < xv_id.size(); k++)
 							{
-								if (x.n < 2 )
-								{
-									if (x.n == 0) x = X.Col(xv_id[k]);
-									else x = x.appendCol(X.Col(xv_id[k]));
-									xv.push_back(this->replacement[xv_id[k]]);
-								}else if ( fabs(B(i, xv_id[k])) > 0.01)
+								if ( fabs(B(i, xv_id[k])) > 0.01)
 								{
 									if (x.n == 0) x = X.Col(xv_id[k]);
 									else x = x.appendCol(X.Col(xv_id[k]));
@@ -3627,7 +3622,7 @@ public:
 					}
 				}
 
-				if (edge_dag_error_flg) continue;
+				//if (edge_dag_error_flg) continue;
 #endif
 				if (!nonlinear)
 				{
