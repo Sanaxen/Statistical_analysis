@@ -381,6 +381,9 @@ int main(int argc, char** argv)
 	float learning_rate = 0.0001;
 	std::string R_cmd_path = "";
 	std::string optimizer = "adam_";
+	double add_hidden_prob = 0.0;
+	int minbatch = -1;
+	double u1_param = 0.001;
 
 
 	int pause = 0;
@@ -560,6 +563,12 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--optimizer") {
 					optimizer = std::string(argv[count + 1]);
+				}
+				else if (argname == "--minbatch") {
+					minbatch = atoi(argv[count + 1]);
+				}
+				else if (argname == "--u1_param") {
+					u1_param = atof(argv[count + 1]);
 				}
 				//
 
@@ -1120,6 +1129,7 @@ int main(int argc, char** argv)
 	LiNGAM.nonlinear = nonlinear;
 	LiNGAM.colnames = header_names;
 	LiNGAM.R_cmd_path = R_cmd_path;
+	LiNGAM.minbatch = minbatch;
 
 	{
 		//CSVReader csv1(csvfile, ',', header);
@@ -1250,6 +1260,7 @@ int main(int argc, char** argv)
 			LiNGAM.confounding_factors_upper = confounding_factors_upper;
 			LiNGAM.rho = rho;
 
+			printf("view_confounding_factors:%d\n", view_confounding_factors ? 1 : 0);
 			if (!nonlinear)
 			{
 				LiNGAM.fit2(xs, max_ica_iteration, ica_tolerance);
@@ -1265,6 +1276,8 @@ int main(int argc, char** argv)
 				LiNGAM.colnames = header_names;
 				LiNGAM.learning_rate = learning_rate;
 				LiNGAM.optimizer = optimizer;
+				LiNGAM.minbatch = minbatch;
+				LiNGAM.u1_param = u1_param;
 
 				LiNGAM.fit3(xs, max_ica_iteration, ica_tolerance);
 			}
@@ -1518,7 +1531,22 @@ int main(int argc, char** argv)
 	{
 		LiNGAM.linear_regression_var.push_back(y_var[0]);
 	}
-	LiNGAM.diagram(header_names, y_var, residual_flag, "digraph.txt", sideways, diaglam_size, output_diaglam_type, false, mutual_information_cut, view_confounding_factors);
+
+	std:string diagram_title = "";
+	{
+		FILE* fp = fopen("lingam.model.update", "r");
+		if (fp)
+		{
+			char buf[256];
+			fgets(buf, 256, fp);
+			fclose(fp);
+
+			char* p = strstr(buf, "\n");
+			if (p) *p = '\0';
+			diagram_title = std::string(buf);
+		}
+	}
+	LiNGAM.diagram(header_names, y_var, residual_flag, "digraph.txt", sideways, diaglam_size, output_diaglam_type, false, mutual_information_cut, view_confounding_factors, diagram_title);
 	LiNGAM.report(header_names);
 
 	{
@@ -1561,7 +1589,7 @@ int main(int argc, char** argv)
 	}
 	for (int i = 0; i < LiNGAM.residual_error.n; i++)
 	{
-		printf("epsilon_mean[%s]:%.4f\n", header_names[i].c_str(), LiNGAM.residual_error.Col(i).Mean().v[0]);
+		printf("epsilon_mean[%s]:%.4f [%.4f ~ %.4f]\n", header_names[i].c_str(), LiNGAM.residual_error.Col(i).Mean().v[0], LiNGAM.residual_error.Col(i).Min(), LiNGAM.residual_error.Col(i).Max());
 	}
 
 	for (int i = 0; i < LiNGAM.residual_error.n; i++)

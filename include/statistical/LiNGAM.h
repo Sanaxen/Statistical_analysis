@@ -135,6 +135,7 @@ extern "C" _LIBRARY_EXPORTS void torch_params(
 	int early_stopping_,
 	char* opt_type_,
 	bool batch_shuffle_,
+	int shuffle_seed_,
 	int test_mode_
 );
 extern "C" _LIBRARY_EXPORTS void torch_train_fc(
@@ -509,6 +510,8 @@ public:
 
 	std::string R_cmd_path = "";
 	std::string optimizer = "adam_";
+	int minbatch = -1;
+	double u1_param = 0.001;
 
 	bool eval_mode = false;
 
@@ -905,8 +908,9 @@ public:
 		"#dcdcdc"
 	};
 
-	void diagram(const std::vector<std::string>& column_names, std::vector<std::string> y_var, std::vector<int>& residual_flag, const char* filename, bool sideways = false, int size=30, char* outformat="png", bool background_Transparent=false, double mutual_information_cut = 0, bool view_confounding_factors = false)
+	void diagram(const std::vector<std::string>& column_names, std::vector<std::string> y_var, std::vector<int>& residual_flag, const char* filename, bool sideways = false, int size=30, char* outformat="png", bool background_Transparent=false, double mutual_information_cut = 0, bool view_confounding_factors = false, std::string title="")
 	{
+		printf("view_confounding_factors:%d\n", view_confounding_factors?1:0);
 		printf("confounding_factors_upper:%f\n", confounding_factors_upper);
 		Matrix<dnn_double> B_tmp = B.chop(0.001);
 		B_tmp.print_e("remove 0.001");
@@ -930,7 +934,7 @@ public:
 		}
 		Matrix<dnn_double> XCor = input.Cor();
 #endif
-		//mutual_information.print("#");
+		mutual_information.print("#mutual_information");
 
 		double mi_max = mutual_information.Max();
 		if (mi_max == 0.0) mi_max = 1.0;
@@ -940,6 +944,11 @@ public:
 		utf8str utf8;
 		FILE* fp = fopen(filename, "w");
 		utf8.fprintf(fp, "digraph {\n");
+		if (title != "")
+		{
+			utf8.fprintf(fp, "labelloc=\"t\";\n");
+			utf8.fprintf(fp, "label=\"%s\";\n", title.c_str());
+		}
 		if (background_Transparent)
 		{
 			utf8.fprintf(fp, "graph[bgcolor=\"#00000000\"];\n");
@@ -1095,9 +1104,9 @@ public:
 							}
 						}
 				}
-				else
+				//else
 				{
-					if (i < j && view_confounding_factors && B_tmp(j, i) == 0.0)
+					if (i < j && view_confounding_factors/* && B_tmp(j, i) == 0.0*/)
 					{
 						if (mutual_information(i, j) > confounding_factors_upper )
 						{
@@ -3189,7 +3198,8 @@ public:
 				// nonlinear
 				if (nonlinear)
 				{
-					//if (condition(engine) < 0.1)
+					//bool is_shuffle = false;
+					//if (condition(engine) < 0.7)
 					//{
 					//	printf("\n");
 					//	printf("=============================================\n"); fflush(stdout);
@@ -3207,12 +3217,37 @@ public:
 					//		for (int j = 0; j < X.n; j++)
 					//		{
 					//			if (j >= i) break;
-					//			if ( condition(engine) > 0.75)
-					//			{
-					//				continue;
-					//			}
-
 					//			B(i, j) = 1;
+					//		}
+					//	}
+					//	is_shuffle = true;
+					//}
+					//{
+					//	int c = 0;
+					//	for (int i = 0; i < this->replacement.size(); i++)
+					//	{
+					//		printf("%d ", this->replacement[i]);
+					//		if (i == this->replacement[i]) c++;
+					//	}
+					//	printf("\n");
+					//	if (c == this->replacement.size())
+					//	{
+					//		//printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+					//		//getchar();
+					//		char fname[256];
+					//		//if (is_shuffle)
+					//		//{
+					//		//	sprintf(fname, "..\\Causal_Search_Experiment\\%d.txt", kk);
+					//		//}
+					//		//else
+					//		{
+					//			sprintf(fname, "..\\Causal_Search_Experiment\\@%d.txt", kk);
+					//		}
+					//		FILE* fp = fopen(fname, "w");
+					//		if (fp)
+					//		{
+					//			fprintf(fp, "%d\n", kk);
+					//			fclose(fp);
 					//		}
 					//	}
 					//}
@@ -3221,6 +3256,7 @@ public:
 					std::vector<float_t> sigma_x;
 					std::vector<float_t> mean_y;
 					std::vector<float_t> sigma_y;
+					calc_mutual_information(X, mutual_information, bins);
 
 					residual_error = Matrix<dnn_double>().zeros(X.m, X.n);
 
@@ -3318,19 +3354,19 @@ public:
 							for (int k = 0; k < B.n; k++)
 							{
 								if (k >= i) break;
-								if (fabs(B(i, k)) > max_b) max_b = fabs(B(k, i));
-								xv_id.push_back(k);
+								if (fabs(B(i, k)) > max_b) max_b = fabs(B(i, k));
+								if (fabs(B(i, k)) > 0.01)
+								{
+									xv_id.push_back(k);
+								}
 							}
 							//std::shuffle(xv_id.begin(), xv_id.end(), engine);
 
 							for (int k = 0; k < xv_id.size(); k++)
 							{
-								if ( fabs(B(i, xv_id[k])) > 0.01)
-								{
-									if (x.n == 0) x = X.Col(xv_id[k]);
-									else x = x.appendCol(X.Col(xv_id[k]));
-									xv.push_back(this->replacement[xv_id[k]]);
-								}
+								if (x.n == 0) x = X.Col(xv_id[k]);
+								else x = x.appendCol(X.Col(xv_id[k]));
+								xv.push_back(this->replacement[xv_id[k]]);
 							}
 							if (xv.size() == 1)
 							{
@@ -3340,13 +3376,40 @@ public:
 
 							if (xv.size() > 1)
 							{
+								bool add_hidden = false;
+								mutual_information.print("mutual_information");
+								//for (int ki = 0; ki < xv.size(); ki++) {
+								//	for (int kj = ki+1; kj < xv.size(); kj++) {
+								//		if (mutual_information(xv[kj], xv[ki]) > 0.5)
+								//		{
+								//			add_hidden = true;
+								//		}
+								//	}
+								//}
 
 #if 10
+								double max_cofound = 0;
+								double max_cofound_id = -1;
 								for (int k = 0; k < xv.size(); k++)
 								{
-									if (x.n == 0) x = ƒÊ.Col(xv[k]) * 0.001;
-									else x = x.appendCol(ƒÊ.Col(xv[k])) * 0.001;
-									hidden_xv.push_back(this->replacement[xv[k]]);
+									if (max_cofound < mutual_information(i, xv[k]))
+									{
+										max_cofound = mutual_information(i, xv[k]);
+										max_cofound_id = k;
+									}
+								}
+								printf("confounding_factors_upper:%f max_cofound:%f\n", confounding_factors_upper, max_cofound);
+								for (int k = 0; k < xv.size(); k++)
+								{
+									if (mutual_information(i, xv[k]) > confounding_factors_upper)
+									{
+										//if (k == max_cofound_id )
+										{
+											if (x.n == 0) x = ƒÊ.Col(xv[k])* u1_param;
+											else x = x.appendCol(ƒÊ.Col(xv[k]))* u1_param;
+											hidden_xv.push_back(this->replacement[xv[k]]);
+										}
+									}
 								}
 #else
 								if (x.n == 0) x = ƒÊ.Col(i);
@@ -3400,9 +3463,14 @@ public:
 						normalizeZ(ty, mean_y, sigma_y);
 
 						int n_train_epochs_ = this->n_epoch;
-						int n_minibatch_ = tx.size()/ 10;
-						if (n_minibatch_ > 1024)  n_minibatch_ = 1024;
+						int n_minibatch_ = /*0.7**/tx.size()/ 5;
+						if (n_minibatch_ > 2000)  n_minibatch_ = 2000;
 						if (n_minibatch_ < 1) n_minibatch_ = 1;
+						if (this->minbatch >= 0)
+						{
+							if(this->minbatch == 0) n_minibatch_ = /*0.7**/tx.size();
+							else n_minibatch_ = this->minbatch;
+						}
 						int input_size_ = this->n_unit;
 
 						int n_layers_ = this->n_layer;
@@ -3429,6 +3497,7 @@ public:
 						char opt_type_[16];
 						strcpy(opt_type_, optimizer.c_str());
 						bool batch_shuffle_ = true;
+						int shuffle_seed_ = kk;
 						int test_mode_ = 0;
 
 						const int max_epohc_srch = 1;
@@ -3458,6 +3527,7 @@ public:
 								early_stopping_,
 								opt_type_,
 								batch_shuffle_,
+								shuffle_seed_,
 								test_mode_
 							);
 
@@ -3481,11 +3551,15 @@ public:
 
 							chrono::system_clock::time_point start, end;
 
-							torch_train_init_seed(kk);
+							torch_train_init_seed(shuffle_seed_);
 
 							start = chrono::system_clock::now();
 							try {
-								torch_train_fc(tx, ty, n_minibatch_, n_train_epochs_, "", on_enumerate_minibatch, on_enumerate_epoch);
+								auto tx_ = tx;
+								auto ty_ = ty;
+								//tx_.resize(tx.size() * 0.7);
+								//ty_.resize(ty.size() * 0.7);
+								torch_train_fc(tx_, ty_, n_minibatch_, n_train_epochs_, "", on_enumerate_minibatch, on_enumerate_epoch);
 							}
 							catch (std::exception& err)
 							{
@@ -3500,7 +3574,7 @@ public:
 
 							std::vector<double> observed_;
 							std::vector<double> predict_;
-							int nn = x.m / 100;
+							int nn = (x.m/* - 0.7 * x.m*/) / 100;
 							if (nn <= 1) nn = x.m;
 #pragma omp parallel for
 							for (int j = 0; j < x.m; j++)
@@ -3511,7 +3585,7 @@ public:
 								double obs_y = (double)ty[j][0] * sigma_y[0] + mean_y[0];
 								residual_error(j, i) = (obs_y - prd_y);
 
-								if (j % nn == 0)
+								if (/*j > 0.7*x.m && */j % nn == 0)
 								{
 #pragma omp critical
 									{
@@ -3611,7 +3685,7 @@ public:
 						edge_dag_error_flg = true;
 					}
 
-					printf("Evaluation of independence\n");
+					//printf("Evaluation of independence\n");
 					//Evaluation of independence
 					//calc_mutual_information(residual_error, residual_error_independ, bins);
 					calc_mutual_information(residual_error, residual_error_independ, bins/*, true*/);
@@ -3664,7 +3738,7 @@ public:
 			}
 			double  abs_residual_errormax_cur = Abs(residual_error).Max();
 			
-			//if (!nonlinear)
+			if (!nonlinear)
 			{
 				if (abs_residual_errormax < 0)
 				{
@@ -3685,7 +3759,7 @@ public:
 					{
 						double max = Abs(residual_error.Col(i)).Max();
 						double median = Median(Abs(residual_error).Col(i));
-						double s = (max - median)/30.0;
+						double s = (max - median)/(0.5*X.m);
 
 						double sum = 0;
 						int n = 0;
@@ -3693,7 +3767,7 @@ public:
 						{
 							if (fabs(residual_error.Col(i)(j, 0)) < max - s)
 							{
-								sum += fabs(residual_error.Col(i)(j, 0));
+								sum += pow(residual_error.Col(i)(j, 0), 2.0);
 								n++;
 							}
 						}
@@ -3718,12 +3792,19 @@ public:
 
 					abs_residual_errormax_cur = mae.Max();
 				}
-				if (0)
+				if (10)
 				{
 					Matrix<double> mse(1, X.n);
 					for (int i = 0; i < X.n; i++)
 					{
 						mse(0, i) = ((Pow(residual_error.Col(i), 2.0) / (double)X.m).Sum());
+
+						//double sum = 0.0;
+						//for (int j = 0.7 * X.m; j < X.m; j++)
+						//{
+						//	sum += pow(residual_error(j, i), 2.0);
+						//}
+						//mse(0, i) = sum / (X.m - 0.7 * X.m);
 					}
 					mse(0, 0) = 0.0;
 					mse.print("mse");
@@ -3779,10 +3860,10 @@ public:
 
 			double  abs_independ_max_cur = max(error_dag, residual_error_independ.Max());
 			
-			if (nonlinear)
-			{
-				abs_independ_max_cur = error_dag;
-			}
+			//if (nonlinear)
+			//{
+			//	abs_independ_max_cur = error_dag;
+			//}
 
 			if (abs_independ_max < 0)
 			{
@@ -3801,10 +3882,10 @@ public:
 			//printf("residual_error max:%f\n", Abs(residual_error).Max());
 
 			double independ = max(error_dag, residual_error_independ.Max())/ abs_independ_max;
-			if (nonlinear)
-			{
-				independ = error_dag;
-			}
+			//if (nonlinear)
+			//{
+			//	independ = error_dag;
+			//}
 			double residual = abs_residual_errormax_cur / abs_residual_errormax;
 
 			if(10)
@@ -3838,6 +3919,14 @@ public:
 				weight2 = independ / w_tmp;
 			}
 
+			if (nonlinear)
+			{
+				weight1 = 0.90;
+				weight2 = 0.45;
+				double w_tmp = weight1 + weight2;
+				weight1 = weight1 / w_tmp;
+				weight2 = weight2 / w_tmp;
+			}
 			double value;
 			if (loss_function == 0)
 			{
@@ -3869,6 +3958,14 @@ public:
 			{
 				accept_ = true;
 			}
+
+			//if (nonlinear)
+			//{
+			//	if (best_residual > residual)
+			//	{
+			//		accept_ = true;
+			//	}
+			//}
 
 			if (kk == 0) accept_ = true;
 
@@ -3937,6 +4034,9 @@ public:
 					bootstrapN++;
 				}
 
+				printf("best_min_value:%f value:%f\n", best_min_value, value);
+				printf("best_residual:%f residual:%f\n", best_residual, residual);
+				printf("best_independ:%f independ:%f\n", best_independ, independ);
 				//printf("+\n");
 				if (best_min_value >= value || (best_residual > residual || best_independ > independ))
 				{
@@ -3944,6 +4044,7 @@ public:
 					double d2 = (independ - best_independ);
 					if (best_residual > residual && best_independ < independ || best_residual < residual && best_independ > independ)
 					{
+						printf("d1:%f + d2:%f -> %f < %f\n", d1, d2, fabs(d1) + fabs(d2), 0.35 * (1.0 - rt));
 						if (fabs(d1) + fabs(d2) < 0.1 * (1.0 - rt))
 						{
 							best_update = true;
@@ -3958,6 +4059,7 @@ public:
 					}
 				}
 
+				printf("loss_function:%d\n", loss_function);
 				if (loss_function == 0)
 				{
 					if (best_min_value < value)
@@ -4051,6 +4153,11 @@ public:
 					else
 					{
 						save(std::string("lingam.model"));
+					}
+					{
+						FILE* fp = fopen("lingam.model.update", "w");
+						fprintf(fp, "%d/%d", kk, confounding_factors_sampling);
+						fclose(fp);
 					}
 					if (independ + residual < 0.000001)
 					{
