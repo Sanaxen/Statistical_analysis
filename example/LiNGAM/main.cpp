@@ -1285,6 +1285,10 @@ int main(int argc, char** argv)
 		else
 		{
 			LiNGAM.fit(xs, max_ica_iteration, ica_tolerance);
+			printf("/===replacement===/\n");
+			for (int x = 0; x < LiNGAM.replacement.size(); x++)
+				std::cout << x << "," << LiNGAM.replacement[x] << "\t";
+			printf("\n");
 
 			if (LiNGAM.use_bootstrap)
 			{
@@ -1344,6 +1348,11 @@ int main(int argc, char** argv)
 		
 		LiNGAM.save(std::string("lingam.model"), true);
 	}
+
+	printf("===replacement===\n");
+	for (int x = 0; x < LiNGAM.replacement.size(); x++)
+		std::cout << x << "," << LiNGAM.replacement[x] << "\t";
+	printf("\n");
 
 	LiNGAM.B.print_e("(#1)B");
 	if (lasso)

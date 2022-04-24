@@ -620,6 +620,7 @@ public:
 			}
 			if ( 1 )
 			{
+				auto replacement_sv = replacement;
 				auto B_sv = B;
 				before_sorting();
 
@@ -636,6 +637,7 @@ public:
 					importance_B.print_csv((char*)(filename + ".importance_B.csv").c_str());
 				}
 				B = B_sv;
+				replacement = replacement_sv;
 			}
 		}
 		catch (std::exception& e)
@@ -1488,10 +1490,11 @@ public:
 		} while (tri_ng);
 #endif
 
+		printf("---replacement---\n");
 		for (int x = 0; x < replacement.size(); x++)
 			std::cout << x << "," << replacement[x] << "\t";
 		printf("\n");
-		b_est.print_e();
+		b_est.print_e("b_est");
 		fflush(stdout);
 
 		if (error == 0) B = b_est;
