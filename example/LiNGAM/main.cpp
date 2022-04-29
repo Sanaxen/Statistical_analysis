@@ -374,16 +374,18 @@ int main(int argc, char** argv)
 	bool nonlinear = false;
 	bool use_hsic = false;
 	bool use_gpu = false;
-	int n_epoch = 160;
-	int n_unit = 16;
-	int n_layer = 3;
-	std::string activation_fnc = "tanh";
-	float learning_rate = 0.0001;
+	int n_epoch = 40;
+	int n_unit = 20;
+	int n_layer = 5;
+	std::string activation_fnc = "relu";
+	float learning_rate = 0.001;
 	std::string R_cmd_path = "";
-	std::string optimizer = "adam_";
+	std::string optimizer = "rmsprop";
 	double add_hidden_prob = 0.0;
-	int minbatch = -1;
+	int minbatch = 0;
 	double u1_param = 0.001;
+	double confounding_factors_upper2 = -1;
+	double dropout_rate = 0.0;
 
 
 	int pause = 0;
@@ -507,6 +509,9 @@ int main(int argc, char** argv)
 				else if (argname == "--confounding_factors_upper") {
 					confounding_factors_upper = atof(argv[count + 1]);
 				}
+				else if (argname == "--confounding_factors_upper2") {
+					confounding_factors_upper2 = atof(argv[count + 1]);
+				}
 				else if (argname == "--view_confounding_factors") {
 					 view_confounding_factors = atoi(argv[count + 1]) == 0 ? false : true;
 				}
@@ -569,6 +574,9 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--u1_param") {
 					u1_param = atof(argv[count + 1]);
+				}
+				else if (argname == "--dropout_rate") {
+					dropout_rate = atof(argv[count + 1]);
 				}
 				//
 
@@ -1106,15 +1114,16 @@ int main(int argc, char** argv)
 	}
 	if (normalize_type == 2)
 	{
-		auto& means = xs.Mean();
-#pragma omp parallel for
-		for (int i = 0; i < xs.m; i++)
-		{
-			for (int j = 0; j < xs.n; j++)
-			{
-				xs(i, j) = xs(i, j) - means(0, j);
-			}
-		}
+//		auto& means = xs.Mean();
+//#pragma omp parallel for
+//		for (int i = 0; i < xs.m; i++)
+//		{
+//			for (int j = 0; j < xs.n; j++)
+//			{
+//				xs(i, j) = xs(i, j) - means(0, j);
+//			}
+//		}
+		xs = xs.Std_Normalize();
 	}
 	xs.print_csv("xs.csv");
 
@@ -1239,6 +1248,13 @@ int main(int argc, char** argv)
 	}
 	else
 	{
+		FILE* fp = fopen("lingam.model.update", "r");
+		if (fp)
+		{
+			fclose(fp);
+			remove("lingam.model.update");
+		}
+
 		LiNGAM.eval_mode = false;
 
 		//http://www.ar.sanken.osaka-u.ac.jp/~sshimizu/papers/JJSS08.pdf
@@ -1278,8 +1294,17 @@ int main(int argc, char** argv)
 				LiNGAM.optimizer = optimizer;
 				LiNGAM.minbatch = minbatch;
 				LiNGAM.u1_param = u1_param;
+				LiNGAM.dropout_rate = dropout_rate;
+				if (confounding_factors_upper2 < 0)
+				{
+					confounding_factors_upper2 = 0.05;
+				}
+				LiNGAM.confounding_factors_upper2 = confounding_factors_upper2;
 
+				//LiNGAM.fit(xs, max_ica_iteration, ica_tolerance);
 				LiNGAM.fit3(xs, max_ica_iteration, ica_tolerance);
+				//LiNGAM.before_sorting_(LiNGAM.B).print("before_sorting_");
+
 			}
 		}
 		else
@@ -1375,6 +1400,7 @@ int main(int argc, char** argv)
 
 		LiNGAM.before_sorting(LiNGAM.importance_B);
 		LiNGAM.eval_mode = eval_mode;
+		LiNGAM.importance_B.print("LiNGAM.importance_B");
 	}
 	LiNGAM.before_sorting(LiNGAM.mutual_information);
 	LiNGAM.before_sorting();

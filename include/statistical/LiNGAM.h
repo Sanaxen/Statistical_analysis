@@ -117,7 +117,7 @@ extern "C" _LIBRARY_EXPORTS void torch_params(
 	int input_size_,
 
 	int n_layers_,
-	int dropout_,
+	float dropout_,
 	int n_hidden_size_,
 	int fc_hidden_size_,
 	float learning_rate_,
@@ -472,6 +472,7 @@ public:
 	bool logmsg = true;
 	int confounding_factors_sampling = 1000;
 	double confounding_factors_upper = 0.90;
+	double confounding_factors_upper2 = 0.05;
 
 	vector<int> replacement;
 	Matrix<dnn_double> B;
@@ -495,13 +496,13 @@ public:
 	bool nonlinear = false;
 	bool use_hsic = false;
 	bool use_gpu = false;
-	int n_epoch = 160;
-	int n_unit = 16;
-	int n_layer = 3;
-	float learning_rate = 0.0001;
+	int n_epoch = 40;
+	int n_unit = 20;
+	int n_layer = 5;
+	float learning_rate = 0.001;
 	std::vector<std::string> exper;
 	std::vector<std::string> colnames;
-	std::string activation_fnc = "tanh";
+	std::string activation_fnc = "relu";
 	std::vector<std::vector<double>> observed;
 	std::vector<std::vector<double>> predict;
 	std::vector< std::vector<int>> colnames_id;
@@ -509,9 +510,10 @@ public:
 	Matrix<dnn_double> importance_B;
 
 	std::string R_cmd_path = "";
-	std::string optimizer = "adam_";
+	std::string optimizer = "rmsprop";
 	int minbatch = -1;
 	double u1_param = 0.001;
+	double dropout_rate = 0.0;
 
 	bool eval_mode = false;
 
@@ -616,12 +618,15 @@ public:
 			}
 			if (nonlinear)
 			{
-				fit_state(colnames_id, predict, observed);
+				this->fit_state(colnames_id, predict, observed);
+				this->scatter(colnames_id, predict, observed);
+				this->scatter2(colnames_id, predict, observed);
+				this->error_hist(colnames_id);
 			}
 			if ( 1 )
 			{
-				auto replacement_sv = replacement;
 				auto B_sv = B;
+				auto replacement_sv = replacement;
 				before_sorting();
 
 				if (use_bootstrap)
@@ -1490,7 +1495,7 @@ public:
 		} while (tri_ng);
 #endif
 
-		printf("---replacement---\n");
+		printf("replacement\n");
 		for (int x = 0; x < replacement.size(); x++)
 			std::cout << x << "," << replacement[x] << "\t";
 		printf("\n");
@@ -1528,6 +1533,22 @@ public:
 		{
 			fprintf(fp, "%f\n", c_factors);
 			fclose(fp);
+		}
+
+		colnames_id.clear();
+		for (int i = 0; i < B.n; i++)
+		{
+			std::vector<int> name_id;
+
+			name_id.push_back(this->replacement[i]);
+			for (int j = 0; j < B.n; j++)
+			{
+				if (fabs(B(i, j)) > 0.01)
+				{
+					name_id.push_back(this->replacement[j]);
+				}
+			}
+			colnames_id.push_back(name_id);
 		}
 
 		B_pre_sort = this->before_sorting_(B);
@@ -2522,6 +2543,21 @@ public:
 
 					calc_mutual_information(X, mutual_information, bins);
 					
+					colnames_id.clear();
+					for (int i = 0; i < B.n; i++)
+					{
+						std::vector<int> name_id;
+
+						name_id.push_back(this->replacement[i]);
+						for (int j = 0; j < B.n; j++)
+						{
+							if (fabs(B(i, j)) > 0.01)
+							{
+								name_id.push_back(this->replacement[j]);
+							}
+						}
+						colnames_id.push_back(name_id);
+					}
 					if (use_bootstrap)
 					{
 						auto tmp = b_probability;
@@ -2668,6 +2704,19 @@ public:
 
 		remove("confounding_factors.txt");
 
+		vector<vector<int>> pattern_list;
+		vector<int> pattern;
+		for (int i = 0; i < X_.n; i++) pattern.push_back(i);
+
+		do {
+			pattern_list.push_back(pattern);
+		} while (next_permutation(pattern.begin(), pattern.end()));
+		int accept_pattern_idx = -1;
+		int current_pattern_idx = -1;
+
+		printf("pattern:%d\n", pattern_list.size());
+		std::vector<int> pattern_count(pattern_list.size(), 0);
+
 		CONSOLE_SCREEN_BUFFER_INFO csbi;
 		HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
 		GetConsoleScreenBufferInfo(hStdout, &csbi);
@@ -2730,6 +2779,8 @@ public:
 		auto residual_error_independ_best = residual_error_independ;
 
 		input = X_;
+		modification_input = X_;
+
 		double min_value = Abs(X_).Min();
 		if (min_value < 1.0e-3) min_value = 1.0e-3;
 		double max_value = Abs(X_).Max();
@@ -2748,6 +2799,7 @@ public:
 
 		std::uniform_real_distribution<> mu_zero(0.0, 1.0);
 		std::uniform_real_distribution<> condition(0.0, 1.0);
+		std::uniform_real_distribution<> condition2(0.0, 1.0);
 
 
 		int no_accept_count = 0;
@@ -3066,10 +3118,11 @@ public:
 				Matrix<dnn_double> b_est_tmp = b_est;
 				b_est = AlgorithmC(b_est_tmp, n);
 
+				//printf("replacement\n");
 				//for (int x = 0; x < replacement.size(); x++)
 				//	std::cout << x << "," << replacement[x] << "\t";
 				//printf("\n");
-				//b_est.print_e();
+				//b_est.print_e("b_est");
 				//fflush(stdout);
 
 				if (error == 0)
@@ -3201,59 +3254,77 @@ public:
 				// nonlinear
 				if (nonlinear)
 				{
-					//bool is_shuffle = false;
-					//if (condition(engine) < 0.7)
-					//{
-					//	printf("\n");
-					//	printf("=============================================\n"); fflush(stdout);
-					//	printf("=== Forced shuffling of causal structures ===\n"); fflush(stdout);
-					//	printf("=============================================\n"); fflush(stdout);
-					//	printf("\n");
-					//	vector<int> colindex = this->replacement;
-
-					//	std::shuffle(colindex.begin(), colindex.end(), engine);
-
-					//	this->replacement = colindex;
-					//	B = B.zeros(X.n, X.n);
-					//	for (int i = 0; i < X.n; i++)
-					//	{
-					//		for (int j = 0; j < X.n; j++)
-					//		{
-					//			if (j >= i) break;
-					//			B(i, j) = 1;
-					//		}
-					//	}
-					//	is_shuffle = true;
-					//}
-					//{
-					//	int c = 0;
-					//	for (int i = 0; i < this->replacement.size(); i++)
-					//	{
-					//		printf("%d ", this->replacement[i]);
-					//		if (i == this->replacement[i]) c++;
-					//	}
-					//	printf("\n");
-					//	if (c == this->replacement.size())
-					//	{
-					//		//printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
-					//		//getchar();
-					//		char fname[256];
-					//		//if (is_shuffle)
-					//		//{
-					//		//	sprintf(fname, "..\\Causal_Search_Experiment\\%d.txt", kk);
-					//		//}
-					//		//else
-					//		{
-					//			sprintf(fname, "..\\Causal_Search_Experiment\\@%d.txt", kk);
-					//		}
-					//		FILE* fp = fopen(fname, "w");
-					//		if (fp)
-					//		{
-					//			fprintf(fp, "%d\n", kk);
-					//			fclose(fp);
-					//		}
-					//	}
-					//}
+					double max_count = 0;
+					int lookup = -1;
+					for (int jj = 0; jj < pattern_list.size(); jj++)
+					{
+						int c = 0;
+						for (int i = 0; i < this->replacement.size(); i++)
+						{
+							if (pattern_list[jj][i] == this->replacement[i]) c++;
+						}
+						if (c == this->replacement.size())
+						{
+							pattern_count[jj] += 1;
+							lookup = jj;
+							current_pattern_idx = jj;
+						}
+						if (max_count < pattern_count[jj])max_count = pattern_count[jj];
+					}
+					if (max_count > 1)
+					{
+						if (!accept || accept_pattern_idx >= 0)
+						{
+							int idx = -1;
+							if (!accept)
+							{
+								idx = (int)((condition2(engine) + 0.5) * (pattern_list.size() - 1));
+							}
+							else
+							{
+								if (condition2(engine) > 0.7)
+								{
+									idx = accept_pattern_idx;
+								}
+							}
+							if ( idx >= 0 && idx < pattern_list.size())
+							{
+								printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@ %d\n", idx);
+								if (lookup >= 0)pattern_count[lookup] -= 1;
+								this->replacement = pattern_list[idx];
+								pattern_count[idx] += 1;
+								B = B.zeros(X.n, X.n);
+								for (int i = 0; i < X.n; i++)
+								{
+									for (int j = 0; j < X.n; j++)
+									{
+										if (j >= i) break;
+										B(i, j) = 1;
+									}
+								}
+							}
+						}
+					}
+					if (kk % ((confounding_factors_sampling>1000)?50:10) == 0)
+					{
+						char fname[256];
+						{
+							sprintf(fname, "..\\Causal_Search_Experiment\\pattern_count.txt");
+						}
+						FILE* fp = fopen(fname, "w");
+						if (fp)
+						{
+							for (int jj = 0; jj < pattern_list.size(); jj++)
+							{
+								for (int jjj = 0; jjj < pattern_list[jj].size(); jjj++)
+								{
+									fprintf(fp, "%d ", pattern_list[jj][jjj]);
+								}
+								fprintf(fp, " %d\n", pattern_count[jj]);
+							}
+							fclose(fp);
+						}
+					}
 
 					std::vector<float_t> mean_x;
 					std::vector<float_t> sigma_x;
@@ -3367,6 +3438,21 @@ public:
 
 							for (int k = 0; k < xv_id.size(); k++)
 							{
+								//if (xv_id.size() > 1 )
+								//{
+								//	double corr = y.Cor(X.Col(xv_id[k]));
+								//	if (corr > 0.8 && condition2(engine) < 0.5)
+								//	{
+								//		if (xv.size() == 1 && k == xv_id.size() - 1)
+								//		{
+								//			/* */
+								//		}
+								//		else
+								//		{
+								//			continue;
+								//		}
+								//	}
+								//}
 								if (x.n == 0) x = X.Col(xv_id[k]);
 								else x = x.appendCol(X.Col(xv_id[k]));
 								xv.push_back(this->replacement[xv_id[k]]);
@@ -3401,10 +3487,11 @@ public:
 										max_cofound_id = k;
 									}
 								}
-								printf("confounding_factors_upper:%f max_cofound:%f\n", confounding_factors_upper, max_cofound);
+								printf("confounding_factors_upper2:%f max_cofound:%f\n", confounding_factors_upper2, max_cofound);
 								for (int k = 0; k < xv.size(); k++)
 								{
-									if (mutual_information(i, xv[k]) > confounding_factors_upper)
+									printf("mutual_information:%f \n", mutual_information(i, xv[k]));
+									if (fabs(mutual_information(i, xv[k])) > confounding_factors_upper2)
 									{
 										//if (k == max_cofound_id )
 										{
@@ -3477,7 +3564,7 @@ public:
 						int input_size_ = this->n_unit;
 
 						int n_layers_ = this->n_layer;
-						int dropout_ = 0.0;
+						float dropout_ = dropout_rate;
 						int n_hidden_size_ = 32;
 						int fc_hidden_size_ = 32;
 						float learning_rate_ = this->learning_rate;
@@ -3506,6 +3593,7 @@ public:
 						const int max_epohc_srch = 1;
 						for (int jj = 0; jj < max_epohc_srch; jj ++ )
 						{
+							//printf("dropout:%f\n", dropout_);
 							torch_params(
 								n_train_epochs_,
 								n_minibatch_,
@@ -3577,8 +3665,9 @@ public:
 
 							std::vector<double> observed_;
 							std::vector<double> predict_;
-							int nn = (x.m/* - 0.7 * x.m*/) / 100;
-							if (nn <= 1) nn = x.m;
+
+							observed_.resize(x.m);
+							predict_.resize(x.m);
 #pragma omp parallel for
 							for (int j = 0; j < x.m; j++)
 							{
@@ -3588,14 +3677,8 @@ public:
 								double obs_y = (double)ty[j][0] * sigma_y[0] + mean_y[0];
 								residual_error(j, i) = (obs_y - prd_y);
 
-								if (/*j > 0.7*x.m && */j % nn == 0)
-								{
-#pragma omp critical
-									{
-										observed_.push_back(obs_y);
-										predict_.push_back(prd_y);
-									}
-								}
+								observed_[j] = obs_y;
+								predict_[j] = prd_y;
 							}
 							auto loss = torch_get_Loss(n_minibatch_);
 							printf("loss:%f\n", loss);
@@ -3813,6 +3896,20 @@ public:
 					mse.print("mse");
 					printf("mse max:%f\n", mse.Max());
 
+					//Matrix<double> mse_(1, X.n);
+					//for (int i = 0; i < X.n; i++)
+					//{
+					//	double sum = 0.0;
+					//	for (int j = 0; j < X.m; j++)
+					//	{
+					//		sum += pow(residual_error(j, i), 2.0);
+					//	}
+					//	mse_(0, i) = sum / (double)X.m;
+					//}
+					//mse_(0, 0) = 0.0;
+					//mse_.print("mse_");
+					//printf("mse_ max:%f\n", mse_.Max());
+
 					abs_residual_errormax_cur = mse.Max();
 				}
 
@@ -4021,6 +4118,7 @@ public:
 			bool best_update = false;
 			if (accept_)
 			{
+				accept_pattern_idx = current_pattern_idx;
 				if (use_bootstrap)
 				{
 					auto b = before_sorting_(B);
@@ -4179,6 +4277,7 @@ public:
 			}
 			else
 			{
+				accept_pattern_idx = -1;
 				accept = 0;
 				reject++;
 				//neighborhood_search--;
@@ -4613,18 +4712,29 @@ public:
 		fprintf(fp, "library(ggplot2)\n");
 		fprintf(fp, "library(gridExtra)\n");
 		fprintf(fp, "n <- %d\n", predict_y[0].size());
+
+		int nn = predict_y[0].size() / 100;
+		if (nn < 1) nn = predict_y[0].size();
+
+		int num = 0;
+		for (int j = 0; j < observed_y[0].size(); j++)
+		{
+			if (j % nn == 0) num++;
+		}
+		fprintf(fp, "n <- %d\n", num);
+
 		for (int i = 0; i < predict_y.size(); i++)
 		{
 			fprintf(fp, "df%d<- data.frame(", name_id[i][0]);
 			fprintf(fp, "x=c(1:n), %s=c(%.3f", std::regex_replace(this->colnames [name_id[i][0]], regex("\""), "").c_str(), observed_y[i][0]);
 			for (int j = 1; j < observed_y[i].size(); j++)
 			{
-				fprintf(fp, ",%.3f", observed_y[i][j]);
+				if ( j % nn == 0 ) fprintf(fp, ",%.3f", observed_y[i][j]);
 			}
 			fprintf(fp, "), %s_fit=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), predict_y[i][0]);
 			for (int j = 1; j < predict_y[i].size(); j++)
 			{
-				fprintf(fp, ",%.3f", predict_y[i][j]);
+				if (j % nn == 0) fprintf(fp, ",%.3f", predict_y[i][j]);
 			}
 			fprintf(fp, "))\n");
 			fprintf(fp, "g%d <- ggplot(df%d)\n", i, name_id[i][0]);
@@ -4834,5 +4944,179 @@ public:
 		fclose(fp);
 		printf("b_probability_barplot end\n");
 	}
+
+	void scatter(std::vector<std::vector<int>>& name_id, std::vector<std::vector<double>>& predict_y, std::vector<std::vector<double>>& observed_y)
+	{
+		FILE* fp = fopen("scatter.r", "w");
+		if (fp == NULL)
+		{
+			return;
+		}
+		fprintf(fp, "library(ggplot2)\n");
+		fprintf(fp, "library(gridExtra)\n");
+
+		input.print("input");
+		int count = 0;
+		for (int i = 0; i < name_id.size(); i++)
+		{
+			for (int k = 1; k < name_id[i].size(); k++)
+			{
+				fprintf(fp, "df%d_%d<- data.frame(", name_id[i][0], name_id[i][k]);
+				fprintf(fp, "%s=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), input(0, name_id[i][0]));
+				
+				int n = input.m / 300;
+				if (n <= 0) n = input.m;
+				for (int j = 1; j < input.m; j++)
+				{
+					if ( j % n == 0 ) fprintf(fp, ",%.3f", input(j, name_id[i][0]));
+				}
+				fprintf(fp, ")");
+				fprintf(fp, ",%s=c(%.3f", std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), input(0, name_id[i][k]));
+				for (int j = 1; j < input.m; j++)
+				{
+					if (j % n == 0) fprintf(fp, ",%.3f", input(j, name_id[i][k]));
+				}
+				fprintf(fp, ")");
+				fprintf(fp, ", %s_fit=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), predict_y[i][0]);
+				for (int j = 1; j < predict_y[i].size(); j++)
+				{
+					if (j % n == 0) fprintf(fp, ",%.3f", predict_y[i][j]);
+				}
+				fprintf(fp, "))\n");
+
+				fprintf(fp, "g%d <- ggplot(df%d_%d,", count, name_id[i][0], name_id[i][k]);
+				fprintf(fp, " aes(x=%s, y=%s))\n", std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+				fprintf(fp, "g%d <- g%d + geom_point(alpha=0.4)\n", count, count);
+				fprintf(fp, "#g%d <- g%d + geom_line(aes(x=%s, y=%s_fit), color =\"#FF4B00\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+				fprintf(fp, "#g%d <- g%d + scale_color_brewer(palette = \"Set2\")\n", count, count);
+				count++;
+			}
+		}
+		if (count >= 1)
+		{
+			if (count == 1)
+			{
+				fprintf(fp, "g <- g0\n");
+			}
+			else
+			{
+				fprintf(fp, "g <- grid.arrange(g%d", 0);
+				for (int i = 1; i < count; i++)
+				{
+					fprintf(fp, ",g%d", i);
+				}
+				fprintf(fp, ", nrow = %d)\n", count);
+			}
+			fprintf(fp, "ggplot2::ggsave(\"scatter.png\",g,width = 6.4*%d, height = 4.8, units = \"cm\", dpi = 100, limitsize=F)\n", count);
+		}
+		fclose(fp);
+	}
+
+	void scatter2(std::vector<std::vector<int>>& name_id, std::vector<std::vector<double>>& predict_y, std::vector<std::vector<double>>& observed_y)
+	{
+		FILE* fp = fopen("scatter2.r", "w");
+		if (fp == NULL)
+		{
+			return;
+		}
+		fprintf(fp, "library(ggplot2)\n");
+		fprintf(fp, "library(gridExtra)\n");
+
+		input.print("input");
+		int count = 0;
+		for (int i = 0; i < name_id.size(); i++)
+		{
+			if (name_id[i].size() == 1) continue;
+			fprintf(fp, "df%d<- data.frame(", name_id[i][0]);
+
+			int n = input.m / 300;
+			if (n <= 0) n = input.m;
+			fprintf(fp, "%s_fit=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), predict_y[i][0]);
+			for (int j = 1; j < predict_y[i].size(); j++)
+			{
+				if (j % n == 0) fprintf(fp, ",%.3f", predict_y[i][j]);
+			}
+			fprintf(fp, "),\n");
+			fprintf(fp, "%s_obs=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), observed_y[i][0]);
+			for (int j = 1; j < observed_y[i].size(); j++)
+			{
+				if (j % n == 0) fprintf(fp, ",%.3f", observed_y[i][j]);
+			}
+			fprintf(fp, "))\n");
+
+			fprintf(fp, "g%d <- ggplot(df%d)\n", count, name_id[i][0]);
+			fprintf(fp, "g%d <- g%d + geom_point(aes(x=%s_obs, y=%s_fit), color =\"#FF4B00\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+			fprintf(fp, "g%d <- g%d + geom_line(aes(x=%s_obs, y=%s_obs), color =\"#005AFF\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+			count++;
+		}
+		if (count >= 1)
+		{
+			if (count == 1)
+			{
+				fprintf(fp, "g <- g0\n");
+			}
+			else
+			{
+				fprintf(fp, "g <- grid.arrange(g%d", 0);
+				for (int i = 1; i < count; i++)
+				{
+					fprintf(fp, ",g%d", i);
+				}
+				fprintf(fp, ", nrow = %d)\n", count);
+			}
+			fprintf(fp, "ggplot2::ggsave(\"scatter2.png\",g,width = 6.4*%d, height = 6.4, units = \"cm\", dpi = 100, limitsize=F)\n", count);
+		}
+		fclose(fp);
+	}
+
+	void error_hist(std::vector<std::vector<int>>& name_id)
+	{
+		FILE* fp = fopen("error_hist.r", "w");
+		if (fp == NULL)
+		{
+			return;
+		}
+		fprintf(fp, "library(ggplot2)\n");
+		fprintf(fp, "library(gridExtra)\n");
+
+		int count = 0;
+		for (int i = 0; i < name_id.size(); i++)
+		{
+			fprintf(fp, "df%d<- data.frame(", name_id[i][0]);
+			fprintf(fp, "%s=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), residual_error(0, name_id[i][0]));
+
+			int n = residual_error.m / 300;
+			if (n <= 0) n = input.m;
+			for (int j = 1; j < input.m; j++)
+			{
+				if (j % n == 0) fprintf(fp, ",%.3f", residual_error(j, name_id[i][0]));
+			}
+			fprintf(fp, "))\n");
+
+			fprintf(fp, "g%d <- ggplot(df%d,", count, name_id[i][0]);
+			fprintf(fp, " aes(x=%s))\n", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+			fprintf(fp, "g%d <- g%d + geom_histogram()\n", count, count);
+			count++;
+		}
+		if (count >= 1)
+		{
+			if (count == 1)
+			{
+				fprintf(fp, "g <- g0\n");
+			}
+			else
+			{
+				fprintf(fp, "g <- grid.arrange(g%d", 0);
+				for (int i = 1; i < count; i++)
+				{
+					fprintf(fp, ",g%d", i);
+				}
+				fprintf(fp, ", nrow = %d)\n", count);
+			}
+			fprintf(fp, "ggplot2::ggsave(\"err_histogram.png\",g,width = 6.4*%d, height = 6.4, units = \"cm\", dpi = 100, limitsize=F)\n", count);
+		}
+		fclose(fp);
+	}
+
 };
 #endif
