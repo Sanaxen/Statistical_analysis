@@ -386,6 +386,7 @@ int main(int argc, char** argv)
 	double u1_param = 0.001;
 	double confounding_factors_upper2 = -1;
 	double dropout_rate = 0.0;
+	bool random_pattern = false;
 
 
 	int pause = 0;
@@ -578,7 +579,10 @@ int main(int argc, char** argv)
 				else if (argname == "--dropout_rate") {
 					dropout_rate = atof(argv[count + 1]);
 				}
-				//
+				else if (argname == "--random_pattern") {
+					random_pattern = (atoi(argv[count + 1]) != 0) ? true : false;
+				}
+
 
 				//
 				///
@@ -1300,7 +1304,8 @@ int main(int argc, char** argv)
 					confounding_factors_upper2 = 0.05;
 				}
 				LiNGAM.confounding_factors_upper2 = confounding_factors_upper2;
-
+				LiNGAM.random_pattern = random_pattern;
+				
 				//LiNGAM.fit(xs, max_ica_iteration, ica_tolerance);
 				LiNGAM.fit3(xs, max_ica_iteration, ica_tolerance);
 				//LiNGAM.before_sorting_(LiNGAM.B).print("before_sorting_");

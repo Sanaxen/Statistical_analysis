@@ -473,6 +473,7 @@ public:
 	int confounding_factors_sampling = 1000;
 	double confounding_factors_upper = 0.90;
 	double confounding_factors_upper2 = 0.05;
+	bool random_pattern = false;
 
 	vector<int> replacement;
 	Matrix<dnn_double> B;
@@ -3271,35 +3272,44 @@ public:
 						}
 						if (max_count < pattern_count[jj])max_count = pattern_count[jj];
 					}
-					if (max_count > 1)
+					if (random_pattern)
 					{
-						if (!accept || accept_pattern_idx >= 0)
+						if (max_count > 1)
 						{
-							int idx = -1;
-							if (!accept)
+							if (!accept || accept_pattern_idx >= 0)
 							{
-								idx = (int)((condition2(engine) + 0.5) * (pattern_list.size() - 1));
-							}
-							else
-							{
-								if (condition2(engine) > 0.7)
+								int idx = -1;
+								if (!accept)
 								{
-									idx = accept_pattern_idx;
-								}
-							}
-							if ( idx >= 0 && idx < pattern_list.size())
-							{
-								printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@ %d\n", idx);
-								if (lookup >= 0)pattern_count[lookup] -= 1;
-								this->replacement = pattern_list[idx];
-								pattern_count[idx] += 1;
-								B = B.zeros(X.n, X.n);
-								for (int i = 0; i < X.n; i++)
-								{
-									for (int j = 0; j < X.n; j++)
+									if (condition2(engine) > 0.20)
 									{
-										if (j >= i) break;
-										B(i, j) = 1;
+										do {
+											idx = (int)((condition2(engine) + 0.5) * (pattern_list.size() - 1));
+											if (lookup == -1) break;
+										} while (idx == lookup);
+									}
+								}
+								else
+								{
+									if (condition2(engine) > 0.70)
+									{
+										idx = accept_pattern_idx;
+									}
+								}
+								if (idx >= 0 && idx < pattern_list.size())
+								{
+									printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@ %d\n", idx);
+									if (lookup >= 0)pattern_count[lookup] -= 1;
+									this->replacement = pattern_list[idx];
+									pattern_count[idx] += 1;
+									B = B.zeros(X.n, X.n);
+									for (int i = 0; i < X.n; i++)
+									{
+										for (int j = 0; j < X.n; j++)
+										{
+											if (j >= i) break;
+											B(i, j) = 1;
+										}
 									}
 								}
 							}
@@ -4987,7 +4997,7 @@ public:
 				fprintf(fp, "g%d <- ggplot(df%d_%d,", count, name_id[i][0], name_id[i][k]);
 				fprintf(fp, " aes(x=%s, y=%s))\n", std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
 				fprintf(fp, "g%d <- g%d + geom_point(alpha=0.4)\n", count, count);
-				fprintf(fp, "#g%d <- g%d + geom_line(aes(x=%s, y=%s_fit), color =\"#FF4B00\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+				fprintf(fp, "g%d <- g%d + geom_line(aes(x=%s, y=%s_fit), color =\"#FF4B00\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
 				fprintf(fp, "#g%d <- g%d + scale_color_brewer(palette = \"Set2\")\n", count, count);
 				count++;
 			}
