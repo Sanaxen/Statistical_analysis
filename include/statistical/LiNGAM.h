@@ -475,6 +475,7 @@ public:
 	double confounding_factors_upper = 0.90;
 	double confounding_factors_upper2 = 0.05;
 	bool random_pattern = false;
+	bool L1_loss = false;
 
 	vector<int> replacement;
 	Matrix<dnn_double> B;
@@ -3599,7 +3600,7 @@ public:
 						strcpy(opt_type_, optimizer.c_str());
 						bool batch_shuffle_ = true;
 						int shuffle_seed_ = kk;
-						bool L1_loss_ = true;
+						bool L1_loss_ = L1_loss;
 						int test_mode_ = 0;
 
 						const int max_epohc_srch = 1;
