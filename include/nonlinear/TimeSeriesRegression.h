@@ -340,6 +340,7 @@ public:
 	int n_sampling = 0;
 	std::mt19937 mt_distribution;
 	bool inversion = false;
+	bool L1_loss = false;
 
 	int padding_prm = 0;
 	int residual = 0;
@@ -2530,6 +2531,7 @@ public:
 			fprintf(fp, "residual:%d\n", this->residual);
 			fprintf(fp, "use_observed_value:%f\n", this->use_latest_observations);
 			fprintf(fp, "use_self_sequence:%d\n", this->use_self_sequence?1:0);
+			fprintf(fp, "L1_loss:%d\n", this->L1_loss ? 1 : 0);
 			fclose(fp);
 			
 			float maxvalue = -999999999.0;

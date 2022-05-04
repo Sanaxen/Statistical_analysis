@@ -90,6 +90,7 @@ int main(int argc, char** argv)
 	int xvar_time_sift = 1;
 	int target_position = 1;
 	int mean_row = 1;
+	bool L1_loss = false;
 
 	std::string csvfile("sample.csv");
 	std::string report_file("TimeSeriesRegression.txt");
@@ -109,67 +110,71 @@ int main(int argc, char** argv)
 		}
 		else
 			if (argname == "--use_attention") {
-			use_attention = (atoi(argv[count + 1]) != 0) ? true : false;
-		}else
-		if (argname == "--activation_fnc") {
-			activation_fnc = std::string(argv[count + 1]);
-		}
-		else
-		if (argname == "--mean_row") {
-			mean_row = atoi(argv[count + 1]);
-			printf("mean_row:%d\n", mean_row);
-		}else
-		if (argname == "--target_position") {
-			target_position = atoi(argv[count + 1]);
-			printf("target_position:%d\n", target_position);
-		}
-		else if (argname == "--time_sift") {
-			xvar_time_sift = atoi(argv[count + 1]);
-			printf("xvar_time_sift:%d\n", xvar_time_sift);
-		}
-		else
-		if (argname == "--multiplot_step") {
-			multiplot_step = atoi(argv[count + 1]);
-		}else
-		if (argname == "--device_name") {
-			device_name = std::string(argv[count + 1]);
-		}
-		else
-			if (argname == "--use_libtorch") {
-			use_libtorch = (atoi(argv[count + 1]) != 0) ? true : false;
-		}
-		else
-		if (argname == "--ts_decomp_frequency") {
-			ts_decomp_frequency = atoi(argv[count + 1]);
-		}
-		else
-		if (argname == "--dir") {
-			data_path = argv[count + 1];
-		}
-		else if (argname == "--x") {
-			if (sscanf(argv[count + 1], "%d:%d", &x_s, &x_dim) == 2)
-			{
+				use_attention = (atoi(argv[count + 1]) != 0) ? true : false;
 			}
 			else
-			{
-				x_dim = atoi(argv[count + 1]);
-			}
-		}else
-		if (argname == "--read_max") {
-			read_max = atoi(argv[count + 1]);
-		}
-		else if (argname == "--y") {
-			if (sscanf(argv[count + 1], "%d:%d", &y_s, &y_dim) == 2)
-			{
-			}
-			else
-			{
-				y_dim = atoi(argv[count + 1]);
-			}
-		}
-		else if (argname == "--csv") {
-			csvfile = std::string(argv[count + 1]);
-		}
+				if (argname == "--activation_fnc") {
+					activation_fnc = std::string(argv[count + 1]);
+				}
+				else
+					if (argname == "--mean_row") {
+						mean_row = atoi(argv[count + 1]);
+						printf("mean_row:%d\n", mean_row);
+					}
+					else
+						if (argname == "--target_position") {
+							target_position = atoi(argv[count + 1]);
+							printf("target_position:%d\n", target_position);
+						}
+						else if (argname == "--time_sift") {
+							xvar_time_sift = atoi(argv[count + 1]);
+							printf("xvar_time_sift:%d\n", xvar_time_sift);
+						}
+						else
+							if (argname == "--multiplot_step") {
+								multiplot_step = atoi(argv[count + 1]);
+							}
+							else
+								if (argname == "--device_name") {
+									device_name = std::string(argv[count + 1]);
+								}
+								else
+									if (argname == "--use_libtorch") {
+										use_libtorch = (atoi(argv[count + 1]) != 0) ? true : false;
+									}
+									else
+										if (argname == "--ts_decomp_frequency") {
+											ts_decomp_frequency = atoi(argv[count + 1]);
+										}
+										else
+											if (argname == "--dir") {
+												data_path = argv[count + 1];
+											}
+											else if (argname == "--x") {
+												if (sscanf(argv[count + 1], "%d:%d", &x_s, &x_dim) == 2)
+												{
+												}
+												else
+												{
+													x_dim = atoi(argv[count + 1]);
+												}
+											}
+											else
+												if (argname == "--read_max") {
+													read_max = atoi(argv[count + 1]);
+												}
+												else if (argname == "--y") {
+													if (sscanf(argv[count + 1], "%d:%d", &y_s, &y_dim) == 2)
+													{
+													}
+													else
+													{
+														y_dim = atoi(argv[count + 1]);
+													}
+												}
+												else if (argname == "--csv") {
+													csvfile = std::string(argv[count + 1]);
+												}
 		if (argname == "--header") {
 			header = (atoi(argv[count + 1]) != 0) ? true : false;
 		}
@@ -248,8 +253,11 @@ int main(int argc, char** argv)
 			use_differnce_output_only = (0 < atoi(argv[count + 1])) ? true : false;
 			continue;
 		}
+		else if (argname == "--L1_loss") {
+			L1_loss = (atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
 	}
-
 	if (data_path != "")
 	{
 		FILE* fp = fopen(csvfile.c_str(), "r");
@@ -1113,6 +1121,7 @@ int main(int argc, char** argv)
 	timeSeries.target_position = target_position;
 	timeSeries.activation_fnc = activation_fnc;
 	timeSeries.use_attention = use_attention;
+	timeSeries.L1_loss = L1_loss;
 
 	int n_layers = -1;
 	int n_rnn_layers = -1;
@@ -1122,6 +1131,9 @@ int main(int argc, char** argv)
 
 	for (int count = 1; count + 1 < argc; count += 2) {
 		std::string argname(argv[count]);
+		if (argname == "--L1_loss") {
+			continue;
+		}
 		if (argname == "--multi_files") {
 			continue;
 		}

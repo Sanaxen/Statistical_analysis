@@ -1081,6 +1081,7 @@ public:
 	size_t n_eval_minibatch = 10;
 	size_t n_train_epochs = 2000;
 	float_t learning_rate = 1.0;
+	bool L1_loss = false;
 	int plot = 1;
 #ifdef USE_LIBTORCH
 	std::string model_file = "fit.pt";
@@ -1759,6 +1760,7 @@ public:
 				fprintf(fp, "use_add_bn:%d\n", this->use_add_bn);
 				fprintf(fp, "padding_prm:%d\n", this->padding_prm);
 				fprintf(fp, "residual:%d\n", this->residual);
+				fprintf(fp, "L1_loss:%d\n", this->L1_loss?1:0);
 				fclose(fp);
 			}
 			else

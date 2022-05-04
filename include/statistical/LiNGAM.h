@@ -136,6 +136,7 @@ extern "C" _LIBRARY_EXPORTS void torch_params(
 	char* opt_type_,
 	bool batch_shuffle_,
 	int shuffle_seed_,
+	bool L1_loss_,
 	int test_mode_
 );
 extern "C" _LIBRARY_EXPORTS void torch_train_fc(
@@ -3598,6 +3599,7 @@ public:
 						strcpy(opt_type_, optimizer.c_str());
 						bool batch_shuffle_ = true;
 						int shuffle_seed_ = kk;
+						bool L1_loss_ = true;
 						int test_mode_ = 0;
 
 						const int max_epohc_srch = 1;
@@ -3629,6 +3631,7 @@ public:
 								opt_type_,
 								batch_shuffle_,
 								shuffle_seed_,
+								L1_loss_,
 								test_mode_
 							);
 

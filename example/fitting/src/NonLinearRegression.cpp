@@ -74,6 +74,7 @@ int main(int argc, char** argv)
 	std::string report_file("NonLinearRegression.txt");
 
 	std::string data_path = "";
+	bool L1_loss = false;
 	//{
 	//	std::ofstream tmp_(report_file);
 	//	if (!tmp_.bad())
@@ -184,6 +185,11 @@ int main(int argc, char** argv)
 		else if (argname == "--use_trained_scale")
 		{
 			use_trained_scale = (0 < atoi(argv[count + 1])) ? true : false;
+			continue;
+		}
+		else if (argname == "--L1_loss")
+		{
+			L1_loss = (atoi(argv[count + 1])) ? true : false;
 			continue;
 		}
 	}
@@ -684,6 +690,7 @@ int main(int argc, char** argv)
 	regression.use_libtorch = use_libtorch;
 	regression.device_name = device_name;
 #endif
+	regression.L1_loss = L1_loss;
 
 	double test_num = 0;
 	int n_layers = -1;
@@ -763,6 +770,10 @@ int main(int argc, char** argv)
 			continue;
 		}
 		else if (argname == "--use_trained_scale")
+		{
+			continue;
+		}
+		else if (argname == "--L1_loss")
 		{
 			continue;
 		}
