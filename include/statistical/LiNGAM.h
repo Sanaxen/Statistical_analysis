@@ -109,7 +109,10 @@ extern "C" _LIBRARY_EXPORTS int torch_train_init_seed(int seed);
 extern "C" _LIBRARY_EXPORTS void torch_setDevice(const char* device_name);
 extern "C" _LIBRARY_EXPORTS void torch_delete_model();
 extern  _LIBRARY_EXPORTS tiny_dnn::vec_t torch_predict(tiny_dnn::vec_t x);
+extern  _LIBRARY_EXPORTS tiny_dnn::vec_t torch_post_predict(tiny_dnn::vec_t x);
+extern  _LIBRARY_EXPORTS tiny_dnn::vec_t torch_invpost_predict(tiny_dnn::vec_t x);
 extern "C" _LIBRARY_EXPORTS float torch_get_Loss(int batch);
+extern "C" _LIBRARY_EXPORTS float torch_get_train_loss();
 
 extern "C" _LIBRARY_EXPORTS void torch_params(
 	int n_train_epochs_,
@@ -140,6 +143,16 @@ extern "C" _LIBRARY_EXPORTS void torch_params(
 	int test_mode_
 );
 extern "C" _LIBRARY_EXPORTS void torch_train_fc(
+	std::vector<tiny_dnn::vec_t>&train_images_,
+	std::vector<tiny_dnn::vec_t>&train_labels_,
+	int n_minibatch,
+	int n_train_epochs,
+	char* regression,
+	std::function <void(void)> on_enumerate_minibatch,
+	std::function <void(void)> on_enumerate_epoch
+);
+
+extern "C" _LIBRARY_EXPORTS void torch_train_post_fc(
 	std::vector<tiny_dnn::vec_t>&train_images_,
 	std::vector<tiny_dnn::vec_t>&train_labels_,
 	int n_minibatch,
@@ -517,6 +530,7 @@ public:
 	int minbatch = -1;
 	double u1_param = 0.001;
 	double dropout_rate = 0.0;
+	bool use_pnl = 0;
 
 	bool eval_mode = false;
 
@@ -2708,12 +2722,16 @@ public:
 		remove("confounding_factors.txt");
 
 		vector<vector<int>> pattern_list;
+		vector<Matrix<dnn_double>> pattern_list_bmat;
+
 		vector<int> pattern;
 		for (int i = 0; i < X_.n; i++) pattern.push_back(i);
 
 		do {
 			pattern_list.push_back(pattern);
 		} while (next_permutation(pattern.begin(), pattern.end()));
+		pattern_list_bmat.resize(pattern_list.size());
+
 		int accept_pattern_idx = -1;
 		int current_pattern_idx = -1;
 
@@ -2734,7 +2752,7 @@ public:
 		Matrix<double> X = X_;
 
 		std::default_random_engine eng(123456789);
-		int resample = 10000;
+		int resample = 5000;
 		if (X_.m > resample)
 		{
 			vector<size_t> permutation(X_.m, 0);
@@ -2832,12 +2850,12 @@ public:
 		//std::normal_distribution<> dist(0.0, 20.0);
 		//std::uniform_real_distribution<> dist(-mu_max_value, mu_max_value);
 
-		double t_p = 12.0 * rho;
-		if (t_p <= 6.0) t_p = 7.0;
-		std::uniform_real_distribution<> student_t_dist(6.0, t_p);
-		std::vector<int> dist_t_param(X.n);
-		std::vector<int> dist_t_param_best;
-		std::vector<int> dist_t_param_sv;
+		int t_p = 12 * rho;
+		if (t_p <= 6) t_p = 7;
+		std::uniform_real_distribution<> student_t_dist(6, t_p);
+		std::vector<double> dist_t_param(X.n);
+		std::vector<double> dist_t_param_best;
+		std::vector<double> dist_t_param_sv;
 		for (int i = 0; i < X.n; i++)
 		{
 			dist_t_param[i] = student_t_dist(engine);
@@ -2855,8 +2873,8 @@ public:
 		{
 		}
 
-		std::uniform_real_distribution<> gg_rho(1, 30);
-		std::uniform_real_distribution<> gg_beta(1, 30);
+		std::uniform_real_distribution<> gg_rho(1, 50);
+		std::uniform_real_distribution<> gg_beta(1, 50);
 		std::uniform_int_distribution<> gg_seed(1, -1395630315);
 		//printf("*************** %d\n", (int)123456789123456789);
 
@@ -2872,6 +2890,10 @@ public:
 		int neighborhood_search = 0;
 
 		double fit_loss = 0.005;
+
+		std::vector<int> pattern_pikup;
+		int train_size = X.m*0.7;
+		if (train_size < 100) train_size = X.m;
 
 		for (int kk = 0; kk < confounding_factors_sampling; kk++)
 		{
@@ -3034,145 +3056,141 @@ public:
 
 			//intercept.print("intercept");
 
-			ICA ica;
-			ica.logmsg = false;
-			ica.set(variableNum);
-			try
-			{
-				ica.fit(xs, max_ica_iteration, tolerance);
-				//(ica.A.transpose()).inv().print_e();
-				error = ica.getStatus();
-				if (error != 0)
-				{
-					fput_loss(loss, best_residual, best_independ, best_min_value);
-					continue;
-				}
-			}
-			catch (...)
-			{
-				//error = -99;
-				fput_loss(loss, best_residual, best_independ, best_min_value);
-				continue;
-			}
-
-			try
-			{
-				int inv_error = 0;
-
-				Matrix<dnn_double>& W_ica = (ica.A.transpose()).inv(&inv_error);
-				if (inv_error != 0)
-				{
-					fput_loss(loss, best_residual, best_independ, best_min_value);
-					continue;
-				}
-				int error_ = 0;
-				Matrix<dnn_double>& W_ica_ = Abs(W_ica).Reciprocal(&error_);
-				if (error_ != 0)
-				{
-					fput_loss(loss, best_residual, best_independ, best_min_value);
-					continue;
-				}
-
-				HungarianAlgorithm HungAlgo;
-				vector<int> replace;
-
-				double cost = HungAlgo.Solve(W_ica_, replace);
-
-				//for (int x = 0; x < W_ica_.m; x++)
-				//	std::cout << x << "," << replace[x] << "\t";
-				//printf("\n");
-
-				Matrix<dnn_double>& ixs = toMatrix(replace);
-				//ixs.print();
-				//Substitution(replace).print("Substitution matrix");
-
-				//P^-1*Wica
-				inv_error = 0;
-				Matrix<dnn_double>& W_ica_perm = (Substitution(replace).inv(&inv_error) * W_ica);
-				//W_ica_perm.print_e("Replacement->W_ica_perm");
-				if (inv_error != 0)
-				{
-					fput_loss(loss, best_residual, best_independ, best_min_value);
-					continue;
-				}
-
-				//D^-1
-				Matrix<dnn_double>& D = Matrix<dnn_double>().diag(W_ica_perm);
-				Matrix<dnn_double> D2(diag_vector(D));
-				//(D2.Reciprocal()).print_e("1/D");
-
-				error_ = 0;
-				//W_ica_perm_D=I - D^-1*(P^-1*Wica)
-				Matrix<dnn_double>& W_ica_perm_D = W_ica_perm.hadamard(to_vector(D2.Reciprocal(&error)));
-				if (error_ != 0)
-				{
-					fput_loss(loss, best_residual, best_independ, best_min_value);
-					continue;
-				}
-
-				//W_ica_perm_D.print_e("W_ica_perm_D");
-
-				//B=I - D^-1*(P^-1*Wica)
-				Matrix<dnn_double>& b_est = Matrix<dnn_double>().unit(W_ica_perm_D.m, W_ica_perm_D.n) - W_ica_perm_D;
-				//b_est.print_e("b_est");
-
-				//https://www.cs.helsinki.fi/u/ahyvarin/papers/JMLR06.pdf
-				const int n = W_ica_perm_D.m;
-				Matrix<dnn_double> b_est_tmp = b_est;
-				b_est = AlgorithmC(b_est_tmp, n);
-
-				//printf("replacement\n");
-				//for (int x = 0; x < replacement.size(); x++)
-				//	std::cout << x << "," << replacement[x] << "\t";
-				//printf("\n");
-				//b_est.print_e("b_est");
-				//fflush(stdout);
-
-				if (error == 0)
-				{
-					B = b_est;
-				}
-				else
-				{
-					printf("--------------------\n");
-					fput_loss(loss, best_residual, best_independ, best_min_value);
-					continue;
-				}
-			}
-			catch (std::exception& e)
-			{
-				printf("Exception:%s\n", e.what());
-				fput_loss(loss, best_residual, best_independ, best_min_value);
-				continue;
-			}
-			catch (...)
-			{
-				printf("Exception\n");
-				fput_loss(loss, best_residual, best_independ, best_min_value);
-				continue;
-			}
-
-			//{
-			//	auto& b = before_sorting_(B);
-			//	b.print("b");
-			//	auto& c = inv_before_sorting_(b);
-
-			//	(B - c).print("B-c");
-			//}
-
-			//dir_change_(xs, μ);
-			double error_dag = 0.0;
-			std::vector<std::vector<double>> observed_tmp;
-			std::vector<std::vector<double>> predict_tmp;
-			std::vector< std::vector<int>> name_id;
-			std::vector< std::vector<int>> hidden_name_id;
-			std::vector<std::string> exper_tmp;
-
-			//float r = 0.0;
+			Matrix<dnn_double> b;
 			bool cond = true;
-			{
-				auto& b = before_sorting_(B);
 
+			if (pattern_pikup.size() == 0 ||!random_pattern)
+			{
+				ICA ica;
+				ica.logmsg = false;
+				ica.set(variableNum);
+				try
+				{
+					ica.fit(xs, max_ica_iteration, tolerance);
+					//(ica.A.transpose()).inv().print_e();
+					error = ica.getStatus();
+					if (error != 0)
+					{
+						fput_loss(loss, best_residual, best_independ, best_min_value);
+						continue;
+					}
+				}
+				catch (...)
+				{
+					//error = -99;
+					fput_loss(loss, best_residual, best_independ, best_min_value);
+					continue;
+				}
+
+				try
+				{
+					int inv_error = 0;
+
+					Matrix<dnn_double>& W_ica = (ica.A.transpose()).inv(&inv_error);
+					if (inv_error != 0)
+					{
+						fput_loss(loss, best_residual, best_independ, best_min_value);
+						continue;
+					}
+					int error_ = 0;
+					Matrix<dnn_double>& W_ica_ = Abs(W_ica).Reciprocal(&error_);
+					if (error_ != 0)
+					{
+						fput_loss(loss, best_residual, best_independ, best_min_value);
+						continue;
+					}
+
+					HungarianAlgorithm HungAlgo;
+					vector<int> replace;
+
+					double cost = HungAlgo.Solve(W_ica_, replace);
+
+					//for (int x = 0; x < W_ica_.m; x++)
+					//	std::cout << x << "," << replace[x] << "\t";
+					//printf("\n");
+
+					Matrix<dnn_double>& ixs = toMatrix(replace);
+					//ixs.print();
+					//Substitution(replace).print("Substitution matrix");
+
+					//P^-1*Wica
+					inv_error = 0;
+					Matrix<dnn_double>& W_ica_perm = (Substitution(replace).inv(&inv_error) * W_ica);
+					//W_ica_perm.print_e("Replacement->W_ica_perm");
+					if (inv_error != 0)
+					{
+						fput_loss(loss, best_residual, best_independ, best_min_value);
+						continue;
+					}
+
+					//D^-1
+					Matrix<dnn_double>& D = Matrix<dnn_double>().diag(W_ica_perm);
+					Matrix<dnn_double> D2(diag_vector(D));
+					//(D2.Reciprocal()).print_e("1/D");
+
+					error_ = 0;
+					//W_ica_perm_D=I - D^-1*(P^-1*Wica)
+					Matrix<dnn_double>& W_ica_perm_D = W_ica_perm.hadamard(to_vector(D2.Reciprocal(&error)));
+					if (error_ != 0)
+					{
+						fput_loss(loss, best_residual, best_independ, best_min_value);
+						continue;
+					}
+
+					//W_ica_perm_D.print_e("W_ica_perm_D");
+
+					//B=I - D^-1*(P^-1*Wica)
+					Matrix<dnn_double>& b_est = Matrix<dnn_double>().unit(W_ica_perm_D.m, W_ica_perm_D.n) - W_ica_perm_D;
+					//b_est.print_e("b_est");
+
+					//https://www.cs.helsinki.fi/u/ahyvarin/papers/JMLR06.pdf
+					const int n = W_ica_perm_D.m;
+					Matrix<dnn_double> b_est_tmp = b_est;
+					b_est = AlgorithmC(b_est_tmp, n);
+
+					//printf("replacement\n");
+					//for (int x = 0; x < replacement.size(); x++)
+					//	std::cout << x << "," << replacement[x] << "\t";
+					//printf("\n");
+					//b_est.print_e("b_est");
+					//fflush(stdout);
+
+					if (error == 0)
+					{
+						B = b_est;
+					}
+					else
+					{
+						printf("--------------------\n");
+						fput_loss(loss, best_residual, best_independ, best_min_value);
+						continue;
+					}
+				}
+				catch (std::exception& e)
+				{
+					printf("Exception:%s\n", e.what());
+					fput_loss(loss, best_residual, best_independ, best_min_value);
+					continue;
+				}
+				catch (...)
+				{
+					printf("Exception\n");
+					fput_loss(loss, best_residual, best_independ, best_min_value);
+					continue;
+				}
+				//{
+				//	auto& b = before_sorting_(B);
+				//	b.print("b");
+				//	auto& c = inv_before_sorting_(b);
+
+				//	(B - c).print("B-c");
+				//}
+
+				//dir_change_(xs, μ);
+
+				b = before_sorting_(B);
+
+				cond = true;
 				if (kk > 0 && prior_knowledge.size())
 				{
 					for (int k = 0; k < prior_knowledge.size() / 2; k++)
@@ -3251,1122 +3269,1275 @@ public:
 						//intercept(i, 0) = μ.Col(i).mean();
 					}
 				}
+			}
 
-#ifdef USE_LIBTORCH
-				bool edge_dag_error_flg = false;
-				// nonlinear
-				if (nonlinear)
+			struct pttern_s {
+				int idx;
+				int count;
+			};
+			std::vector<VectorIndex<int>> pttern_s;
+
+			// 300ケースの結果から得た因果グラフのパターンを抽出
+			// 上位10パターンを選んで以降はその10パターンに対して最適なものを算出する
+			if (random_pattern)
+			{
+				if (kk >= 300 && pattern_pikup.size() == 0)
 				{
-					double max_count = 0;
-					int lookup = -1;
+					printf("make pattern_pikup\n");
+
+					pattern_pikup.clear();
+
 					for (int jj = 0; jj < pattern_list.size(); jj++)
 					{
-						int c = 0;
-						for (int i = 0; i < this->replacement.size(); i++)
-						{
-							if (pattern_list[jj][i] == this->replacement[i]) c++;
-						}
-						if (c == this->replacement.size())
-						{
-							pattern_count[jj] += 1;
-							lookup = jj;
-							current_pattern_idx = jj;
-						}
-						if (max_count < pattern_count[jj])max_count = pattern_count[jj];
+						VectorIndex<int> a;
+						a.id = jj;
+						a.abs_dat = pattern_count[jj];
+						pttern_s.push_back(a);
 					}
-					if (random_pattern)
+					std::sort(pttern_s.begin(), pttern_s.end());
+
+					for (int i = pttern_s.size() - 1; i >= 0; i--)
 					{
-						if (max_count > 1)
+						printf(")");
+						for (int jjj = 0; jjj < pattern_list[pttern_s[i].id].size(); jjj++)
 						{
-							if (!accept || accept_pattern_idx >= 0)
-							{
-								int idx = -1;
-								if (!accept)
-								{
-									if (condition2(engine) > 0.20)
-									{
-										do {
-											idx = (int)((condition2(engine) + 0.5) * (pattern_list.size() - 1));
-											if (lookup == -1) break;
-										} while (idx == lookup);
-									}
-								}
-								else
-								{
-									if (condition2(engine) > 0.70)
-									{
-										idx = accept_pattern_idx;
-									}
-								}
-								if (idx >= 0 && idx < pattern_list.size())
-								{
-									printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@ %d\n", idx);
-									if (lookup >= 0)pattern_count[lookup] -= 1;
-									this->replacement = pattern_list[idx];
-									pattern_count[idx] += 1;
-									B = B.zeros(X.n, X.n);
-									for (int i = 0; i < X.n; i++)
-									{
-										for (int j = 0; j < X.n; j++)
-										{
-											if (j >= i) break;
-											B(i, j) = 1;
-										}
-									}
-								}
-							}
+							printf("%d ", pattern_list[pttern_s[i].id][jjj]);
+						}
+						printf(")  %d\n", pttern_s[i].abs_dat);
+						if (pttern_s[i].abs_dat == 0) break;
+
+						pattern_pikup.push_back(pttern_s[i].id);
+						if (pattern_pikup.size() == 10) break;
+					}
+					if (pttern_s.size() > 0)
+					{
+						printf("pttern_s[pttern_s.size() - 1].abs_dat:%d\n", pttern_s[pttern_s.size() - 1].abs_dat);
+						if (pttern_s[pttern_s.size() - 1].abs_dat == 0)
+						{
+							pattern_pikup.clear();
 						}
 					}
-					if (kk % ((confounding_factors_sampling>1000)?50:10) == 0)
+					if (pattern_list.size() < 10)
 					{
-						char fname[256];
+						for (int ii = 0; ii < pattern_list.size(); ii++)
 						{
-							sprintf(fname, "..\\Causal_Search_Experiment\\pattern_count.txt");
-						}
-						FILE* fp = fopen(fname, "w");
-						if (fp)
-						{
-							for (int jj = 0; jj < pattern_list.size(); jj++)
-							{
-								for (int jjj = 0; jjj < pattern_list[jj].size(); jjj++)
-								{
-									fprintf(fp, "%d ", pattern_list[jj][jjj]);
-								}
-								fprintf(fp, " %d\n", pattern_count[jj]);
-							}
-							fclose(fp);
+							pattern_pikup.push_back(ii);
 						}
 					}
+					printf("pattern_pikup:%d\n", pattern_pikup.size());
+				}
+			}
 
-					std::vector<float_t> mean_x;
-					std::vector<float_t> sigma_x;
-					std::vector<float_t> mean_y;
-					std::vector<float_t> sigma_y;
-					calc_mutual_information(X, mutual_information, bins);
+			if (pattern_pikup.size() == 0 || !random_pattern)
+			{
+				printf("pattern_pikup clear\n");
+				pattern_pikup.push_back(-1);
+			}
 
-					residual_error = Matrix<dnn_double>().zeros(X.m, X.n);
+	
 
-					//b.print("b");
-					//B.print("B");
+			printf("pattern_pikup:%d\n", pattern_pikup.size());
+			for ( int pt = 0; pt < 1; pt++)
+			{
+				double error_dag = 0.0;
+				std::vector<std::vector<double>> observed_tmp;
+				std::vector<std::vector<double>> predict_tmp;
+				std::vector< std::vector<int>> name_id;
+				std::vector< std::vector<int>> hidden_name_id;
+				std::vector<std::string> exper_tmp;
 
-					if (0)
+				{
+
+					if (pattern_pikup[0] >= 0)
 					{
-						char buf[256] = { '\0' };
-						for (int i = 0; i < B.n; i++)
+						int pt_idx = kk % pattern_pikup.size();
+						printf("\nLeading candidate:%d\n", pt_idx);
+						printf("(");
+						for (int jjj = 0; jjj < pattern_list[pattern_pikup[pt_idx]].size(); jjj++)
 						{
-							char tmp_buf[256];
-
-							sprintf(tmp_buf, "%d [%s] ", this->replacement[i], colnames[this->replacement[i]].c_str());
-							strcat(buf, tmp_buf);
+							printf("%d ", pattern_list[pattern_pikup[pt_idx]][jjj]);
 						}
-						DWORD  bytesWritten = 0;
-						SetConsoleTextAttribute(hStdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_RED | BACKGROUND_BLUE | BACKGROUND_INTENSITY);
-						WriteFile(hStdout, buf, strlen(buf), &bytesWritten, NULL);
-						SetConsoleTextAttribute(hStdout, csbi.wAttributes);
-						WriteFile(hStdout, "\n", 1, &bytesWritten, NULL);
+						printf(")\n\n");
+
+						this->replacement = pattern_list[pattern_pikup[pt_idx]];
+						B = pattern_list_bmat[pattern_pikup[pt_idx]];
 					}
 					else
 					{
-						//printf("\n-----------\n");
-						//for (int i = 0; i < B.n; i++)
-						//{
-						//	printf("%d [%s] ", this->replacement[i], colnames[this->replacement[i]].c_str());
-						//}
-						//printf("\n-----------\n");
+						pattern_pikup.clear();
 					}
-					Matrix<dnn_double> x;
-					Matrix<dnn_double> y;
-					for (int i = 0; i < B.n; i++)
+#ifdef USE_LIBTORCH
+					bool edge_dag_error_flg = false;
+					// nonlinear
+					if (nonlinear)
 					{
-						std::vector<int> xv;
-						std::vector<int> hidden_xv;
-
-						//if (accept)
-						//{
-						//	if (i >= colnames_id.size())
-						//	{
-						//		continue;
-						//	}
-						//	for (int k = 0; k < colnames_id[i].size(); k++)
-						//	{
-						//		for (int j = 0; j < replacement_best.size(); j++)
-						//		{
-						//			if (colnames_id[i][k] == replacement_best[j])
-						//			{
-						//				if (k == 0)
-						//				{
-						//					y = X.Col(j);
-						//					xv.push_back(replacement_best[j]);
-						//					break;
-						//				}
-						//				if (x.n == 0) x = X.Col(j);
-						//				else x = x.appendCol(X.Col(j));
-						//				xv.push_back(replacement_best[j]);
-						//				break;
-						//			}
-						//		}
-						//	}
-						//	if (xv.size() <= 1)
-						//	{
-						//		for (int j = 0; j < xs.m; j++)
-						//		{
-						//			residual_error(j, i) = (X.Col(i))(j, 0);
-						//		}
-						//		continue;
-						//	}
-
-						//	for (int k = 0; k < hidden_colnames_id[i].size(); k++)
-						//	{
-						//		for (int j = 0; j < replacement_best.size(); j++)
-						//		{
-						//			if (hidden_colnames_id[i][k] == replacement_best[j])
-						//			{
-						//				if (x.n == 0) x = X.Col(j);
-						//				else x = x.appendCol(X.Col(j));
-						//				hidden_xv.push_back(replacement_best[j]);
-						//			}
-						//		}
-						//	}
-						//}
-
-						//if (!accept)
+						double max_count = 0;
+						int lookup = -1;
+						for (int jj = 0; jj < pattern_list.size(); jj++)
 						{
-							x = Matrix<dnn_double>();
-							y = X.Col(i);
-							xv.push_back(this->replacement[i]);
-
-							std::vector<int>xv_id;
-							double max_b = 0;
-							for (int k = 0; k < B.n; k++)
+							int c = 0;
+							for (int i = 0; i < this->replacement.size(); i++)
 							{
-								if (k >= i) break;
-								if (fabs(B(i, k)) > max_b) max_b = fabs(B(i, k));
-								if (fabs(B(i, k)) > 0.01)
+								if (pattern_list[jj][i] == this->replacement[i]) c++;
+							}
+							if (c == this->replacement.size())
+							{
+								pattern_count[jj] += 1;
+								if (pattern_list_bmat[jj].m == 0)
 								{
-									xv_id.push_back(k);
-								}
-							}
-							//std::shuffle(xv_id.begin(), xv_id.end(), engine);
-
-							for (int k = 0; k < xv_id.size(); k++)
-							{
-								//if (xv_id.size() > 1 )
-								//{
-								//	double corr = y.Cor(X.Col(xv_id[k]));
-								//	if (corr > 0.8 && condition2(engine) < 0.5)
-								//	{
-								//		if (xv.size() == 1 && k == xv_id.size() - 1)
-								//		{
-								//			/* */
-								//		}
-								//		else
-								//		{
-								//			continue;
-								//		}
-								//	}
-								//}
-								if (x.n == 0) x = X.Col(xv_id[k]);
-								else x = x.appendCol(X.Col(xv_id[k]));
-								xv.push_back(this->replacement[xv_id[k]]);
-							}
-							if (xv.size() == 1)
-							{
-								x = X.Col(i);
-								hidden_xv.push_back(this->replacement[i]);
-							}
-
-							if (xv.size() > 1)
-							{
-								bool add_hidden = false;
-								mutual_information.print("mutual_information");
-								//for (int ki = 0; ki < xv.size(); ki++) {
-								//	for (int kj = ki+1; kj < xv.size(); kj++) {
-								//		if (mutual_information(xv[kj], xv[ki]) > 0.5)
-								//		{
-								//			add_hidden = true;
-								//		}
-								//	}
-								//}
-
-#if 10
-								double max_cofound = 0;
-								double max_cofound_id = -1;
-								for (int k = 0; k < xv.size(); k++)
-								{
-									if (max_cofound < mutual_information(i, xv[k]))
-									{
-										max_cofound = mutual_information(i, xv[k]);
-										max_cofound_id = k;
-									}
-								}
-								printf("confounding_factors_upper2:%f max_cofound:%f\n", confounding_factors_upper2, max_cofound);
-								for (int k = 0; k < xv.size(); k++)
-								{
-									printf("mutual_information:%f \n", mutual_information(i, xv[k]));
-									if (fabs(mutual_information(i, xv[k])) > confounding_factors_upper2)
-									{
-										//if (k == max_cofound_id )
-										{
-											if (x.n == 0) x = μ.Col(xv[k])* u1_param;
-											else x = x.appendCol(μ.Col(xv[k]))* u1_param;
-											hidden_xv.push_back(this->replacement[xv[k]]);
-										}
-									}
-								}
-#else
-								if (x.n == 0) x = μ.Col(i);
-								else x = x.appendCol(μ.Col(i));
-								hidden_xv.push_back(this->replacement[i]);
-#endif
-							}
-						}
-
-
-						//printf("\n");
-						//y.print("y");
-						//x.print("x");
-#if 0
-						xgboost_util< dnn_double> xgb;
-						xgb.set_train(x, y);
-						xgb.train(500);
-
-						auto& predict_y = xgb.predict(x);
-
-						std::vector<double> observed_;
-						std::vector<double> predict_;
-						int nn = x.m / 100;
-						if (nn <= 1) nn = x.m;
-#pragma omp parallel for
-						for (int j = 0; j < x.m; j++)
-						{
-
-							double prd_y = (double)predict_y[j];
-							double obs_y = (double)y(j,0);
-							residual_error(j, i) = (obs_y - prd_y);
-
-							if (j % nn == 0)
-							{
-#pragma omp critical
-								{
-									observed_.push_back(obs_y);
-									predict_.push_back(prd_y);
-								}
-							}
-						}
-						observed_tmp.push_back(observed_);
-						predict_tmp.push_back(predict_);
-#else
-						tiny_dnn::tensor_t tx;
-						tiny_dnn::tensor_t ty;
-						MatrixToTensor(x, tx);
-						MatrixToTensor(y, ty);
-
-						normalizeZ(tx, mean_x, sigma_x);
-						normalizeZ(ty, mean_y, sigma_y);
-
-						int n_train_epochs_ = this->n_epoch;
-						int n_minibatch_ = /*0.7**/tx.size()/ 5;
-						if (n_minibatch_ > 2000)  n_minibatch_ = 2000;
-						if (n_minibatch_ < 1) n_minibatch_ = 1;
-						if (this->minbatch >= 0)
-						{
-							if(this->minbatch == 0) n_minibatch_ = /*0.7**/tx.size();
-							else n_minibatch_ = this->minbatch;
-						}
-						int input_size_ = this->n_unit;
-
-						int n_layers_ = this->n_layer;
-						float dropout_ = dropout_rate;
-						int n_hidden_size_ = 32;
-						int fc_hidden_size_ = 32;
-						float learning_rate_ = this->learning_rate;
-
-						float clip_gradients_ = 0;
-						int use_cnn_ = 0;
-						int use_add_bn_ = 0;
-						int use_cnn_add_bn_ = 0;
-						int residual_ = 0;
-						int padding_prm_ = 0;
-
-						int classification_ = 0;
-						
-						char weight_init_type_[16];
-						strcpy(weight_init_type_,"xavier");
-						char activation_fnc_[16];
-						strcpy(activation_fnc_, activation_fnc.c_str());
-						
-						int early_stopping_ = 0;
-						char opt_type_[16];
-						strcpy(opt_type_, optimizer.c_str());
-						bool batch_shuffle_ = true;
-						int shuffle_seed_ = kk;
-						bool L1_loss_ = L1_loss;
-						int test_mode_ = 0;
-
-						const int max_epohc_srch = 1;
-						for (int jj = 0; jj < max_epohc_srch; jj ++ )
-						{
-							//printf("dropout:%f\n", dropout_);
-							torch_params(
-								n_train_epochs_,
-								n_minibatch_,
-								input_size_,
-
-								n_layers_,
-								dropout_,
-								n_hidden_size_,
-								fc_hidden_size_,
-								learning_rate_,
-
-								clip_gradients_,
-								use_cnn_,
-								use_add_bn_,
-								use_cnn_add_bn_,
-								residual_,
-								padding_prm_,
-
-								classification_,
-								weight_init_type_,
-								activation_fnc_,
-								early_stopping_,
-								opt_type_,
-								batch_shuffle_,
-								shuffle_seed_,
-								L1_loss_,
-								test_mode_
-							);
-
-#if 10
-							auto on_enumerate_epoch = [&]() {};
-							auto on_enumerate_minibatch = [&]() {};
-#else
-							int epoch = 1;
-							// create callback
-							auto on_enumerate_epoch = [&]() {
-								std::cout << "\nEpoch " << epoch << "/" << n_train_epochs_ << " finished. " << std::endl;
-								float loss = torch_get_Loss(n_minibatch_);
-								std::cout << "loss :" << loss << std::endl;
-								++epoch;
-							};
-							auto on_enumerate_minibatch = [&]() {
-								float loss = torch_get_Loss(n_minibatch_);
-								std::cout << "loss :" << loss << std::endl;
-							};
-#endif
-
-							chrono::system_clock::time_point start, end;
-
-							torch_train_init_seed(shuffle_seed_);
-
-							start = chrono::system_clock::now();
-							try {
-								auto tx_ = tx;
-								auto ty_ = ty;
-								//tx_.resize(tx.size() * 0.7);
-								//ty_.resize(ty.size() * 0.7);
-								torch_train_fc(tx_, ty_, n_minibatch_, n_train_epochs_, "", on_enumerate_minibatch, on_enumerate_epoch);
-							}
-							catch (std::exception& err)
-							{
-								std::cout << err.what() << std::endl;
-							}
-							catch (...)
-							{
-								printf("exception!\n");
-							}
-							end = chrono::system_clock::now();
-							printf("fitting %lf[ms]\n", static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0));
-
-							std::vector<double> observed_;
-							std::vector<double> predict_;
-
-							observed_.resize(x.m);
-							predict_.resize(x.m);
-#pragma omp parallel for
-							for (int j = 0; j < x.m; j++)
-							{
-								tiny_dnn::vec_t& predict_y = torch_predict(tx[j]);
-
-								double prd_y = (double)predict_y[0] * sigma_y[0] + mean_y[0];
-								double obs_y = (double)ty[j][0] * sigma_y[0] + mean_y[0];
-								residual_error(j, i) = (obs_y - prd_y);
-
-								observed_[j] = obs_y;
-								predict_[j] = prd_y;
-							}
-							auto loss = torch_get_Loss(n_minibatch_);
-							printf("loss:%f\n", loss);
-							if (loss < fit_loss || jj == max_epohc_srch-1)
-							{
-								if (loss < fit_loss)
-								{
-									printf("fit ok!\n");
+									pattern_list_bmat[jj] = B;
 								}
 								else
 								{
-									printf("fit ng!\n");
+									pattern_list_bmat[jj] = (pattern_list_bmat[jj] + B) * 0.5;
 								}
-								observed_tmp.push_back(observed_);
-								predict_tmp.push_back(predict_);
-								break;
+								lookup = jj;
+								current_pattern_idx = jj;
 							}
-							n_train_epochs_ *= 2;
+							if (max_count < pattern_count[jj])max_count = pattern_count[jj];
 						}
-#endif
-						//if (xv.size() == 1)
+						//if (random_pattern)
 						//{
-						//	for (int j = 0; j < xs.m; j++)
+						//	if (max_count > 1)
 						//	{
-						//		residual_error(j, i) = y.Col(0)(j, 0);
+						//		if (!accept || accept_pattern_idx >= 0)
+						//		{
+						//			int idx = -1;
+						//			if (!accept)
+						//			{
+						//				//if (condition2(engine) > 0.20)
+						//				{
+						//					do {
+						//						idx = (int)((condition2(engine) + 0.5) * (pattern_list.size() - 1));
+						//						if (lookup == -1) break;
+						//					} while (idx == lookup);
+						//				}
+						//			}
+						//			else
+						//			{
+						//				if (condition2(engine) > 0.50)
+						//				{
+						//					idx = accept_pattern_idx;
+						//				}
+						//				else
+						//				{
+						//					do {
+						//						idx = (int)((condition2(engine) + 0.5) * (pattern_list.size() - 1));
+						//						if (lookup == -1) break;
+						//					} while (idx == lookup);
+						//				}
+						//			}
+						//			if (idx >= 0 && idx < pattern_list.size())
+						//			{
+						//				printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@ %d\n", idx);
+						//				if (lookup >= 0)pattern_count[lookup] -= 1;
+						//				this->replacement = pattern_list[idx];
+						//				pattern_count[idx] += 1;
+						//				B = B.zeros(X.n, X.n);
+						//				for (int i = 0; i < X.n; i++)
+						//				{
+						//					for (int j = 0; j < X.n; j++)
+						//					{
+						//						if (j >= i) break;
+						//						B(i, j) = 1;
+						//					}
+						//				}
+						//			}
+						//		}
 						//	}
 						//}
-
-						name_id.push_back(xv);
-						hidden_name_id.push_back(hidden_xv);
-
-						residual_error.print("residual_error");
-						
-						torch_delete_model();
-						
-						printf("xv:%d\n", xv.size());
-						fflush(stdout);
-
-						if (xv.size() >= 1)
+						if (kk % 20 == 0)
 						{
-							B.print("B");
-							char tmp_buf[256];
-							std::string tmp_buf2;
-
-							if (xv.size() >= 2)
+							char fname[256];
 							{
-								sprintf(tmp_buf, "x(%d:[%s]) = f_{%d}(x(%d:[%s])", xv[0] + 1, colnames[xv[0]].c_str(), xv[0] + 1, xv[1] + 1, colnames[xv[1]].c_str());
-								tmp_buf2 = std::string(tmp_buf);
-								for (int kk = 2; kk < xv.size(); kk++)
+								sprintf(fname, "..\\Causal_Search_Experiment\\pattern_count.txt");
+							}
+							FILE* fp = fopen(fname, "w");
+							if (fp)
+							{
+								for (int jj = 0; jj < pattern_list.size(); jj++)
 								{
-									sprintf(tmp_buf, ",x(%d:[%s])", xv[kk] + 1, colnames[xv[kk]].c_str());
-									tmp_buf2 += std::string(tmp_buf);
+									for (int jjj = 0; jjj < pattern_list[jj].size(); jjj++)
+									{
+										fprintf(fp, "%d ", pattern_list[jj][jjj]);
+									}
+									fprintf(fp, " %d\n", pattern_count[jj]);
 								}
-								sprintf(tmp_buf, ")");
-								tmp_buf2 += std::string(tmp_buf);
+								fclose(fp);
 							}
-							else
+						}
+
+
+						std::vector<float_t> mean_x;
+						std::vector<float_t> sigma_x;
+						std::vector<float_t> mean_y;
+						std::vector<float_t> sigma_y;
+						calc_mutual_information(X, mutual_information, bins);
+
+						residual_error = Matrix<dnn_double>().zeros(X.m, X.n);
+
+						//b.print("b");
+						//B.print("B");
+
+						if (0)
+						{
+							char buf[256] = { '\0' };
+							for (int i = 0; i < B.n; i++)
 							{
-								sprintf(tmp_buf, "x(%d:[%s]) = eps_{%d}", xv[0] + 1, colnames[xv[0]].c_str(), xv[0] + 1);
-								tmp_buf2 = std::string(tmp_buf);
+								char tmp_buf[256];
+
+								sprintf(tmp_buf, "%d [%s] ", this->replacement[i], colnames[this->replacement[i]].c_str());
+								strcat(buf, tmp_buf);
 							}
-							auto eps = Median(residual_error.Col(i));
-							sprintf(tmp_buf, " %c %.4f{%.4f ~ %.4f}", (eps<0)?'-':'+', fabs(eps), residual_error.Col(i).Min(), residual_error.Col(i).Max());
-							tmp_buf2 += std::string(tmp_buf);
-							exper_tmp.push_back(tmp_buf2);
-						}
-
-						printf("Evaluation of independence\n");
-
-						start = chrono::system_clock::now();
-						
-						//Evaluation of independence
-						calc_mutual_information_r(x, residual_error.Col(i), residual_error_independ, bins, true);
-						
-						end = chrono::system_clock::now();
-						printf("independence check %lf[ms]\n", static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0));
-
-						if (error_dag < residual_error_independ.Max())
-						{
-							error_dag = residual_error_independ.Max();
-						}
-					}
-
-					printf("error_dag:%f (%s)\n", error_dag, (use_hsic) ? "HSIC" : "corr(x,tanh(y)");
-					fflush(stdout);
-					double error_dag_treshold = 1.0;
-					if (use_hsic) error_dag_treshold = 0.1;
-					if (error_dag > error_dag_treshold) {
-						std::cout << "残差と説明変数が独立ではないため間違ったDAGのためキャンセル" << std::endl;
-						edge_dag_error_flg = true;
-					}
-
-					//printf("Evaluation of independence\n");
-					//Evaluation of independence
-					//calc_mutual_information(residual_error, residual_error_independ, bins);
-					calc_mutual_information(residual_error, residual_error_independ, bins/*, true*/);
-
-					for (int ii = 0; ii < exper_tmp.size(); ii++)
-					{
-						printf("%s\n", exper_tmp[ii].c_str());
-					}
-				}
-
-				//if (edge_dag_error_flg) continue;
-#endif
-				if (!nonlinear)
-				{
-					//b.print("b");
-#pragma omp parallel for
-					for (int j = 0; j < xs.m; j++)
-					{
-						Matrix<dnn_double> μT(xs.n, 1);
-						Matrix<dnn_double> x(xs.n, 1);
-						Matrix<dnn_double> y(xs.n, 1);
-						for (int i = 0; i < xs.n; i++)
-						{
-							//x(i, 0) = xs(j, replacement[i]);
-							//y(i, 0) = X(j, replacement[i]);
-							x(i, 0) = xs(j, i);
-							y(i, 0) = X(j, i);
-							μT(i, 0) = μ(j, i);
-							if (use_intercept)
-							{
-								//切片の分離
-								μT(i, 0) = μ(j, i) - intercept(i, 0);
-							}
-							// y = B*y + (μ- intercept)+ e
-						}
-						// y = B*y + (μ- intercept)+intercept + e
-						// y = B*y + μ + e
-						Matrix<dnn_double>& rr = y - b * y - μT - intercept;
-						for (int i = 0; i < xs.n; i++)
-						{
-							//r += rr(0, i)*rr(0, i);
-							residual_error(j, i) = rr(0, i);
-						}
-					}
-					//r /= (xs.m*xs.n);
-
-					//Evaluation of independence
-					calc_mutual_information(residual_error, residual_error_independ, bins);
-				}
-			}
-			double  abs_residual_errormax_cur = Abs(residual_error).Max();
-			
-			if (!nonlinear)
-			{
-				if (abs_residual_errormax < 0)
-				{
-					abs_residual_errormax = abs_residual_errormax_cur;
-				}
-				if (abs_residual_errormax < 1.0e-10)
-				{
-					abs_residual_errormax = 1.0e-10;
-				}
-			}
-			if (nonlinear)
-			{
-				if (0)
-				{
-					Matrix<double> mse_median(1, X.n);
-
-					for (int i = 0; i < X.n; i++)
-					{
-						double max = Abs(residual_error.Col(i)).Max();
-						double median = Median(Abs(residual_error).Col(i));
-						double s = (max - median)/(0.5*X.m);
-
-						double sum = 0;
-						int n = 0;
-						for (int j = 0; j < X.m; j++)
-						{
-							if (fabs(residual_error.Col(i)(j, 0)) < max - s)
-							{
-								sum += pow(residual_error.Col(i)(j, 0), 2.0);
-								n++;
-							}
-						}
-						mse_median(0, i) = sum / (double)n;
-					}
-					mse_median(0, 0) = 0.0;
-					mse_median.print("mse_median");
-					printf("mse_median max:%f\n", mse_median.Max());
-
-					abs_residual_errormax_cur = mse_median.Max();
-				}
-				if (0)
-				{
-					Matrix<double> mae(1, X.n);
-					for (int i = 0; i < X.n; i++)
-					{
-						mae(0, i) = Abs(residual_error.Col(i)).Sum() / (double)X.m;
-					}
-					mae(0, 0) = 0.0;
-					mae.print("mae");
-					printf("mae max:%f\n", mae.Max());
-
-					abs_residual_errormax_cur = mae.Max();
-				}
-				if (10)
-				{
-					Matrix<double> mse(1, X.n);
-					for (int i = 0; i < X.n; i++)
-					{
-						mse(0, i) = ((Pow(residual_error.Col(i), 2.0) / (double)X.m).Sum());
-
-						//double sum = 0.0;
-						//for (int j = 0.7 * X.m; j < X.m; j++)
-						//{
-						//	sum += pow(residual_error(j, i), 2.0);
-						//}
-						//mse(0, i) = sum / (X.m - 0.7 * X.m);
-					}
-					mse(0, 0) = 0.0;
-					mse.print("mse");
-					printf("mse max:%f\n", mse.Max());
-
-					//Matrix<double> mse_(1, X.n);
-					//for (int i = 0; i < X.n; i++)
-					//{
-					//	double sum = 0.0;
-					//	for (int j = 0; j < X.m; j++)
-					//	{
-					//		sum += pow(residual_error(j, i), 2.0);
-					//	}
-					//	mse_(0, i) = sum / (double)X.m;
-					//}
-					//mse_(0, 0) = 0.0;
-					//mse_.print("mse_");
-					//printf("mse_ max:%f\n", mse_.Max());
-
-					abs_residual_errormax_cur = mse.Max();
-				}
-
-				if (0)
-				{
-					Matrix<double> r2(1, X.n);
-					for (int i = 0; i < X.n; i++)
-					{
-						r2(0, i) = Pow(residual_error.Col(i), 2.0).Sum() / 
-						(Pow(X.Col(i) - X.Col(i).mean(), 2.0).Sum()+1.0e-14);
-					}
-
-					r2(0, 0) = 0.0;
-					r2.print("r2");
-					printf("r2 max:%f\n", r2.Max());
-
-					abs_residual_errormax_cur = r2.Max();
-				}
-
-				if (0)
-				{
-					Matrix<double> mer(1, X.n);
-					Matrix<double> mer_(X.m, X.n);
-					for (int i = 0; i < X.n; i++)
-					{
-						for (int j = 0; j < X.m; j++)
-						{
-							mer_(j, i) = fabs(residual_error(j, i)) / (X(j, i) + 1.0e-14);
-						}
-						mer(0, i) = Median(mer_.Col(i));
-						if (i == 0)mer(0, i) = 0.0;
-					}
-					mer.print("mer");
-					printf("mer max:%f\n", mer.Max());
-
-					abs_residual_errormax_cur = mer.Max();
-				}
-
-				if (abs_residual_errormax < 0)
-				{
-					abs_residual_errormax = abs_residual_errormax_cur;
-				}
-				if (abs_residual_errormax < 1.0e-10)
-				{
-					abs_residual_errormax = 1.0e-10;
-				}
-			}
-
-			double  abs_independ_max_cur = max(error_dag, residual_error_independ.Max());
-			
-			//if (nonlinear)
-			//{
-			//	abs_independ_max_cur = error_dag;
-			//}
-
-			if (abs_independ_max < 0)
-			{
-				abs_independ_max = abs_independ_max_cur;
-				if (!use_hsic) abs_independ_max = 1.0;
-			}
-			if (abs_independ_max < 1.0e-10)
-			{
-				abs_independ_max = 1.0e-10;
-			}			
-			//if (abs_residual_errormax < abs_residual_errormax_cur)
-			//{
-			//	abs_residual_errormax = abs_residual_errormax_cur;
-			//}
-			//residual_error.print("residual_error");
-			//printf("residual_error max:%f\n", Abs(residual_error).Max());
-
-			double independ = max(error_dag, residual_error_independ.Max())/ abs_independ_max;
-			//if (nonlinear)
-			//{
-			//	independ = error_dag;
-			//}
-			double residual = abs_residual_errormax_cur / abs_residual_errormax;
-
-			if(10)
-			{
-				char buf[256];
-				sprintf(buf, "abs_residual_errormax:%f residual:%f (best:%f) independ:%f (best:%f)\n", abs_residual_errormax, residual, best_residual, independ, best_independ);
-
-				DWORD  bytesWritten = 0;
-				SetConsoleTextAttribute(hStdout, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
-				WriteFile(hStdout, buf, strlen(buf), &bytesWritten, NULL);
-				SetConsoleTextAttribute(hStdout, csbi.wAttributes);
-				WriteFile(hStdout, "\n", 1, &bytesWritten, NULL);
-			}
-			else
-			{
-				printf("abs_residual_errormax:%f residual:%f independ:%f\n", abs_residual_errormax, residual, independ);
-			}
-			//{
-			//	double w = weight1 + weight2;
-			//	weight1 = weight1 / w;
-			//	weight2 = weight2 / w;
-			//}
-
-			double w_tmp = sqrt(best_independ + best_residual);
-			weight1 = best_residual / w_tmp;
-			weight2 = best_independ / w_tmp;
-			if (kk == 0)
-			{
-				double w_tmp = sqrt(independ + residual);
-				weight1 = residual / w_tmp;
-				weight2 = independ / w_tmp;
-			}
-
-			if (nonlinear)
-			{
-				weight1 = 0.90;
-				weight2 = 0.45;
-				double w_tmp = weight1 + weight2;
-				weight1 = weight1 / w_tmp;
-				weight2 = weight2 / w_tmp;
-			}
-			double value;
-			if (loss_function == 0)
-			{
-				value = max(weight1 * residual, weight2 * independ) + 0.0001 * (weight1 * residual + weight2 * independ);
-			}
-			else
-			{
-				value = log(1 + fabs(residual - independ) + weight1 * residual + weight2 * independ);
-
-			}
-
-			if (start_value < 0)
-			{
-				start_independ = independ;
-				start_residual = residual;
-				start_value = value;
-				loss_value = value;
-				start_delta = fabs(residual - independ);
-			}
-			//printf("value:%f (%f) %f\n", value, log(1 + fabs(residual - independ)), weight1 *residual + weight2 * independ);
-			bool accept_ = false;
-
-			if (best_residual > residual && best_independ > independ)
-			{
-				accept_ = true;
-			}
-			else
-			if (best_min_value > value)
-			{
-				accept_ = true;
-			}
-
-			//if (nonlinear)
-			//{
-			//	if (best_residual > residual)
-			//	{
-			//		accept_ = true;
-			//	}
-			//}
-
-			if (kk == 0) accept_ = true;
-
-
-			double rt = (double)kk / (double)confounding_factors_sampling;
-			temperature = pow(temperature_alp, rt);
-
-			if (!accept_ && cond)
-			{
-				double alp = acceptance_rate(engine);
-
-				double th = -1.0;
-				if (best_min_value < value)
-				{
-					th = exp((best_min_value - value) / temperature);
-				}
-				{
-					char buf[256];
-					sprintf(buf, "[%d][%f] %f:%f temperature:%f  alp:%f < th:%f %s", kk, fabs((best_min_value - value)), best_min_value, value, temperature, alp, th, (alp < th) ? "true" : "false");
-					if (1)
-					{
-						DWORD  bytesWritten = 0;
-						if (alp < th)
-						{
-							SetConsoleTextAttribute(hStdout, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+							DWORD  bytesWritten = 0;
+							SetConsoleTextAttribute(hStdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_RED | BACKGROUND_BLUE | BACKGROUND_INTENSITY);
+							WriteFile(hStdout, buf, strlen(buf), &bytesWritten, NULL);
+							SetConsoleTextAttribute(hStdout, csbi.wAttributes);
+							WriteFile(hStdout, "\n", 1, &bytesWritten, NULL);
 						}
 						else
 						{
-							SetConsoleTextAttribute(hStdout, FOREGROUND_RED | FOREGROUND_INTENSITY);
+							//printf("\n-----------\n");
+							//for (int i = 0; i < B.n; i++)
+							//{
+							//	printf("%d [%s] ", this->replacement[i], colnames[this->replacement[i]].c_str());
+							//}
+							//printf("\n-----------\n");
 						}
-						WriteFile(hStdout, buf, strlen(buf), &bytesWritten, NULL);
-						SetConsoleTextAttribute(hStdout, csbi.wAttributes);
-						WriteFile(hStdout, "\n", 1, &bytesWritten, NULL);
-					}
-					else
-					{
-						printf(buf); 
-						printf("\n");
-					}
-				}
-				if (alp < th)
-				{
-					accept_ = true;
-				}
-			}
-
-			if (!cond) accept_ = false;
-			if (independ < 1.0e-4)  accept_ = false;
-
-			bool best_update = false;
-			if (accept_)
-			{
-				accept_pattern_idx = current_pattern_idx;
-				if (use_bootstrap)
-				{
-					auto b = before_sorting_(B);
-					for (int j = 0; j < xs.n; j++)
-					{
-						for (int i = 0; i < xs.n; i++)
+						Matrix<dnn_double> x;
+						Matrix<dnn_double> y;
+						for (int i = 0; i < B.n; i++)
 						{
-							if (fabs(b(i, j)) > 0.01)
+							std::vector<int> xv;
+							std::vector<int> hidden_xv;
+
+							//if (accept)
+							//{
+							//	if (i >= colnames_id.size())
+							//	{
+							//		continue;
+							//	}
+							//	for (int k = 0; k < colnames_id[i].size(); k++)
+							//	{
+							//		for (int j = 0; j < replacement_best.size(); j++)
+							//		{
+							//			if (colnames_id[i][k] == replacement_best[j])
+							//			{
+							//				if (k == 0)
+							//				{
+							//					y = X.Col(j);
+							//					xv.push_back(replacement_best[j]);
+							//					break;
+							//				}
+							//				if (x.n == 0) x = X.Col(j);
+							//				else x = x.appendCol(X.Col(j));
+							//				xv.push_back(replacement_best[j]);
+							//				break;
+							//			}
+							//		}
+							//	}
+							//	if (xv.size() <= 1)
+							//	{
+							//		for (int j = 0; j < xs.m; j++)
+							//		{
+							//			residual_error(j, i) = (X.Col(i))(j, 0);
+							//		}
+							//		continue;
+							//	}
+
+							//	for (int k = 0; k < hidden_colnames_id[i].size(); k++)
+							//	{
+							//		for (int j = 0; j < replacement_best.size(); j++)
+							//		{
+							//			if (hidden_colnames_id[i][k] == replacement_best[j])
+							//			{
+							//				if (x.n == 0) x = X.Col(j);
+							//				else x = x.appendCol(X.Col(j));
+							//				hidden_xv.push_back(replacement_best[j]);
+							//			}
+							//		}
+							//	}
+							//}
+
+							//if (!accept)
 							{
-								b_probability(i, j) += 1;
+								x = Matrix<dnn_double>();
+								y = X.Col(i);
+								xv.push_back(this->replacement[i]);
+
+								std::vector<int>xv_id;
+								double max_b = 0;
+								for (int k = 0; k < B.n; k++)
+								{
+									if (k >= i) break;
+									if (fabs(B(i, k)) > max_b) max_b = fabs(B(i, k));
+									if (fabs(B(i, k)) > 0.01)
+									{
+										xv_id.push_back(k);
+									}
+								}
+								//std::shuffle(xv_id.begin(), xv_id.end(), engine);
+
+								for (int k = 0; k < xv_id.size(); k++)
+								{
+									//if (xv_id.size() > 1 )
+									//{
+									//	double corr = y.Cor(X.Col(xv_id[k]));
+									//	if (corr > 0.8 && condition2(engine) < 0.5)
+									//	{
+									//		if (xv.size() == 1 && k == xv_id.size() - 1)
+									//		{
+									//			/* */
+									//		}
+									//		else
+									//		{
+									//			continue;
+									//		}
+									//	}
+									//}
+									if (x.n == 0) x = X.Col(xv_id[k]);
+									else x = x.appendCol(X.Col(xv_id[k]));
+									xv.push_back(this->replacement[xv_id[k]]);
+								}
+								if (xv.size() == 1)
+								{
+									x = X.Col(i);
+									hidden_xv.push_back(this->replacement[i]);
+								}
+
+								if (xv.size() > 1)
+								{
+									bool add_hidden = false;
+									mutual_information.print("mutual_information");
+									//for (int ki = 0; ki < xv.size(); ki++) {
+									//	for (int kj = ki+1; kj < xv.size(); kj++) {
+									//		if (mutual_information(xv[kj], xv[ki]) > 0.5)
+									//		{
+									//			add_hidden = true;
+									//		}
+									//	}
+									//}
+
+#if 10
+									double max_cofound = 0;
+									double max_cofound_id = -1;
+									for (int k = 0; k < xv.size(); k++)
+									{
+										if (max_cofound < mutual_information(i, xv[k]))
+										{
+											max_cofound = mutual_information(i, xv[k]);
+											max_cofound_id = k;
+										}
+									}
+									printf("confounding_factors_upper2:%f max_cofound:%f\n", confounding_factors_upper2, max_cofound);
+									for (int k = 0; k < xv.size(); k++)
+									{
+										printf("mutual_information:%f \n", mutual_information(i, xv[k]));
+										if (fabs(mutual_information(i, xv[k])) > confounding_factors_upper2)
+										{
+											//if (k == max_cofound_id )
+											{
+												if (x.n == 0) x = μ.Col(xv[k]) * u1_param;
+												else x = x.appendCol(μ.Col(xv[k])) * u1_param;
+												hidden_xv.push_back(this->replacement[xv[k]]);
+											}
+										}
+									}
+#else
+									if (x.n == 0) x = μ.Col(i);
+									else x = x.appendCol(μ.Col(i));
+									hidden_xv.push_back(this->replacement[i]);
+#endif
+								}
+							}
+
+
+							//printf("\n");
+							//y.print("y");
+							//x.print("x");
+#if 0
+							xgboost_util< dnn_double> xgb;
+							xgb.set_train(x, y);
+							xgb.train(500);
+
+							auto& predict_y = xgb.predict(x);
+
+							std::vector<double> observed_;
+							std::vector<double> predict_;
+							int nn = x.m / 100;
+							if (nn <= 1) nn = x.m;
+#pragma omp parallel for
+							for (int j = 0; j < x.m; j++)
+							{
+
+								double prd_y = (double)predict_y[j];
+								double obs_y = (double)y(j, 0);
+								residual_error(j, i) = (obs_y - prd_y);
+
+								if (j % nn == 0)
+								{
+#pragma omp critical
+									{
+										observed_.push_back(obs_y);
+										predict_.push_back(prd_y);
+									}
+								}
+							}
+							observed_tmp.push_back(observed_);
+							predict_tmp.push_back(predict_);
+#else
+							tiny_dnn::tensor_t tx;
+							tiny_dnn::tensor_t ty;
+							MatrixToTensor(x, tx);
+							MatrixToTensor(y, ty);
+
+							normalizeZ(tx, mean_x, sigma_x);
+							normalizeZ(ty, mean_y, sigma_y);
+
+							int n_train_epochs_ = this->n_epoch;
+							if (n_train_epochs_ < 2) n_train_epochs_ = 2;
+
+							int n_minibatch_ = /*0.7**/tx.size() / 5;
+							if (n_minibatch_ > 2000)  n_minibatch_ = 2000;
+							if (n_minibatch_ < 1) n_minibatch_ = 1;
+							if (this->minbatch >= 0)
+							{
+								if (this->minbatch == 0) n_minibatch_ = train_size;///*0.7**/tx.size();
+								else n_minibatch_ = this->minbatch;
+							}
+							int input_size_ = this->n_unit;
+
+							int n_layers_ = this->n_layer;
+							float dropout_ = dropout_rate;
+							int n_hidden_size_ = 32;
+							int fc_hidden_size_ = 32;
+							float learning_rate_ = this->learning_rate;
+
+							float clip_gradients_ = 0;
+							int use_cnn_ = 0;
+							int use_add_bn_ = 0;
+							int use_cnn_add_bn_ = 0;
+							int residual_ = 0;
+							int padding_prm_ = 0;
+
+							int classification_ = 0;
+
+							char weight_init_type_[16];
+							strcpy(weight_init_type_, "xavier");
+							char activation_fnc_[16];
+							strcpy(activation_fnc_, activation_fnc.c_str());
+
+							int early_stopping_ = 0;
+							char opt_type_[16];
+							strcpy(opt_type_, optimizer.c_str());
+							bool batch_shuffle_ = true;
+							int shuffle_seed_ = kk;
+							bool L1_loss_ = L1_loss;
+							int test_mode_ = 0;
+
+							const int max_epohc_srch = 1;
+							for (int jj = 0; jj < max_epohc_srch; jj++)
+							{
+								//printf("dropout:%f\n", dropout_);
+								torch_params(
+									n_train_epochs_,
+									n_minibatch_,
+									input_size_,
+
+									n_layers_,
+									dropout_,
+									n_hidden_size_,
+									fc_hidden_size_,
+									learning_rate_,
+
+									clip_gradients_,
+									use_cnn_,
+									use_add_bn_,
+									use_cnn_add_bn_,
+									residual_,
+									padding_prm_,
+
+									classification_,
+									weight_init_type_,
+									activation_fnc_,
+									early_stopping_,
+									opt_type_,
+									batch_shuffle_,
+									shuffle_seed_,
+									L1_loss_,
+									test_mode_
+								);
+
+#if 10
+								auto on_enumerate_epoch = [&]() {};
+								auto on_enumerate_minibatch = [&]() {};
+#else
+								int epoch = 1;
+								// create callback
+								auto on_enumerate_epoch = [&]() {
+									std::cout << "\nEpoch " << epoch << "/" << n_train_epochs_ << " finished. " << std::endl;
+									float loss = torch_get_Loss(n_minibatch_);
+									std::cout << "loss :" << loss << std::endl;
+									++epoch;
+								};
+								auto on_enumerate_minibatch = [&]() {
+									float loss = torch_get_Loss(n_minibatch_);
+									std::cout << "loss :" << loss << std::endl;
+								};
+#endif
+
+								chrono::system_clock::time_point start, end;
+
+								torch_train_init_seed(shuffle_seed_);
+
+								start = chrono::system_clock::now();
+								try {
+									auto tx_ = tx;
+									auto ty_ = ty;
+									tx_.resize(train_size);
+									ty_.resize(train_size);
+									printf("tx_:%d\n", tx_.size());
+									if (use_pnl)
+									{
+										torch_train_post_fc(tx_, ty_, n_minibatch_, n_train_epochs_, "", on_enumerate_minibatch, on_enumerate_epoch);
+									}
+									else
+									{
+										torch_train_fc(tx_, ty_, n_minibatch_, n_train_epochs_, "", on_enumerate_minibatch, on_enumerate_epoch);
+									}
+								}
+								catch (std::exception& err)
+								{
+									std::cout << err.what() << std::endl;
+								}
+								catch (...)
+								{
+									printf("exception!\n");
+								}
+								end = chrono::system_clock::now();
+								printf("fitting %lf[ms]\n", static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0));
+
+								std::vector<double> observed_;
+								std::vector<double> predict_;
+
+								observed_.resize(x.m);
+								predict_.resize(x.m);
+
+#pragma omp parallel for
+								for (int j = 0; j < x.m; j++)
+								{
+									if (use_pnl)
+									{
+										tiny_dnn::vec_t& fx = torch_predict(tx[j]);		// f(x)
+										tiny_dnn::vec_t& gy = torch_post_predict(ty[j]);// g(y)
+										tiny_dnn::vec_t& igy = torch_invpost_predict(fx);// g^-1(f(x))
+
+										double prd_y = (double)fx[0] * sigma_y[0] + mean_y[0];
+										double obs_y = (double)ty[j][0] * sigma_y[0] + mean_y[0];
+										double pst_y = (double)gy[0] * sigma_y[0] + mean_y[0];
+										double ipst_y = (double)igy[0] * sigma_y[0] + mean_y[0];
+
+										residual_error(j, i) = (pst_y - prd_y);
+										observed_[j] = obs_y;
+										predict_[j] = ipst_y;
+									}
+									else
+									{
+										tiny_dnn::vec_t& predict_y = torch_predict(tx[j]);
+
+										double prd_y = (double)predict_y[0] * sigma_y[0] + mean_y[0];
+										double obs_y = (double)ty[j][0] * sigma_y[0] + mean_y[0];
+
+										residual_error(j, i) = (obs_y - prd_y);
+										observed_[j] = obs_y;
+										predict_[j] = prd_y;
+									}
+								}
+								//auto loss = torch_get_Loss(n_minibatch_);
+								auto loss = torch_get_train_loss();
+								printf("loss:%f\n", loss);
+								fflush(stdout);
+								if (loss < fit_loss || jj == max_epohc_srch - 1)
+								{
+									if (loss < fit_loss)
+									{
+										printf("fit ok!\n");
+									}
+									else
+									{
+										printf("fit ng!\n");
+									}
+									observed_tmp.push_back(observed_);
+									predict_tmp.push_back(predict_);
+									break;
+								}
+								n_train_epochs_ *= 2;
+							}
+#endif
+							//if (xv.size() == 1)
+							//{
+							//	for (int j = 0; j < xs.m; j++)
+							//	{
+							//		residual_error(j, i) = y.Col(0)(j, 0);
+							//	}
+							//}
+
+							name_id.push_back(xv);
+							hidden_name_id.push_back(hidden_xv);
+
+							residual_error.print("residual_error");
+
+							torch_delete_model();
+
+							printf("xv:%d\n", xv.size());
+							fflush(stdout);
+
+							if (xv.size() >= 1)
+							{
+								B.print("B");
+								char tmp_buf[256];
+								std::string tmp_buf2;
+
+								if (xv.size() >= 2)
+								{
+									sprintf(tmp_buf, "x(%d:[%s]) = f_{%d}(x(%d:[%s])", xv[0] + 1, colnames[xv[0]].c_str(), xv[0] + 1, xv[1] + 1, colnames[xv[1]].c_str());
+									tmp_buf2 = std::string(tmp_buf);
+									for (int kk = 2; kk < xv.size(); kk++)
+									{
+										sprintf(tmp_buf, ",x(%d:[%s])", xv[kk] + 1, colnames[xv[kk]].c_str());
+										tmp_buf2 += std::string(tmp_buf);
+									}
+									sprintf(tmp_buf, ")");
+									tmp_buf2 += std::string(tmp_buf);
+								}
+								else
+								{
+									sprintf(tmp_buf, "x(%d:[%s]) = eps_{%d}", xv[0] + 1, colnames[xv[0]].c_str(), xv[0] + 1);
+									tmp_buf2 = std::string(tmp_buf);
+								}
+								auto eps = Median(residual_error.Col(i));
+								sprintf(tmp_buf, " %c %.4f{%.4f ~ %.4f}", (eps < 0) ? '-' : '+', fabs(eps), residual_error.Col(i).Min(), residual_error.Col(i).Max());
+								tmp_buf2 += std::string(tmp_buf);
+								exper_tmp.push_back(tmp_buf2);
+							}
+
+							printf("Evaluation of independence\n");
+
+							start = chrono::system_clock::now();
+
+							//Evaluation of independence
+							calc_mutual_information_r(x, residual_error.Col(i), residual_error_independ, bins, true);
+
+							end = chrono::system_clock::now();
+							printf("independence check %lf[ms]\n", static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0));
+
+							if (error_dag < residual_error_independ.Max())
+							{
+								error_dag = residual_error_independ.Max();
 							}
 						}
-					}
-					bootstrapN++;
-				}
 
-				printf("best_min_value:%f value:%f\n", best_min_value, value);
-				printf("best_residual:%f residual:%f\n", best_residual, residual);
-				printf("best_independ:%f independ:%f\n", best_independ, independ);
-				//printf("+\n");
-				if (best_min_value >= value || (best_residual > residual || best_independ > independ))
-				{
-					double d1 = (residual - best_residual);
-					double d2 = (independ - best_independ);
-					if (best_residual > residual && best_independ < independ || best_residual < residual && best_independ > independ)
-					{
-						printf("d1:%f + d2:%f -> %f < %f\n", d1, d2, fabs(d1) + fabs(d2), 0.35 * (1.0 - rt));
-						if (fabs(d1) + fabs(d2) < 0.1 * (1.0 - rt))
+						printf("error_dag:%f (%s)\n", error_dag, (use_hsic) ? "HSIC" : "corr(x,tanh(y)");
+						fflush(stdout);
+						double error_dag_treshold = 1.0;
+						if (use_hsic) error_dag_treshold = 0.1;
+						if (error_dag > error_dag_treshold) {
+							std::cout << "残差と説明変数が独立ではないため間違ったDAGのためキャンセル" << std::endl;
+							edge_dag_error_flg = true;
+						}
+
+						//printf("Evaluation of independence\n");
+						//Evaluation of independence
+						//calc_mutual_information(residual_error, residual_error_independ, bins);
+						calc_mutual_information(residual_error, residual_error_independ, bins/*, true*/);
+
+						for (int ii = 0; ii < exper_tmp.size(); ii++)
 						{
-							best_update = true;
+							printf("%s\n", exper_tmp[ii].c_str());
 						}
 					}
-					else
+
+					//if (edge_dag_error_flg) continue;
+#endif
+					if (!nonlinear)
 					{
-						if (best_residual > residual && best_independ > independ)
+						//b.print("b");
+#pragma omp parallel for
+						for (int j = 0; j < xs.m; j++)
 						{
-							best_update = true;
+							Matrix<dnn_double> μT(xs.n, 1);
+							Matrix<dnn_double> x(xs.n, 1);
+							Matrix<dnn_double> y(xs.n, 1);
+							for (int i = 0; i < xs.n; i++)
+							{
+								//x(i, 0) = xs(j, replacement[i]);
+								//y(i, 0) = X(j, replacement[i]);
+								x(i, 0) = xs(j, i);
+								y(i, 0) = X(j, i);
+								μT(i, 0) = μ(j, i);
+								if (use_intercept)
+								{
+									//切片の分離
+									μT(i, 0) = μ(j, i) - intercept(i, 0);
+								}
+								// y = B*y + (μ- intercept)+ e
+							}
+							// y = B*y + (μ- intercept)+intercept + e
+							// y = B*y + μ + e
+							Matrix<dnn_double>& rr = y - b * y - μT - intercept;
+							for (int i = 0; i < xs.n; i++)
+							{
+								//r += rr(0, i)*rr(0, i);
+								residual_error(j, i) = rr(0, i);
+							}
 						}
+						//r /= (xs.m*xs.n);
+
+						//Evaluation of independence
+						calc_mutual_information(residual_error, residual_error_independ, bins);
+					}
+				}
+				double  abs_residual_errormax_cur = Abs(residual_error).Max();
+
+				if (!nonlinear)
+				{
+					if (abs_residual_errormax < 0)
+					{
+						abs_residual_errormax = abs_residual_errormax_cur;
+					}
+					if (abs_residual_errormax < 1.0e-10)
+					{
+						abs_residual_errormax = 1.0e-10;
+					}
+				}
+				if (nonlinear)
+				{
+					if (0)
+					{
+						Matrix<double> mse_median(1, X.n);
+
+						for (int i = 0; i < X.n; i++)
+						{
+							double max = Abs(residual_error.Col(i)).Max();
+							double median = Median(Abs(residual_error).Col(i));
+							double s = (max - median) / (0.5 * X.m);
+
+							double sum = 0;
+							int n = 0;
+							for (int j = 0; j < X.m; j++)
+							{
+								if (fabs(residual_error.Col(i)(j, 0)) < max - s)
+								{
+									sum += pow(residual_error.Col(i)(j, 0), 2.0);
+									n++;
+								}
+							}
+							mse_median(0, i) = sum / (double)n;
+						}
+						mse_median(0, 0) = 0.0;
+						mse_median.print("mse_median");
+						printf("mse_median max:%f\n", mse_median.Max());
+
+						abs_residual_errormax_cur = mse_median.Max();
+					}
+					if (0)
+					{
+						Matrix<double> mae(1, X.n);
+						for (int i = 0; i < X.n; i++)
+						{
+							mae(0, i) = Abs(residual_error.Col(i)).Sum() / (double)X.m;
+						}
+						mae(0, 0) = 0.0;
+						mae.print("mae");
+						printf("mae max:%f\n", mae.Max());
+
+						abs_residual_errormax_cur = mae.Max();
+					}
+					if (10)
+					{
+						Matrix<double> mse(1, X.n);
+						for (int i = 0; i < X.n; i++)
+						{
+							//mse(0, i) = ((Pow(residual_error.Col(i), 2.0) / (double)X.m).Sum());
+
+							double sum = 0.0;
+							for (int j = train_size; j < X.m; j++)
+							{
+								sum += pow(residual_error(j, i), 2.0);
+							}
+							if (X.m == train_size)
+							{
+								mse(0, i) = sum / X.m;
+							}
+							else
+							{
+								mse(0, i) = sum / (X.m - train_size);
+							}
+						}
+						mse(0, 0) = 0.0;
+						mse.print("mse");
+						printf("mse max:%f\n", mse.Max());
+
+						//Matrix<double> mse_(1, X.n);
+						//for (int i = 0; i < X.n; i++)
+						//{
+						//	double sum = 0.0;
+						//	for (int j = 0; j < X.m; j++)
+						//	{
+						//		sum += pow(residual_error(j, i), 2.0);
+						//	}
+						//	mse_(0, i) = sum / (double)X.m;
+						//}
+						//mse_(0, 0) = 0.0;
+						//mse_.print("mse_");
+						//printf("mse_ max:%f\n", mse_.Max());
+
+						abs_residual_errormax_cur = mse.Max();
+					}
+
+					if (0)
+					{
+						Matrix<double> r2(1, X.n);
+						for (int i = 0; i < X.n; i++)
+						{
+							r2(0, i) = Pow(residual_error.Col(i), 2.0).Sum() /
+								(Pow(X.Col(i) - X.Col(i).mean(), 2.0).Sum() + 1.0e-14);
+						}
+
+						r2(0, 0) = 0.0;
+						r2.print("r2");
+						printf("r2 max:%f\n", r2.Max());
+
+						abs_residual_errormax_cur = r2.Max();
+					}
+
+					if (0)
+					{
+						Matrix<double> mer(1, X.n);
+						Matrix<double> mer_(X.m, X.n);
+						for (int i = 0; i < X.n; i++)
+						{
+							for (int j = 0; j < X.m; j++)
+							{
+								mer_(j, i) = fabs(residual_error(j, i)) / (X(j, i) + 1.0e-14);
+							}
+							mer(0, i) = Median(mer_.Col(i));
+							if (i == 0)mer(0, i) = 0.0;
+						}
+						mer.print("mer");
+						printf("mer max:%f\n", mer.Max());
+
+						abs_residual_errormax_cur = mer.Max();
+					}
+
+					if (abs_residual_errormax < 0)
+					{
+						abs_residual_errormax = abs_residual_errormax_cur;
+					}
+					if (abs_residual_errormax < 1.0e-10)
+					{
+						abs_residual_errormax = 1.0e-10;
 					}
 				}
 
-				printf("loss_function:%d\n", loss_function);
-				if (loss_function == 0)
-				{
-					if (best_min_value < value)
-					{
-						best_update = false;
-					}
-				}
+				double  abs_independ_max_cur = max(error_dag, residual_error_independ.Max());
 
 				//if (nonlinear)
 				//{
-				//	if (best_residual < residual)
+				//	abs_independ_max_cur = error_dag;
+				//}
+
+				if (abs_independ_max < 0)
+				{
+					abs_independ_max = abs_independ_max_cur;
+					if (!use_hsic) abs_independ_max = 1.0;
+				}
+				if (abs_independ_max < 1.0e-10)
+				{
+					abs_independ_max = 1.0e-10;
+				}
+				//if (abs_residual_errormax < abs_residual_errormax_cur)
+				//{
+				//	abs_residual_errormax = abs_residual_errormax_cur;
+				//}
+				//residual_error.print("residual_error");
+				//printf("residual_error max:%f\n", Abs(residual_error).Max());
+
+				double independ = max(error_dag, residual_error_independ.Max()) / abs_independ_max;
+				//if (nonlinear)
+				//{
+				//	independ = error_dag;
+				//}
+				double residual = abs_residual_errormax_cur / abs_residual_errormax;
+
+				if (10)
+				{
+					char buf[256];
+					sprintf(buf, "abs_residual_errormax:%f residual:%f (best:%f) independ:%f (best:%f)\n", abs_residual_errormax, residual, best_residual, independ, best_independ);
+
+					DWORD  bytesWritten = 0;
+					SetConsoleTextAttribute(hStdout, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+					WriteFile(hStdout, buf, strlen(buf), &bytesWritten, NULL);
+					SetConsoleTextAttribute(hStdout, csbi.wAttributes);
+					WriteFile(hStdout, "\n", 1, &bytesWritten, NULL);
+				}
+				else
+				{
+					printf("abs_residual_errormax:%f residual:%f independ:%f\n", abs_residual_errormax, residual, independ);
+				}
+				//{
+				//	double w = weight1 + weight2;
+				//	weight1 = weight1 / w;
+				//	weight2 = weight2 / w;
+				//}
+
+				double w_tmp = sqrt(best_independ + best_residual);
+				weight1 = best_residual / w_tmp;
+				weight2 = best_independ / w_tmp;
+				if (kk == 0)
+				{
+					double w_tmp = sqrt(independ + residual);
+					weight1 = residual / w_tmp;
+					weight2 = independ / w_tmp;
+				}
+
+				if (nonlinear)
+				{
+					weight1 = 0.90;
+					weight2 = 0.45;
+					double w_tmp = weight1 + weight2;
+					weight1 = weight1 / w_tmp;
+					weight2 = weight2 / w_tmp;
+				}
+				double value;
+				if (loss_function == 0)
+				{
+					value = max(weight1 * residual, weight2 * independ) + 0.0001 * (weight1 * residual + weight2 * independ);
+				}
+				else
+				{
+					value = log(1 + fabs(residual - independ) + weight1 * residual + weight2 * independ);
+
+				}
+
+				if (start_value < 0)
+				{
+					start_independ = independ;
+					start_residual = residual;
+					start_value = value;
+					loss_value = value;
+					start_delta = fabs(residual - independ);
+				}
+				//printf("value:%f (%f) %f\n", value, log(1 + fabs(residual - independ)), weight1 *residual + weight2 * independ);
+				bool accept_ = false;
+
+				if (best_residual > residual && best_independ > independ)
+				{
+					accept_ = true;
+				}
+				else
+					if (best_min_value > value)
+					{
+						accept_ = true;
+					}
+
+				//if (nonlinear)
+				//{
+				//	if (best_residual > residual)
 				//	{
-				//		best_update = false;
+				//		accept_ = true;
 				//	}
 				//}
 
-				if (best_update || kk == 0)
+				if (kk == 0) accept_ = true;
+
+
+				double rt = (double)kk / (double)confounding_factors_sampling;
+				temperature = pow(temperature_alp, rt);
+
+				if (!accept_ && cond)
 				{
-					best_exper = exper_tmp;
-					best_min_value = value;
-					best_residual = residual;
-					best_independ = independ;
-					loss_value = value;
-					for (int ii = 0; ii < best_exper.size(); ii++)
+					double alp = acceptance_rate(engine);
+
+					double th = -1.0;
+					if (best_min_value < value)
 					{
-						printf("%s\n", best_exper[ii].c_str());
+						th = exp((best_min_value - value) / temperature);
+					}
+					{
+						char buf[256];
+						sprintf(buf, "[%d][%f] %f:%f temperature:%f  alp:%f < th:%f %s", kk, fabs((best_min_value - value)), best_min_value, value, temperature, alp, th, (alp < th) ? "true" : "false");
+						if (1)
+						{
+							DWORD  bytesWritten = 0;
+							if (alp < th)
+							{
+								SetConsoleTextAttribute(hStdout, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+							}
+							else
+							{
+								SetConsoleTextAttribute(hStdout, FOREGROUND_RED | FOREGROUND_INTENSITY);
+							}
+							WriteFile(hStdout, buf, strlen(buf), &bytesWritten, NULL);
+							SetConsoleTextAttribute(hStdout, csbi.wAttributes);
+							WriteFile(hStdout, "\n", 1, &bytesWritten, NULL);
+						}
+						else
+						{
+							printf(buf);
+							printf("\n");
+						}
+					}
+					if (alp < th)
+					{
+						accept_ = true;
 					}
 				}
-				//{
-				//	auto& b = before_sorting_(B);
-				//	b.print("accept-b");
-				//}
 
-				μ_sv = μ;
-				dist_t_param_sv = dist_t_param;
-				neighborhood_search = xs.n;
+				if (!cond) accept_ = false;
+				if (independ < 1.0e-4)  accept_ = false;
 
-				accept++;
-				reject = 0;
-				if (best_update)
+				bool best_update = false;
+				if (accept_)
 				{
-					no_accept_count = 0;
-					update_count++;
-					char buf[256];
-					sprintf(buf, "@[%d/%d] %f (ind:%f,err:%f)accept:%d", kk, confounding_factors_sampling - 1, best_min_value, independ, residual, accept);
-
-					if (1)
-					{
-						DWORD  bytesWritten = 0;
-						SetConsoleTextAttribute(hStdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_BLUE | BACKGROUND_INTENSITY);
-						WriteFile(hStdout, buf, strlen(buf), &bytesWritten, NULL);
-						SetConsoleTextAttribute(hStdout, csbi.wAttributes);
-						printf("\n");
-					}
-					else
-					{
-						printf(buf);
-					}
-
-					//intercept_best.print("intercept_best");
-					//μ.print("μ");
-					Mu = μ;
-					B_best_sv = B;
-					B_pre_sort = B;
-					modification_input = xs;
-					replacement_best = replacement;
-					residual_error_best = residual_error;
-					residual_error_independ_best = residual_error_independ;
-					
-					observed = observed_tmp;
-					predict = predict_tmp;
-					colnames_id = name_id;
-					hidden_colnames_id = hidden_name_id;
-
-					intercept_best = intercept;
-					dist_t_param_best = dist_t_param;
-
-					exper = best_exper;
-					calc_mutual_information(X, mutual_information, bins);
-
+					accept_pattern_idx = current_pattern_idx;
 					if (use_bootstrap)
 					{
-						auto tmp = b_probability;
-						b_probability /= bootstrapN;
-						b_probability *= 0.99;
-
-						save(std::string("lingam.model"));
-
-						b_probability = tmp;
-					}
-					else
-					{
-						save(std::string("lingam.model"));
-					}
-					{
-						FILE* fp = fopen("lingam.model.update", "w");
-						fprintf(fp, "%d/%d", kk, confounding_factors_sampling);
-						fclose(fp);
-					}
-					if (independ + residual < 0.000001)
-					{
-						printf("convergence!\n");
-						break;
+						auto b = before_sorting_(B);
+						for (int j = 0; j < xs.n; j++)
+						{
+							for (int i = 0; i < xs.n; i++)
+							{
+								if (fabs(b(i, j)) > 0.01)
+								{
+									b_probability(i, j) += 1;
+								}
+							}
+						}
+						bootstrapN++;
 					}
 
+					printf("best_min_value:%f value:%f\n", best_min_value, value);
+					printf("best_residual:%f residual:%f\n", best_residual, residual);
+					printf("best_independ:%f independ:%f\n", best_independ, independ);
+					//printf("+\n");
+					if (best_min_value >= value || (best_residual > residual || best_independ > independ))
+					{
+						double d1 = (residual - best_residual);
+						double d2 = (independ - best_independ);
+						if (best_residual > residual && best_independ < independ || best_residual < residual && best_independ > independ)
+						{
+							printf("d1:%f + d2:%f -> %f < %f\n", d1, d2, fabs(d1) + fabs(d2), 0.35 * (1.0 - rt));
+							if (fabs(d1) + fabs(d2) < 0.1 * (1.0 - rt))
+							{
+								best_update = true;
+							}
+						}
+						else
+						{
+							if (best_residual > residual && best_independ > independ)
+							{
+								best_update = true;
+							}
+						}
+					}
+
+					printf("loss_function:%d\n", loss_function);
+					if (loss_function == 0)
+					{
+						if (best_min_value < value)
+						{
+							best_update = false;
+						}
+					}
+
+					//if (nonlinear)
+					//{
+					//	if (best_residual < residual)
+					//	{
+					//		best_update = false;
+					//	}
+					//}
+
+					if (best_update || kk == 0)
+					{
+						best_exper = exper_tmp;
+						best_min_value = value;
+						best_residual = residual;
+						best_independ = independ;
+						loss_value = value;
+						for (int ii = 0; ii < best_exper.size(); ii++)
+						{
+							printf("%s\n", best_exper[ii].c_str());
+						}
+					}
+					//{
+					//	auto& b = before_sorting_(B);
+					//	b.print("accept-b");
+					//}
+
+					μ_sv = μ;
+					dist_t_param_sv = dist_t_param;
+					neighborhood_search = xs.n;
+
+					accept++;
+					reject = 0;
+					if (best_update)
+					{
+						no_accept_count = 0;
+						update_count++;
+						char buf[256];
+						sprintf(buf, "@[%d/%d] %f (ind:%f,err:%f)accept:%d", kk, confounding_factors_sampling - 1, best_min_value, independ, residual, accept);
+
+						if (1)
+						{
+							DWORD  bytesWritten = 0;
+							SetConsoleTextAttribute(hStdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY | BACKGROUND_BLUE | BACKGROUND_INTENSITY);
+							WriteFile(hStdout, buf, strlen(buf), &bytesWritten, NULL);
+							SetConsoleTextAttribute(hStdout, csbi.wAttributes);
+							printf("\n");
+						}
+						else
+						{
+							printf(buf);
+						}
+
+						//intercept_best.print("intercept_best");
+						//μ.print("μ");
+						Mu = μ;
+						B_best_sv = B;
+						B_pre_sort = B;
+						modification_input = xs;
+						replacement_best = replacement;
+						residual_error_best = residual_error;
+						residual_error_independ_best = residual_error_independ;
+
+						observed = observed_tmp;
+						predict = predict_tmp;
+						colnames_id = name_id;
+						hidden_colnames_id = hidden_name_id;
+
+						intercept_best = intercept;
+						dist_t_param_best = dist_t_param;
+
+						exper = best_exper;
+						calc_mutual_information(X, mutual_information, bins);
+
+						if (use_bootstrap)
+						{
+							auto tmp = b_probability;
+							b_probability /= bootstrapN;
+							b_probability *= 0.99;
+
+							save(std::string("lingam.model"));
+
+							b_probability = tmp;
+						}
+						else
+						{
+							save(std::string("lingam.model"));
+						}
+						{
+							FILE* fp = fopen("lingam.model.update", "w");
+							fprintf(fp, "%d/%d", kk, confounding_factors_sampling);
+							fclose(fp);
+						}
+						if (independ + residual < 0.000001)
+						{
+							printf("convergence!\n");
+							break;
+						}
+
+					}
+
+					//for (int i = 0; i < xs.n; i++)
+					//{
+					//	double residual_error_mean = residual_error.Col(i).mean();
+					//	intercept(i, 0) += residual_error_mean/xs.n;
+					//}
+					fflush(stdout);
+				}
+				else
+				{
+					accept_pattern_idx = -1;
+					accept = 0;
+					reject++;
+					//neighborhood_search--;
+					//if (neighborhood_search <= 0)
+					//{
+					//	neighborhood_search = 0;
+					//}
+					//else
+					//{
+					//	μ = Mu;
+					//	dist_t_param = dist_t_param_best;
+					//	intercept = intercept_best;
+					//	accept = 1;
+					//	reject = 0;
+					//	printf("------------------\n");
+					//}
+					//if (acceptance_rate(engine) > 0.95)
+					//{
+					//	//μ = Mu;
+					//	//dist_t_param = dist_t_param_best;
+					//	//intercept = intercept_best;
+					//	accept = 1;
+					//	reject = 0;
+					//	printf("------------------\n");
+					//}
+				}
+				if (pt == 0)
+				{
+					fput_loss(loss, best_residual, best_independ, best_min_value);
+				}
+				//if ( confounding_factors_sampling >= 4000 && reject > confounding_factors_sampling / 4)
+				//{
+				//	break;
+				//}
+
+				end = std::chrono::system_clock::now();
+				elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+				//printf("[%d/%d]%8.3f[msec]\n", kk, confounding_factors_sampling - 1, elapsed);
+
+				elapsed_ave += elapsed;
+				double t1 = (confounding_factors_sampling - 1 - kk) * (elapsed_ave * 0.001 / (kk + 1));
+				if (kk != 0 && elapsed_ave * 0.001 / (kk + 1) < 1 && kk % 20)
+				{
+					printf("[%d/%d]Total elapsed time:%.3f[sec] Estimated end time:%.3f[sec] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001, t1, accept);
+					fflush(stdout);
+					continue;
 				}
 
-				//for (int i = 0; i < xs.n; i++)
-				//{
-				//	double residual_error_mean = residual_error.Col(i).mean();
-				//	intercept(i, 0) += residual_error_mean/xs.n;
-				//}
+				if (t1 < 60)
+				{
+					printf("[%d/%d]Total elapsed time:%.3f[sec] Estimated end time:%.3f[sec] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001, t1, accept);
+					fflush(stdout);
+					continue;
+				}
+				t1 /= 60.0;
+				if (t1 < 60)
+				{
+					printf("[%d/%d]Total elapsed time:%.3f[min] Estimated end time:%.3f[min] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001 / 60.0, t1, reject);
+					fflush(stdout);
+					continue;
+				}
+				t1 /= 60.0;
+				if (t1 < 24)
+				{
+					printf("[%d/%d]Total elapsed time:%.3f[h] Estimated end time:%.3f[h] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001 / 60.0 / 60.0, t1, reject);
+					fflush(stdout);
+					continue;
+				}
+				t1 /= 365;
+				if (t1 < 365)
+				{
+					printf("[%d/%d]Total elapsed time:%.3f[days] Estimated end time:%.3f[days] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001 / 60 / 60 / 24.0 / 365.0, t1, reject);
+					fflush(stdout);
+					continue;
+				}
+				printf("[%d/%d]Total elapsed time:%.3f[years] Estimated end time:%.3f[years] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001 / 60 / 60 / 24.0 / 365.0, t1, reject);
 				fflush(stdout);
 			}
-			else
-			{
-				accept_pattern_idx = -1;
-				accept = 0;
-				reject++;
-				//neighborhood_search--;
-				//if (neighborhood_search <= 0)
-				//{
-				//	neighborhood_search = 0;
-				//}
-				//else
-				//{
-				//	μ = Mu;
-				//	dist_t_param = dist_t_param_best;
-				//	intercept = intercept_best;
-				//	accept = 1;
-				//	reject = 0;
-				//	printf("------------------\n");
-				//}
-				//if (acceptance_rate(engine) > 0.95)
-				//{
-				//	//μ = Mu;
-				//	//dist_t_param = dist_t_param_best;
-				//	//intercept = intercept_best;
-				//	accept = 1;
-				//	reject = 0;
-				//	printf("------------------\n");
-				//}
-			}
-			fput_loss(loss, best_residual, best_independ, best_min_value);
-
-			//if ( confounding_factors_sampling >= 4000 && reject > confounding_factors_sampling / 4)
-			//{
-			//	break;
-			//}
-
-			end = std::chrono::system_clock::now();
-			elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-			//printf("[%d/%d]%8.3f[msec]\n", kk, confounding_factors_sampling - 1, elapsed);
-
-			elapsed_ave += elapsed;
-			double t1 = (confounding_factors_sampling - 1 - kk) * (elapsed_ave * 0.001 / (kk + 1));
-			if (kk != 0 && elapsed_ave * 0.001 / (kk + 1) < 1 && kk % 20)
-			{
-				printf("[%d/%d]Total elapsed time:%.3f[sec] Estimated end time:%.3f[sec] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001, t1, accept);
-				fflush(stdout);
-				continue;
-			}
-
-			if (t1 < 60)
-			{
-				printf("[%d/%d]Total elapsed time:%.3f[sec] Estimated end time:%.3f[sec] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001, t1, accept);
-				fflush(stdout);
-				continue;
-			}
-			t1 /= 60.0;
-			if (t1 < 60)
-			{
-				printf("[%d/%d]Total elapsed time:%.3f[min] Estimated end time:%.3f[min] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001 / 60.0, t1, reject);
-				fflush(stdout);
-				continue;
-			}
-			t1 /= 60.0;
-			if (t1 < 24)
-			{
-				printf("[%d/%d]Total elapsed time:%.3f[h] Estimated end time:%.3f[h] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001 / 60.0 / 60.0, t1, reject);
-				fflush(stdout);
-				continue;
-			}
-			t1 /= 365;
-			if (t1 < 365)
-			{
-				printf("[%d/%d]Total elapsed time:%.3f[days] Estimated end time:%.3f[days] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001 / 60 / 60 / 24.0 / 365.0, t1, reject);
-				fflush(stdout);
-				continue;
-			}
-			printf("[%d/%d]Total elapsed time:%.3f[years] Estimated end time:%.3f[years] reject:%d\n", kk, confounding_factors_sampling - 1, elapsed_ave * 0.001 / 60 / 60 / 24.0 / 365.0, t1, reject);
-			fflush(stdout);
 		}
 
 		intercept = intercept_best;
@@ -4899,7 +5070,7 @@ public:
 			{
 				if (i == j) continue;
 				if (b_probability(i, j) < 0.001) continue;
-				//if (fabs(B(i, j)) < 0.001) continue;
+				if (fabs(B(i, j)) < 0.001) continue;
 
 				count++;
 			}
@@ -4914,7 +5085,7 @@ public:
 			{
 				if (i == j) continue;
 				if (b_probability(i, j) < 0.001) continue;
-				//if (fabs(B(i, j)) < 0.001) continue;
+				if (fabs(B(i, j)) < 0.001) continue;
 
 				if (s > 0)fprintf(fp, ",");
 				fprintf(fp, "\"%s\"", header_names2[j].c_str());
@@ -4928,7 +5099,7 @@ public:
 			{
 				if (i == j) continue;
 				if (b_probability(i, j) < 0.001) continue;
-				//if (fabs(B(i, j)) < 0.001) continue;
+				if (fabs(B(i, j)) < 0.001) continue;
 
 				if (s > 0)fprintf(fp, ",");
 				fprintf(fp, "%.2f", b_probability(i, j) * 100.0);
@@ -5001,7 +5172,10 @@ public:
 				fprintf(fp, "g%d <- ggplot(df%d_%d,", count, name_id[i][0], name_id[i][k]);
 				fprintf(fp, " aes(x=%s, y=%s))\n", std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
 				fprintf(fp, "g%d <- g%d + geom_point(alpha=0.4)\n", count, count);
-				fprintf(fp, "g%d <- g%d + geom_line(aes(x=%s, y=%s_fit), color =\"#FF4B00\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+				//if (!use_pnl)
+				{
+					fprintf(fp, "g%d <- g%d + geom_line(aes(x=%s, y=%s_fit), color =\"#FF4B00\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+				}
 				fprintf(fp, "#g%d <- g%d + scale_color_brewer(palette = \"Set2\")\n", count, count);
 				count++;
 			}
@@ -5021,7 +5195,7 @@ public:
 				}
 				fprintf(fp, ", nrow = %d)\n", count);
 			}
-			fprintf(fp, "ggplot2::ggsave(\"scatter.png\",g,width = 6.4*%d, height = 4.8, units = \"cm\", dpi = 100, limitsize=F)\n", count);
+			fprintf(fp, "ggplot2::ggsave(\"scatter.png\",g,width = 6.4, height = 4.8*%d, units = \"cm\", dpi = 100, limitsize=F)\n", count);
 		}
 		fclose(fp);
 	}
@@ -5060,7 +5234,10 @@ public:
 
 			fprintf(fp, "g%d <- ggplot(df%d)\n", count, name_id[i][0]);
 			fprintf(fp, "g%d <- g%d + geom_point(aes(x=%s_obs, y=%s_fit), color =\"#FF4B00\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
-			fprintf(fp, "g%d <- g%d + geom_line(aes(x=%s_obs, y=%s_obs), color =\"#005AFF\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+			//if (!use_pnl)
+			{
+				fprintf(fp, "g%d <- g%d + geom_line(aes(x=%s_obs, y=%s_obs), color =\"#005AFF\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+			}
 			count++;
 		}
 		if (count >= 1)
@@ -5078,7 +5255,7 @@ public:
 				}
 				fprintf(fp, ", nrow = %d)\n", count);
 			}
-			fprintf(fp, "ggplot2::ggsave(\"scatter2.png\",g,width = 6.4*%d, height = 6.4, units = \"cm\", dpi = 100, limitsize=F)\n", count);
+			fprintf(fp, "ggplot2::ggsave(\"scatter2.png\",g,width = 6.4, height = 6.4*%d, units = \"cm\", dpi = 100, limitsize=F)\n", count);
 		}
 		fclose(fp);
 	}
@@ -5100,8 +5277,8 @@ public:
 			fprintf(fp, "%s=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), residual_error(0, name_id[i][0]));
 
 			int n = residual_error.m / 300;
-			if (n <= 0) n = input.m;
-			for (int j = 1; j < input.m; j++)
+			if (n <= 0) n = residual_error.m;
+			for (int j = 1; j < residual_error.m; j++)
 			{
 				if (j % n == 0) fprintf(fp, ",%.3f", residual_error(j, name_id[i][0]));
 			}
@@ -5127,7 +5304,7 @@ public:
 				}
 				fprintf(fp, ", nrow = %d)\n", count);
 			}
-			fprintf(fp, "ggplot2::ggsave(\"err_histogram.png\",g,width = 6.4*%d, height = 6.4, units = \"cm\", dpi = 100, limitsize=F)\n", count);
+			fprintf(fp, "ggplot2::ggsave(\"err_histogram.png\",g,width = 6.4, height = 6.4*%d, units = \"cm\", dpi = 100, limitsize=F)\n", count);
 		}
 		fclose(fp);
 	}

@@ -388,6 +388,7 @@ int main(int argc, char** argv)
 	double dropout_rate = 0.0;
 	bool random_pattern = false;
 	bool L1_loss = false;
+	bool use_pnl = false;	//post-nonlinear causal model
 
 
 	int pause = 0;
@@ -585,6 +586,9 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--L1_loss") {
 					L1_loss = (atoi(argv[count + 1]) != 0) ? true : false;
+				}
+				else if (argname == "--use_pnl") {
+					use_pnl = (atoi(argv[count + 1]) != 0) ? true : false;
 				}
 
 
@@ -1310,6 +1314,8 @@ int main(int argc, char** argv)
 				LiNGAM.confounding_factors_upper2 = confounding_factors_upper2;
 				LiNGAM.random_pattern = random_pattern;
 				LiNGAM.L1_loss = L1_loss;
+				LiNGAM.use_pnl = use_pnl;
+				//LiNGAM.use_pnl = true;
 
 				//LiNGAM.fit(xs, max_ica_iteration, ica_tolerance);
 				LiNGAM.fit3(xs, max_ica_iteration, ica_tolerance);
