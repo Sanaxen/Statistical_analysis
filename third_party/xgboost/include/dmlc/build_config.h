@@ -25,3 +25,5 @@
 #define DMLC_CMAKE_LITTLE_ENDIAN 1
 
 #endif  // DMLC_BUILD_CONFIG_H_
+
+/* #undef DMLC_USE_PARQUET */
