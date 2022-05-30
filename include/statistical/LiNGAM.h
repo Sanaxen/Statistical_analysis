@@ -3446,7 +3446,9 @@ public:
 						//		}
 						//	}
 						//}
-						if (kk % 20 == 0)
+
+						bool _Causal_Search_Experiment = false;
+						if (_Causal_Search_Experiment && kk % 20 == 0)
 						{
 							char fname[256];
 							{
