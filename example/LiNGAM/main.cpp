@@ -389,7 +389,7 @@ int main(int argc, char** argv)
 	bool random_pattern = false;
 	bool L1_loss = false;
 	bool use_pnl = false;	//post-nonlinear causal model
-
+	bool _Causal_Search_Experiment = false;
 
 	int pause = 0;
 	std::string load_model = "";
@@ -590,7 +590,10 @@ int main(int argc, char** argv)
 				else if (argname == "--use_pnl") {
 					use_pnl = (atoi(argv[count + 1]) != 0) ? true : false;
 				}
-
+				else if (argname == "--_Causal_Search_Experiment") {
+					_Causal_Search_Experiment = (atoi(argv[count + 1]) != 0) ? true : false;
+				}
+				//
 
 				//
 				///
@@ -1151,6 +1154,7 @@ int main(int argc, char** argv)
 	LiNGAM.colnames = header_names;
 	LiNGAM.R_cmd_path = R_cmd_path;
 	LiNGAM.minbatch = minbatch;
+	LiNGAM._Causal_Search_Experiment = _Causal_Search_Experiment;
 
 	{
 		//CSVReader csv1(csvfile, ',', header);

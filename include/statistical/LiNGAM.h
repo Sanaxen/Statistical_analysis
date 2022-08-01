@@ -494,6 +494,7 @@ public:
 	Matrix<dnn_double> B;
 	Matrix<dnn_double> B_pre_sort;
 	Matrix<dnn_double> input;
+	Matrix<dnn_double> input_sample;
 	Matrix<dnn_double> modification_input;
 	Matrix<dnn_double> mutual_information;
 	Matrix<dnn_double> Mu;
@@ -532,6 +533,7 @@ public:
 	double dropout_rate = 0.0;
 	bool use_pnl = 0;
 
+	bool _Causal_Search_Experiment = false;
 	bool eval_mode = false;
 
 	Lingam() {
@@ -601,6 +603,7 @@ public:
 			mutual_information.print_csv((char*)(filename + ".mutual_information.csv").c_str());
 			Mu.print_csv((char*)(filename + ".mu.csv").c_str());
 			intercept.print_csv((char*)(filename + ".intercept.csv").c_str());
+			input_sample.print_csv((char*)(filename + ".input_sample.csv").c_str(), this->colnames);
 
 			residual_error_independ.print_csv((char*)(filename + ".residual_error_independ.csv").c_str());
 			residual_error.print_csv((char*)(filename + ".residual_error.csv").c_str());
@@ -766,6 +769,10 @@ public:
 			CSVReader csv9((filename + ".intercept.csv"), ',', false);
 			intercept = csv9.toMat();
 			printf("intercept\n"); fflush(stdout);
+
+			CSVReader csv11((filename + ".input_sample.csv"), ',', false);
+			input_sample = csv11.toMat();
+			printf("input_sample\n"); fflush(stdout);
 
 			if (use_bootstrap)
 			{
@@ -2801,6 +2808,7 @@ public:
 
 		input = X_;
 		modification_input = X_;
+		input_sample = X;
 
 		double min_value = Abs(X_).Min();
 		if (min_value < 1.0e-3) min_value = 1.0e-3;
@@ -2949,6 +2957,7 @@ public:
 				X = x_tmp;
 			}
 			Matrix<dnn_double> xs = X;
+			input_sample = X;
 
 
 			//if (kk > 0)
@@ -3281,7 +3290,7 @@ public:
 			// 上位10パターンを選んで以降はその10パターンに対して最適なものを算出する
 			if (random_pattern)
 			{
-				if (kk >= 300 && pattern_pikup.size() == 0)
+				if (kk >= 1000 && pattern_pikup.size() == 0)
 				{
 					printf("make pattern_pikup\n");
 
@@ -3447,7 +3456,6 @@ public:
 						//	}
 						//}
 
-						bool _Causal_Search_Experiment = false;
 						if (_Causal_Search_Experiment && kk % 20 == 0)
 						{
 							char fname[256];
@@ -3740,7 +3748,10 @@ public:
 							const int max_epohc_srch = 1;
 							for (int jj = 0; jj < max_epohc_srch; jj++)
 							{
-								//printf("dropout:%f\n", dropout_);
+								printf("dropout:%f\n", dropout_);
+								printf("n_minibatch:%d\n", n_minibatch_);
+								printf("activation_fnc:%s\n", activation_fnc_);
+								printf("learning_rate:%f\n", learning_rate_);
 								torch_params(
 									n_train_epochs_,
 									n_minibatch_,
@@ -3834,14 +3845,14 @@ public:
 										tiny_dnn::vec_t& gy = torch_post_predict(ty[j]);// g(y)
 										tiny_dnn::vec_t& igy = torch_invpost_predict(fx);// g^-1(f(x))
 
-										double prd_y = (double)fx[0] * sigma_y[0] + mean_y[0];
-										double obs_y = (double)ty[j][0] * sigma_y[0] + mean_y[0];
-										double pst_y = (double)gy[0] * sigma_y[0] + mean_y[0];
-										double ipst_y = (double)igy[0] * sigma_y[0] + mean_y[0];
+										double prd_y = (double)fx[0] * sigma_y[0] + mean_y[0];		//f(x)
+										double obs_y = (double)ty[j][0] * sigma_y[0] + mean_y[0];	//y
+										double pst_y = (double)gy[0] * sigma_y[0] + mean_y[0];		//g(y)
+										double ipst_y = (double)igy[0] * sigma_y[0] + mean_y[0];	//g^-1(f(x))
 
-										residual_error(j, i) = (pst_y - prd_y);
-										observed_[j] = obs_y;
-										predict_[j] = ipst_y;
+										residual_error(j, i) = (pst_y - prd_y);	//g(y) - f(x)
+										observed_[j] = obs_y;	// y
+										predict_[j] = ipst_y;	//g^-1(f(x)) == y
 									}
 									else
 									{
@@ -3904,10 +3915,13 @@ public:
 								{
 									sprintf(tmp_buf, "x(%d:[%s]) = f_{%d}(x(%d:[%s])", xv[0] + 1, colnames[xv[0]].c_str(), xv[0] + 1, xv[1] + 1, colnames[xv[1]].c_str());
 									tmp_buf2 = std::string(tmp_buf);
-									for (int kk = 2; kk < xv.size(); kk++)
+									if ( xv.size() >= 3 )
 									{
-										sprintf(tmp_buf, ",x(%d:[%s])", xv[kk] + 1, colnames[xv[kk]].c_str());
-										tmp_buf2 += std::string(tmp_buf);
+										for (int kk = 2; kk < xv.size(); kk++)
+										{
+											sprintf(tmp_buf, ",x(%d:[%s])", xv[kk] + 1, colnames[xv[kk]].c_str());
+											tmp_buf2 += std::string(tmp_buf);
+										}
 									}
 									sprintf(tmp_buf, ")");
 									tmp_buf2 += std::string(tmp_buf);
@@ -4754,7 +4768,7 @@ public:
 		cmd += "previous_na_action <- options()$na.action\n";
 		cmd += "options(na.action='na.pass')\n";
 		cmd += "\n";
-		cmd += "df <- read.csv( \"tmp_Causal_relationship_search.csv\", header=T, stringsAsFactors = F, na.strings = c(\"\", \"NA\"))\n";
+		cmd += "df <- read.csv( \"lingam.model.input_sample.csv\", header=T, stringsAsFactors = F, na.strings = c(\"\", \"NA\"))\n";
 		cmd += "mu <- read.csv( \"lingam.model.mu.csv\", header=F, stringsAsFactors = F, na.strings = c(\"\", \"NA\"))\n";
 		cmd += "colnames(mu)<- c(\""+ std::string("Unknown1") + "\"";
 
@@ -5142,26 +5156,26 @@ public:
 		fprintf(fp, "library(ggplot2)\n");
 		fprintf(fp, "library(gridExtra)\n");
 
-		input.print("input");
+		input_sample.print("input_sample");
 		int count = 0;
 		for (int i = 0; i < name_id.size(); i++)
 		{
 			for (int k = 1; k < name_id[i].size(); k++)
 			{
 				fprintf(fp, "df%d_%d<- data.frame(", name_id[i][0], name_id[i][k]);
-				fprintf(fp, "%s=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), input(0, name_id[i][0]));
+				fprintf(fp, "%s=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), input_sample(0, name_id[i][0]));
 				
 				int n = input.m / 300;
-				if (n <= 0) n = input.m;
-				for (int j = 1; j < input.m; j++)
+				if (n <= 0) n = input_sample.m;
+				for (int j = 1; j < input_sample.m; j++)
 				{
-					if ( j % n == 0 ) fprintf(fp, ",%.3f", input(j, name_id[i][0]));
+					if ( j % n == 0 ) fprintf(fp, ",%.3f", input_sample(j, name_id[i][0]));
 				}
 				fprintf(fp, ")");
-				fprintf(fp, ",%s=c(%.3f", std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), input(0, name_id[i][k]));
-				for (int j = 1; j < input.m; j++)
+				fprintf(fp, ",%s=c(%.3f", std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), input_sample(0, name_id[i][k]));
+				for (int j = 1; j < input_sample.m; j++)
 				{
-					if (j % n == 0) fprintf(fp, ",%.3f", input(j, name_id[i][k]));
+					if (j % n == 0) fprintf(fp, ",%.3f", input_sample(j, name_id[i][k]));
 				}
 				fprintf(fp, ")");
 				fprintf(fp, ", %s_fit=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), predict_y[i][0]);
@@ -5176,7 +5190,7 @@ public:
 				fprintf(fp, "g%d <- g%d + geom_point(alpha=0.4)\n", count, count);
 				//if (!use_pnl)
 				{
-					fprintf(fp, "g%d <- g%d + geom_line(aes(x=%s, y=%s_fit), color =\"#FF4B00\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+					fprintf(fp, "g%d <- g%d + geom_point(aes(x=%s, y=%s_fit), color =\"#FF4B00\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
 				}
 				fprintf(fp, "#g%d <- g%d + scale_color_brewer(palette = \"Set2\")\n", count, count);
 				count++;
@@ -5212,15 +5226,15 @@ public:
 		fprintf(fp, "library(ggplot2)\n");
 		fprintf(fp, "library(gridExtra)\n");
 
-		input.print("input");
+		input_sample.print("input_sample");
 		int count = 0;
 		for (int i = 0; i < name_id.size(); i++)
 		{
 			if (name_id[i].size() == 1) continue;
 			fprintf(fp, "df%d<- data.frame(", name_id[i][0]);
 
-			int n = input.m / 300;
-			if (n <= 0) n = input.m;
+			int n = input_sample.m / 300;
+			if (n <= 0) n = input_sample.m;
 			fprintf(fp, "%s_fit=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), predict_y[i][0]);
 			for (int j = 1; j < predict_y[i].size(); j++)
 			{
