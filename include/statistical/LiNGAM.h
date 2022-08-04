@@ -4927,7 +4927,7 @@ public:
 		for (int i = 0; i < predict_y.size(); i++)
 		{
 			fprintf(fp, "df%d<- data.frame(", name_id[i][0]);
-			fprintf(fp, "x=c(1:n), %s=c(%.3f", std::regex_replace(this->colnames [name_id[i][0]], regex("\""), "").c_str(), observed_y[i][0]);
+			fprintf(fp, "x=c(1:n), %s_obs=c(%.3f", std::regex_replace(this->colnames [name_id[i][0]], regex("\""), "").c_str(), observed_y[i][0]);
 			for (int j = 1; j < observed_y[i].size(); j++)
 			{
 				if ( j % nn == 0 ) fprintf(fp, ",%.3f", observed_y[i][j]);
@@ -4940,7 +4940,7 @@ public:
 			fprintf(fp, "))\n");
 			fprintf(fp, "g%d <- ggplot(df%d)\n", i, name_id[i][0]);
 			fprintf(fp, "g%d <- g%d + geom_line(aes(x = x, y = %s_fit, colour =\"%s_fit\"))\n", i, i, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
-			fprintf(fp, "g%d <- g%d + geom_line(aes(x = x, y = %s, colour =\"%s\"))\n", i, i, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+			fprintf(fp, "g%d <- g%d + geom_line(aes(x = x, y = %s_obs, colour =\"%s\"))\n", i, i, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
 		}
 		fprintf(fp, "g <- grid.arrange(g%d", 0);
 		for (int i = 1; i < predict_y.size(); i++)
