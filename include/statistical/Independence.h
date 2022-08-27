@@ -28,13 +28,37 @@ Matrix<dnn_double> squareform_pdist(Matrix<dnn_double>& x)
 Matrix<dnn_double> Gram_Matrix(Matrix<dnn_double>& x)
 {
     Matrix<dnn_double>& pairwise_dist = squareform_pdist(x);
+
+    double sigma = 1.0;
+    {
+        double med = 0.0;
+        std::vector<double> xx;
+        xx.reserve(x.m * (x.m - 1) / 2);
+        for (size_t i = 0; i < x.m; i++)
+            for (size_t j = i + 1; j < x.m; j++)
+                if (pairwise_dist(i,j) != 0.0)
+                    xx.push_back(pairwise_dist(i, j));
+        nth_element(xx.begin(), xx.begin() + xx.size() / 2, xx.end());
+        double x1 = *(xx.begin() + xx.size() / 2);
+        if (xx.size() % 2) {
+            med = x1;
+        }
+        else {
+            nth_element(xx.begin(), xx.begin() + xx.size() / 2 - 1, xx.end());
+            double x2 = *(xx.begin() + xx.size() / 2 - 1);
+            med = (x1 + x2) / 2.0;
+        }
+
+        double sigma =  sqrt(0.5 * med);
+    }
     auto& t = Pow(pairwise_dist, 2.0);
-    return Exp(-0.5 * t);
+    return Exp(-0.5 * t / sigma);
 }
 
 class HSIC
 {
 public:
+    double p_value = 0;
 
     double value(Matrix<dnn_double>& x, Matrix<dnn_double>& y, int nrperm = 0)
     {
@@ -84,21 +108,26 @@ public:
         return hsic;
     }
 
-    double value_(Matrix<dnn_double>& x, Matrix<dnn_double>& y, int nrperm = 0, int sample = 3)
+    double value_(Matrix<dnn_double>& x, Matrix<dnn_double>& y, int nrperm = 0, int sample = 20)
     {
         std::vector<double> hsic(sample, 0);
+
+        double hsic_b = value(x, y, nrperm);
+
 #pragma omp parallel for
         for (int i = 0; i < sample; i++)
         {
-            hsic[i] = value(x, y, nrperm) / (double)sample;
+            hsic[i] = value(x, y, nrperm);
         }
 
-        double h = 0.0;
+        int count = 0;
         for (int i = 0; i < sample; i++)
         {
-            h += hsic[i];
+            if (hsic_b < hsic[i]) count++;
         }
-        return h;
+
+        p_value = (count + 1.0) / (sample + 2.0);
+        return hsic_b;
     }
 
 };
@@ -539,7 +568,9 @@ inline double independ_test(const Matrix<double>& x, const Matrix<double>& y)
     auto& xx = Matrix<double>(x.v, x.m * x.n, 1);
     auto& yy = Matrix<double>(y.v, x.m * x.n, 1);
 
-    return fabs(xx.Cor(Tanh(yy))) + fabs(yy.Cor(Tanh(xx)));
+    double a = fabs(xx.Cor(Tanh<double>(yy)));
+    double b = fabs(yy.Cor(Tanh<double>(xx)));
+    return (a + b)/2.0;
 }
 
 

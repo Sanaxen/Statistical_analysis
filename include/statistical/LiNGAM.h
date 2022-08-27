@@ -1585,23 +1585,21 @@ public:
 		return error;
 	}
 
-	void calc_mutual_information_r(Matrix<dnn_double>& X, Matrix<dnn_double>& rerr, Matrix<dnn_double>& info, int bins = 30, bool nonlinner_cor = false)
+	void calc_mutual_information_r( Matrix<dnn_double>& X, Matrix<dnn_double>& rerr, Matrix<dnn_double>& info, int bins = 30, bool nonlinner_cor = false)
 	{
 		info = info.zeros(X.n, rerr.n);
 		printf("info %d x %d\n", info.m, info.n);
+		if (X.n <= 1) return;
+
 #pragma omp parallel for
 		for (int j = 0; j < X.n; j++)
 		{
 			for (int i = 0; i < rerr.n; i++)
 			{
 				info(i, j) = 0;
-				if (i == j)
-				{
-					continue;
-				}
 
-				Matrix<dnn_double>& x = X.Col(i);
-				Matrix<dnn_double>& y = rerr.Col(j);
+				Matrix<dnn_double>& x = X.Col(j);
+				Matrix<dnn_double>& y = rerr.Col(i);
 
 				double tmp;
 				if (nonlinner_cor)
@@ -3290,7 +3288,7 @@ public:
 			// 上位10パターンを選んで以降はその10パターンに対して最適なものを算出する
 			if (random_pattern)
 			{
-				if (kk >= 1000 && pattern_pikup.size() == 0)
+				if (kk >= 300 && pattern_pikup.size() == 0)
 				{
 					printf("make pattern_pikup\n");
 
@@ -3345,10 +3343,12 @@ public:
 
 	
 
+			bool edge_dag_error_flg = false;
 			printf("pattern_pikup:%d\n", pattern_pikup.size());
 			for ( int pt = 0; pt < 1; pt++)
 			{
 				double error_dag = 0.0;
+				const double error_dag_max = 1.0;
 				std::vector<std::vector<double>> observed_tmp;
 				std::vector<std::vector<double>> predict_tmp;
 				std::vector< std::vector<int>> name_id;
@@ -3376,7 +3376,6 @@ public:
 						pattern_pikup.clear();
 					}
 #ifdef USE_LIBTORCH
-					bool edge_dag_error_flg = false;
 					// nonlinear
 					if (nonlinear)
 					{
@@ -3516,11 +3515,13 @@ public:
 						}
 						Matrix<dnn_double> x;
 						Matrix<dnn_double> y;
+						Matrix<dnn_double> x_input_only;
 						for (int i = 0; i < B.n; i++)
 						{
 							std::vector<int> xv;
 							std::vector<int> hidden_xv;
 
+							std::vector<int> xv_input_id;
 							//if (accept)
 							//{
 							//	if (i >= colnames_id.size())
@@ -3572,8 +3573,10 @@ public:
 							//if (!accept)
 							{
 								x = Matrix<dnn_double>();
+								x_input_only = x;
 								y = X.Col(i);
 								xv.push_back(this->replacement[i]);
+								xv_input_id.push_back(i);
 
 								std::vector<int>xv_id;
 								double max_b = 0;
@@ -3608,6 +3611,8 @@ public:
 									if (x.n == 0) x = X.Col(xv_id[k]);
 									else x = x.appendCol(X.Col(xv_id[k]));
 									xv.push_back(this->replacement[xv_id[k]]);
+									x_input_only = x;
+									xv_input_id.push_back(xv_id[k]);
 								}
 								if (xv.size() == 1)
 								{
@@ -3745,6 +3750,8 @@ public:
 							bool L1_loss_ = L1_loss;
 							int test_mode_ = 0;
 
+							torch_train_init_seed(shuffle_seed_);
+
 							const int max_epohc_srch = 1;
 							for (int jj = 0; jj < max_epohc_srch; jj++)
 							{
@@ -3804,6 +3811,7 @@ public:
 								torch_train_init_seed(shuffle_seed_);
 
 								start = chrono::system_clock::now();
+								bool train_error = false;
 								try {
 									auto tx_ = tx;
 									auto ty_ = ty;
@@ -3822,10 +3830,12 @@ public:
 								catch (std::exception& err)
 								{
 									std::cout << err.what() << std::endl;
+									train_error = true;
 								}
 								catch (...)
 								{
 									printf("exception!\n");
+									train_error = true;
 								}
 								end = chrono::system_clock::now();
 								printf("fitting %lf[ms]\n", static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0));
@@ -3841,29 +3851,62 @@ public:
 								{
 									if (use_pnl)
 									{
-										tiny_dnn::vec_t& fx = torch_predict(tx[j]);		// f(x)
-										tiny_dnn::vec_t& gy = torch_post_predict(ty[j]);// g(y)
-										tiny_dnn::vec_t& igy = torch_invpost_predict(fx);// g^-1(f(x))
+										residual_error(j, i) = 0;
+										observed_[j] = 0;
+										predict_[j] = 0;
+										const int nsample = 1;
+										for (int jj = 0; jj < nsample; jj++)
+										{
+											tiny_dnn::vec_t& fx = torch_predict(tx[j]);		// f(x)
+											tiny_dnn::vec_t& gy = torch_post_predict(ty[j]);// g(y)
+											tiny_dnn::vec_t& igy = torch_invpost_predict(fx);// g^-1(f(x))
 
-										double prd_y = (double)fx[0] * sigma_y[0] + mean_y[0];		//f(x)
-										double obs_y = (double)ty[j][0] * sigma_y[0] + mean_y[0];	//y
-										double pst_y = (double)gy[0] * sigma_y[0] + mean_y[0];		//g(y)
-										double ipst_y = (double)igy[0] * sigma_y[0] + mean_y[0];	//g^-1(f(x))
+											double prd_y = (double)fx[0] * (double)sigma_y[0] + (double)mean_y[0];		//f(x)
+											double obs_y = (double)ty[j][0] * (double)sigma_y[0] + (double)mean_y[0];	//y
+											double pst_y = (double)gy[0] * (double)sigma_y[0] + (double)mean_y[0];		//g(y)
+											double ipst_y = (double)igy[0] * (double)sigma_y[0] + (double)mean_y[0];	//g^-1(f(x))
 
-										residual_error(j, i) = (pst_y - prd_y);	//g(y) - f(x)
-										observed_[j] = obs_y;	// y
-										predict_[j] = ipst_y;	//g^-1(f(x)) == y
+											//prd_y = (int)(prd_y * 1000 + 0.5) / 1000.0;
+											//obs_y = (int)(obs_y * 1000 + 0.5) / 1000.0;
+											//pst_y = (int)(pst_y * 1000 + 0.5) / 1000.0;
+											//ipst_y = (int)(ipst_y * 1000 + 0.5) / 1000.0;
+
+											residual_error(j, i) += (pst_y - prd_y);	//g(y) - f(x)
+											observed_[j] += obs_y;	// y
+											predict_[j] += ipst_y;	//g^-1(f(x)) == y
+										}
+										residual_error(j, i) /= nsample;
+										observed_[j] /= nsample;
+										predict_[j] /= nsample;
+										if (train_error)
+										{
+											residual_error(j, i) = 9999;	//g(y) - f(x)
+											observed_[j] = 0;	// y
+											predict_[j] = 0;	//g^-1(f(x)) == y
+										}
+										//printf("residual_error:%f\n", residual_error(j, i));
+										//printf("observed_:%f\n", observed_[j]);
+										//printf("predict_:%f\n", predict_[j]);
 									}
 									else
 									{
 										tiny_dnn::vec_t& predict_y = torch_predict(tx[j]);
 
-										double prd_y = (double)predict_y[0] * sigma_y[0] + mean_y[0];
-										double obs_y = (double)ty[j][0] * sigma_y[0] + mean_y[0];
+										double prd_y = (double)predict_y[0] * (double)sigma_y[0] + (double)mean_y[0];
+										double obs_y = (double)ty[j][0] * (double)sigma_y[0] + (double)mean_y[0];
+
+										//prd_y = (int)(prd_y * 1000 + 0.5) / 1000.0;
+										//obs_y = (int)(obs_y * 1000 + 0.5) / 1000.0;
 
 										residual_error(j, i) = (obs_y - prd_y);
 										observed_[j] = obs_y;
 										predict_[j] = prd_y;
+										if (train_error)
+										{
+											residual_error(j, i) = 9999;	//g(y) - f(x)
+											observed_[j] = 0;	// y
+											predict_[j] = 0;	//g^-1(f(x)) == y
+										}
 									}
 								}
 								//auto loss = torch_get_Loss(n_minibatch_);
@@ -3942,7 +3985,12 @@ public:
 							start = chrono::system_clock::now();
 
 							//Evaluation of independence
-							calc_mutual_information_r(x, residual_error.Col(i), residual_error_independ, bins, true);
+							//x.print("x");
+							//x_input_only.print("x_input_only");
+							//residual_error.print("residual_error");
+							calc_mutual_information_r( x_input_only, residual_error.Col(i), residual_error_independ, bins, true);
+
+							residual_error_independ.print("residual_error_independ");
 
 							end = chrono::system_clock::now();
 							printf("independence check %lf[ms]\n", static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0));
@@ -3955,7 +4003,7 @@ public:
 
 						printf("error_dag:%f (%s)\n", error_dag, (use_hsic) ? "HSIC" : "corr(x,tanh(y)");
 						fflush(stdout);
-						double error_dag_treshold = 1.0;
+						double error_dag_treshold = 0.9;
 						if (use_hsic) error_dag_treshold = 0.1;
 						if (error_dag > error_dag_treshold) {
 							std::cout << "残差と説明変数が独立ではないため間違ったDAGのためキャンセル" << std::endl;
@@ -4156,7 +4204,8 @@ public:
 					}
 				}
 
-				double  abs_independ_max_cur = max(error_dag, residual_error_independ.Max());
+				double  abs_independ_max_cur = max(error_dag_max ,residual_error_independ.Max());
+				//double  abs_independ_max_cur = residual_error_independ.Max();
 
 				//if (nonlinear)
 				//{
@@ -4180,6 +4229,7 @@ public:
 				//printf("residual_error max:%f\n", Abs(residual_error).Max());
 
 				double independ = max(error_dag, residual_error_independ.Max()) / abs_independ_max;
+				//double independ = residual_error_independ.Max() / abs_independ_max;
 				//if (nonlinear)
 				//{
 				//	independ = error_dag;
@@ -4312,6 +4362,8 @@ public:
 
 				if (!cond) accept_ = false;
 				if (independ < 1.0e-4)  accept_ = false;
+
+				//if (edge_dag_error_flg) accept_ = false;
 
 				bool best_update = false;
 				if (accept_)

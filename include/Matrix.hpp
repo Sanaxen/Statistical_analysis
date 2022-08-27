@@ -275,7 +275,7 @@ struct Matrix
 		}
 		printf("\n");
 	}
-	void print(char* title = NULL, char* format=NULL)
+	void print(char* title = NULL, char* format=NULL, bool all = false)
 	{
 		char* format_ = "%10.6f ";
 		if (format) format_ = format;
@@ -284,21 +284,27 @@ struct Matrix
 		printf("%d x %d\n", m, n);
 		for (int i = 0; i < m; i++)
 		{
-			if (m > 4 && i > 3 && i < m - 4)
+			if (!all)
 			{
-				if (i == 4) printf(".....\n");
-				continue;
+				if (m > 4 && i > 3 && i < m - 4)
+				{
+					if (i == 4) printf(".....\n");
+					continue;
+				}
 			}
 			for (int j = 0; j < n; j++)
 			{
-				if (n > 4 && j == 3)
+				if (!all)
 				{
-					printf(" ... ");
-					continue;
-				}
-				if (n > 4 && j > 3 && j < n - 3)
-				{
-					continue;
+					if (n > 4 && j == 3)
+					{
+						printf(" ... ");
+						continue;
+					}
+					if (n > 4 && j > 3 && j < n - 3)
+					{
+						continue;
+					}
 				}
 				printf(format_, v[n*i + j]);
 			}
@@ -1204,9 +1210,11 @@ struct Matrix
 			for (int j = 0; j < n; j++)
 				means.v[j] += x(i, j);
 
-		for (int i = 0; i<n; i++)
-			means.v[i] /= T(m);
-
+		if (fabs(m) > 1.0e-16)
+		{
+			for (int i = 0; i < n; i++)
+				means.v[i] /= T(m);
+		}
 		return means;
 	}
 
@@ -1338,10 +1346,10 @@ struct Matrix
 					xx += x*x;
 					yy += y*y;
 				}
-				xx /= X.n;
-				xy /= X.n;
-				yy /= X.n;
-				cor(i, j) = xy / (sqrt(xx)*sqrt(yy));
+				xx /= T(X.n);
+				xy /= T(X.n);
+				yy /= T(X.n);
+				cor(i, j) = xy / (sqrt(xx)*sqrt(yy) + 1.0e-10);
 			}
 		}
 		return cor;
