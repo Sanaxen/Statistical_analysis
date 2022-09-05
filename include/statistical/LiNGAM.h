@@ -532,6 +532,7 @@ public:
 	double u1_param = 0.001;
 	double dropout_rate = 0.0;
 	bool use_pnl = 0;
+	std::string layout = "dot";
 
 	bool _Causal_Search_Experiment = false;
 	bool eval_mode = false;
@@ -985,6 +986,7 @@ public:
 			utf8.fprintf(fp, "graph[bgcolor=\"#00000000\"];\n");
 		}
 		utf8.fprintf(fp, "size=\"%d!\"\n", size);
+		utf8.fprintf(fp, "layout=%s\n", layout.c_str());
 		if (sideways)
 		{
 			utf8.fprintf(fp, "graph[rankdir=\"LR\"];\n");
@@ -1601,6 +1603,10 @@ public:
 				Matrix<dnn_double>& x = X.Col(j);
 				Matrix<dnn_double>& y = rerr.Col(i);
 
+				//if (x.m == y.m)
+				//{
+				//	printf("x.m == y.m:%d\n", x.m - y.m);
+				//}
 				double tmp;
 				if (nonlinner_cor)
 				{

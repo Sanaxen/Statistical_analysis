@@ -193,6 +193,224 @@ bool prior_knowledge(const char* filename, std::vector<std::string>& header_name
 //LiNGAMモデルの推定方法について
 int main(int argc, char** argv)
 {
+	if (0)
+	{
+		CSVReader csv1("HSIC_test.csv", ',', true);
+		Matrix<dnn_double> x = csv1.toMat();
+		x.print("x");
+
+		auto& x1 = x.Col(0);
+		auto& x2 = x.Col(1);
+		auto& x3 = x.Col(2);
+		auto& x4 = x.Col(3);
+		auto& x5 = x.Col(4);
+		auto& x6 = x.Col(5);
+		auto& x7 = x.Col(6);
+
+		chrono::system_clock::time_point start, end;
+
+		double tmp;
+		double time;
+		printf("非独立\n");
+		{
+			start = chrono::system_clock::now();
+			MutualInformation I(x1, x4, 30);
+			tmp = I.Information();
+			end = chrono::system_clock::now();
+
+			printf("MI=%f ", tmp);
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n", time);
+			fflush(stdout);
+
+			start = chrono::system_clock::now();
+			tmp = independ_test(x1, x4);
+			end = chrono::system_clock::now();
+			printf("cor(tanh)=%f ", tmp);
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n", time);
+			fflush(stdout);
+
+			HSIC hsic_;
+			start = chrono::system_clock::now();
+			printf("HSIC=%f ", hsic_.value_(x1, x4, 500));
+			printf("p %f\n", hsic_.p_value);
+			end = chrono::system_clock::now();
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n\n", time);
+		}
+		/////////////////////////////////
+
+		{
+			start = chrono::system_clock::now();
+			MutualInformation I(x1, x5, 30);
+			tmp = I.Information();
+			end = chrono::system_clock::now();
+
+			printf("MI=%f ", tmp);
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n", time);
+			fflush(stdout);
+
+			start = chrono::system_clock::now();
+			tmp = independ_test(x1, x5);
+			end = chrono::system_clock::now();
+			printf("cor(tanh)=%f ", tmp);
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n", time);
+			fflush(stdout);
+
+			HSIC hsic_;
+			start = chrono::system_clock::now();
+			printf("HSIC=%f ", hsic_.value_(x1, x5, 500));
+			printf("p %f\n", hsic_.p_value);
+			end = chrono::system_clock::now();
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n\n", time);
+		}
+		////////////////////////////////////////
+		{
+			start = chrono::system_clock::now();
+			MutualInformation I(x1, x6, 30);
+			tmp = I.Information();
+			end = chrono::system_clock::now();
+
+			printf("MI=%f ", tmp);
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n", time);
+			fflush(stdout);
+
+			start = chrono::system_clock::now();
+			tmp = independ_test(x1, x6);
+			end = chrono::system_clock::now();
+			printf("cor(tanh)=%f ", tmp);
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n", time);
+			fflush(stdout);
+
+			HSIC hsic_;
+			start = chrono::system_clock::now();
+			printf("HSIC=%f ", hsic_.value_(x1, x6, 500));
+			printf("p %f\n", hsic_.p_value);
+			end = chrono::system_clock::now();
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n\n", time);
+		}
+		////////////////////////////////////////
+		{
+			start = chrono::system_clock::now();
+			MutualInformation I(x3, x7, 30);
+			tmp = I.Information();
+			end = chrono::system_clock::now();
+
+			printf("MI=%f ", tmp);
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n", time);
+			fflush(stdout);
+
+			start = chrono::system_clock::now();
+			tmp = independ_test(x3, x7);
+			end = chrono::system_clock::now();
+			printf("cor(tanh)=%f ", tmp);
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n", time);
+			fflush(stdout);
+
+			HSIC hsic_;
+			start = chrono::system_clock::now();
+			printf("HSIC=%f ", hsic_.value_(x3, x7, 500));
+			printf("p %f\n", hsic_.p_value);
+			end = chrono::system_clock::now();
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n\n", time);
+		}
+		
+		printf("独立\n");
+		{
+			start = chrono::system_clock::now();
+			MutualInformation I(x1, x3, 30);
+			tmp = I.Information();
+			end = chrono::system_clock::now();
+
+			printf("MI=%f ", tmp);
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n", time);
+			fflush(stdout);
+
+			start = chrono::system_clock::now();
+			tmp = independ_test(x1, x3);
+			end = chrono::system_clock::now();
+			printf("cor(tanh)=%f ", tmp);
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n", time);
+			fflush(stdout);
+
+			HSIC hsic_;
+			start = chrono::system_clock::now();
+			printf("HSIC=%f ", hsic_.value_(x1, x3, 500));
+			printf("p %f\n", hsic_.p_value);
+			end = chrono::system_clock::now();
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n\n", time);
+		}
+		////////////////////////////////////////
+		{
+			start = chrono::system_clock::now();
+			MutualInformation I(x1, x2, 30);
+			tmp = I.Information();
+			end = chrono::system_clock::now();
+
+			printf("MI=%f ", tmp);
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n", time);
+			fflush(stdout);
+
+			start = chrono::system_clock::now();
+			tmp = independ_test(x1, x2);
+			end = chrono::system_clock::now();
+			printf("cor(tanh)=%f ", tmp);
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n", time);
+			fflush(stdout);
+
+			HSIC hsic_;
+			start = chrono::system_clock::now();
+			printf("HSIC=%f ", hsic_.value_(x1, x2, 500));
+			printf("p %f\n", hsic_.p_value);
+			end = chrono::system_clock::now();
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n\n", time);
+		}
+		{
+			start = chrono::system_clock::now();
+			MutualInformation I(x3, x2, 30);
+			tmp = I.Information();
+			end = chrono::system_clock::now();
+
+			printf("MI=%f ", tmp);
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n", time);
+			fflush(stdout);
+
+			start = chrono::system_clock::now();
+			tmp = independ_test(x3, x2);
+			end = chrono::system_clock::now();
+			printf("cor(tanh)=%f ", tmp);
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n", time);
+			fflush(stdout);
+
+			HSIC hsic_;
+			start = chrono::system_clock::now();
+			printf("HSIC=%f ", hsic_.value_(x3, x2, 500));
+			printf("p %f\n", hsic_.p_value);
+			end = chrono::system_clock::now();
+			time = static_cast<double>(chrono::duration_cast<chrono::microseconds>(end - start).count() / 1000.0);
+			printf("time %lf[ms]\n\n", time);
+		}
+		////////////////////////////////////////
+		exit(0);
+	}
 	if(0){	//Independent inspection
 		printf("csvファイルsuffix:");
 		char name[128];
@@ -390,6 +608,7 @@ int main(int argc, char** argv)
 	bool L1_loss = false;
 	bool use_pnl = false;	//post-nonlinear causal model
 	bool _Causal_Search_Experiment = false;
+	std::string layout = "dot";
 
 	int pause = 0;
 	std::string load_model = "";
@@ -592,6 +811,9 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--_Causal_Search_Experiment") {
 					_Causal_Search_Experiment = (atoi(argv[count + 1]) != 0) ? true : false;
+				}
+				else if (argname == "--layout") {
+					layout = std::string(argv[count + 1]);
 				}
 				//
 
@@ -1155,6 +1377,7 @@ int main(int argc, char** argv)
 	LiNGAM.R_cmd_path = R_cmd_path;
 	LiNGAM.minbatch = minbatch;
 	LiNGAM._Causal_Search_Experiment = _Causal_Search_Experiment;
+	LiNGAM.layout = layout;
 
 	{
 		//CSVReader csv1(csvfile, ',', header);
