@@ -1336,6 +1336,7 @@ public:
 
 		Mu = Matrix<dnn_double>().zeros(X.m, X.n);
 		input = X;
+		input_sample = X;
 		modification_input = X;
 
 		Matrix<dnn_double> xs = X;
@@ -1888,6 +1889,7 @@ public:
 		auto residual_error_independ_best = residual_error_independ;
 
 		input = X_;
+		input_sample = X_;
 		double min_value =Abs(X_).Min();
 		if (min_value < 1.0e-3) min_value = 1.0e-3;
 		double max_value = Abs(X_).Max();
