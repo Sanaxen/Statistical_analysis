@@ -1205,7 +1205,7 @@ int main(int argc, char** argv)
 		{
 			if (colMaxMin < 1.0e-6 && ignore_constant_value_columns) continue;
 			error_cols.push_back(header_names[x_var_idx[i]]);
-			col = col +  col.RandMT(mt) * ((colMaxMin < 1.0e-6)?0.001: colMaxMin *0.01);
+			col = col + col*col.RandMT(mt) * ((colMaxMin < 1.0e-6)?0.01: colMaxMin *0.01);
 		}
 		if (xs.n == 0)
 		{
@@ -1265,7 +1265,7 @@ int main(int argc, char** argv)
 		{
 			if (colMaxMin < 1.0e-6 && ignore_constant_value_columns) continue;
 			error_cols.push_back(header_names[y_var_idx[i]]);
-			col = col + col.RandMT(mt) * ((colMaxMin < 1.0e-6) ? 0.0001 : colMaxMin * 0.0001);
+			col = col + col*col.RandMT(mt) * ((colMaxMin < 1.0e-6) ? 0.01 : colMaxMin * 0.01);
 		}
 		xs = xs.appendCol(col);
 		headers_tmp.push_back(header_names[y_var_idx[i]]);
@@ -1314,6 +1314,7 @@ int main(int argc, char** argv)
 		if (fp)
 		{
 			remove("error_cols.txt");
+			fclose(fp);
 		}
 	}
 	if (error_cols.size())
