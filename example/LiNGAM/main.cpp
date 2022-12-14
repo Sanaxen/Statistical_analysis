@@ -193,6 +193,14 @@ bool prior_knowledge(const char* filename, std::vector<std::string>& header_name
 //LiNGAMƒ‚ƒfƒ‹‚Ì„’è•û–@‚É‚Â‚¢‚Ä
 int main(int argc, char** argv)
 {
+	{
+		FILE* fp = fopen("__lingam_process_exit__", "w");
+		if (fp)
+		{
+			fclose(fp);
+			remove("__lingam_process_exit__");
+		}
+	}
 	if (0)
 	{
 		CSVReader csv1("HSIC_test.csv", ',', true);
@@ -609,6 +617,7 @@ int main(int argc, char** argv)
 	bool use_pnl = false;	//post-nonlinear causal model
 	bool _Causal_Search_Experiment = false;
 	std::string layout = "dot";
+	double independent_variable_skip = 0.0;
 
 	int pause = 0;
 	std::string load_model = "";
@@ -814,6 +823,9 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--layout") {
 					layout = std::string(argv[count + 1]);
+				}
+				else if (argname == "--independent_variable_skip") {
+					independent_variable_skip = atof(argv[count + 1]);
 				}
 				//
 
@@ -1167,6 +1179,22 @@ int main(int argc, char** argv)
 	Matrix<dnn_double> xs;
 	for (int i = index_start + 1; i < x_var.size(); i++)
 	{
+		if (0)
+		{
+			if (y_var_idx.size())
+			{
+				bool dup = false;
+				for (int k = 0; k < y_var.size(); k++)
+				{
+					if (x_var_idx[i] == y_var_idx[k])
+					{
+						dup = true;
+						break;
+					}
+				}
+				if (dup) continue;
+			}
+		}
 		col = T.Col(x_var_idx[i]);
 		if (class_index.size())
 		{
@@ -1203,7 +1231,7 @@ int main(int argc, char** argv)
 		printf("[%s]Max-Min:%f\n", header_names[x_var_idx[i]].c_str(), fabs(col.Max() - col.Min()));
 		if (category || colMaxMin < 1.0e-6)
 		{
-			if (colMaxMin < 1.0e-6 && ignore_constant_value_columns) continue;
+			if ((category || colMaxMin < 1.0e-6) && ignore_constant_value_columns) continue;
 			error_cols.push_back(header_names[x_var_idx[i]]);
 			col = col + col*col.RandMT(mt) * ((colMaxMin < 1.0e-6)?0.01: colMaxMin *0.01);
 		}
@@ -1263,7 +1291,7 @@ int main(int argc, char** argv)
 		//printf("[%s]Max-Min:%f\n", header_names[y_var_idx[i]].c_str(),fabs(col.Max() - col.Min()));
 		if (category || colMaxMin < 1.0e-6)
 		{
-			if (colMaxMin < 1.0e-6 && ignore_constant_value_columns) continue;
+			//if ((category || colMaxMin < 1.0e-6) && ignore_constant_value_columns) continue;
 			error_cols.push_back(header_names[y_var_idx[i]]);
 			col = col + col*col.RandMT(mt) * ((colMaxMin < 1.0e-6) ? 0.01 : colMaxMin * 0.01);
 		}
@@ -1278,6 +1306,68 @@ int main(int argc, char** argv)
 		printf("[%d] %s\n", i, header_names[i].c_str());
 	}
 #endif
+
+	if (y_var.size() > 0 && independent_variable_skip > 0.0)
+	{
+		Matrix<dnn_double> xs_;
+		std::vector<std::string> headers_tmp_;
+		for (int i = 0; i < xs.n; i++)
+		{
+			auto col1 = xs.Col(i);
+
+			double independ = -99999999.0;
+			if (i < xs.n - y_var.size())
+			{
+				for (int j = xs.n - y_var.size(); j < xs.n; j++)
+				{
+					auto col2 = xs.Col(j);
+
+					if (i == j) continue;
+
+					double tmp = 0;
+					if (use_hsic)
+					{
+						HSIC hsic_;
+						tmp = hsic_.value_(col1, col2, 500);
+					}
+					else
+					{
+						//MutualInformation I(col1, col2, 30);
+						//tmp = I.Information();
+
+						tmp = independ_test(col1, col2);
+					}
+					if (tmp > independ)
+					{
+						independ = tmp;
+					}
+				}
+			}
+			else
+			{
+				independ = independent_variable_skip;
+			}
+			printf("independ:%f\n", independ);
+			if (independ < independent_variable_skip)
+			{
+				continue;
+			}
+			if (xs_.n == 0)
+			{
+				xs_ = col1;
+			}
+			else
+			{
+				xs_ = xs_.appendCol(col1);
+			}
+			headers_tmp_.push_back(header_names[i]);
+		}
+		printf("xs.n=%d  ==> ", xs.n);
+		xs = xs_;
+		printf("xs.n=%d\n", xs.n);
+		header_names = headers_tmp_;
+	}
+	xs.print_csv("selected_cols.csv", header_names);
 
 	{
 		FILE* fp = fopen("select_variables.dat", "w");
@@ -1905,6 +1995,14 @@ int main(int argc, char** argv)
 			delete[] argv[i];
 		}
 		delete argv;
+	}
+	{
+		FILE* fp = fopen("__lingam_process_exit__", "w");
+		if (fp)
+		{
+			fprintf(fp, "%f\n", -99.0);
+			fclose(fp);
+		}
 	}
 	if (pause != 0)
 	{
