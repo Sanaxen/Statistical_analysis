@@ -193,14 +193,6 @@ bool prior_knowledge(const char* filename, std::vector<std::string>& header_name
 //LiNGAMƒ‚ƒfƒ‹‚Ì„’è•û–@‚É‚Â‚¢‚Ä
 int main(int argc, char** argv)
 {
-	{
-		FILE* fp = fopen("__lingam_process_exit__", "w");
-		if (fp)
-		{
-			fclose(fp);
-			remove("__lingam_process_exit__");
-		}
-	}
 	if (0)
 	{
 		CSVReader csv1("HSIC_test.csv", ',', true);
@@ -618,6 +610,7 @@ int main(int argc, char** argv)
 	bool _Causal_Search_Experiment = false;
 	std::string layout = "dot";
 	double independent_variable_skip = 0.0;
+	double unique_check_rate = 0.1;
 
 	int pause = 0;
 	std::string load_model = "";
@@ -826,6 +819,9 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--independent_variable_skip") {
 					independent_variable_skip = atof(argv[count + 1]);
+				}
+				else if (argname == "--unique_check_rate") {
+					unique_check_rate = atof(argv[count + 1]);
 				}
 				//
 
@@ -1179,7 +1175,7 @@ int main(int argc, char** argv)
 	Matrix<dnn_double> xs;
 	for (int i = index_start + 1; i < x_var.size(); i++)
 	{
-		if (0)
+		if (1)
 		{
 			if (y_var_idx.size())
 			{
@@ -1205,6 +1201,17 @@ int main(int argc, char** argv)
 			}
 			col = Matrix<dnn_double>(tmp);
 		}
+
+		bool y_var_specified = false;
+		for (int k = 0; k < y_var.size(); k++)
+		{
+			if (x_var_idx[i] == y_var_idx[k])
+			{
+				y_var_specified = true;
+			}
+		}
+		if (y_var_specified) continue;
+
 		// Category check
 		bool category = false;
 		{
@@ -1217,7 +1224,7 @@ int main(int argc, char** argv)
 				}
 				std::sort(v.begin(), v.end());
 				v.erase(std::unique(v.begin(), v.end()), v.end());
-				if (v.size() < col.m * col.n * 0.05)
+				if (v.size() < col.m * col.n * unique_check_rate)
 				{
 					printf("unique size:%d <- size:%d\n", v.size(), col.m* col.n);
 					category = true;
@@ -1248,15 +1255,15 @@ int main(int argc, char** argv)
 	}
 	for (int i = 0; i < y_var.size(); i++)
 	{
-		bool dup = false;
-		for (int k = 0; k < x_var.size(); k++)
-		{
-			if (x_var_idx[k] == y_var_idx[i])
-			{
-				dup = true;
-			}
-		}
-		if (dup) continue;
+		//bool dup = false;
+		//for (int k = 0; k < x_var.size(); k++)
+		//{
+		//	if (x_var_idx[k] == y_var_idx[i])
+		//	{
+		//		dup = true;
+		//	}
+		//}
+		//if (dup) continue;
 		col = T.Col(y_var_idx[i]);
 		if (class_index.size())
 		{
@@ -1279,7 +1286,7 @@ int main(int argc, char** argv)
 				}
 				std::sort(v.begin(), v.end());
 				v.erase(std::unique(v.begin(), v.end()), v.end());
-				if (v.size() < (double)col.m * (double)col.n * 0.05)
+				if (v.size() < (double)col.m * (double)col.n * unique_check_rate)
 				{
 					category = true;
 					printf("unique size:%d <- size:%d\n", v.size(), col.m* col.n);
@@ -1996,14 +2003,7 @@ int main(int argc, char** argv)
 		}
 		delete argv;
 	}
-	{
-		FILE* fp = fopen("__lingam_process_exit__", "w");
-		if (fp)
-		{
-			fprintf(fp, "%f\n", -99.0);
-			fclose(fp);
-		}
-	}
+
 	if (pause != 0)
 	{
 		printf("... pause ...[Hit enter key]\n");

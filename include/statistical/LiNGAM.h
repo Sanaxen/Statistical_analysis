@@ -196,14 +196,6 @@ inline void SigHandler_lingam(int p_signame)
 			fprintf(fp, "%f\n", -99.0);
 			fclose(fp);
 		}
-		{
-			FILE* fp = fopen("__lingam_process_exit__", "w");
-			if (fp)
-			{
-				fprintf(fp, "%f\n", -99.0);
-				fclose(fp);
-			}
-		}
 		exit(0);
 	}
 	sig_catch++;
