@@ -2740,11 +2740,17 @@ public:
 		vector<int> pattern;
 		for (int i = 0; i < X_.n; i++) pattern.push_back(i);
 
-		do {
-			pattern_list.push_back(pattern);
-		} while (next_permutation(pattern.begin(), pattern.end()));
-		pattern_list_bmat.resize(pattern_list.size());
-
+		if (X_.n < 8)
+		{
+			do {
+				pattern_list.push_back(pattern);
+			} while (next_permutation(pattern.begin(), pattern.end()));
+			pattern_list_bmat.resize(pattern_list.size());
+		}
+		else
+		{
+			random_pattern = false;
+		}
 		int accept_pattern_idx = -1;
 		int current_pattern_idx = -1;
 
