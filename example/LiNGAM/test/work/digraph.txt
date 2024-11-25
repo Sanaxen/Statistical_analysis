@@ -1,0 +1,38 @@
+digraph {
+labelloc="t";
+label="314/30000";
+size="20!"
+layout=dot
+node [fontname="MS UI Gothic" layout=circo shape=note]
+"x0" [fillcolor="#FFDF79", style="filled"]
+"x0"[color=blue shape=note]
+"x1" [fillcolor="#FFDF79", style="filled"]
+"x1"[color=blue shape=note]
+"x0"-> "x1" [label="   0.561(   0.321)\n    97.3%" color=black ]
+"x2" [fillcolor="#FFDF79", style="filled"]
+"x2"[color=blue shape=note]
+"x1"-> "x2" [label="   0.363(   0.329)\n    97.3%" color=black ]
+"x3" [fillcolor="#FFDF79", style="filled"]
+"x3"[color=blue shape=note]
+"x2"-> "x3" [label="   0.456(   0.346)\n    60.8%" color=black ]
+"x4" [fillcolor="#FFDF79", style="filled"]
+"x4"[color=blue shape=note]
+"x0"-> "x4" [label="   0.298(   0.287)\n    95.5%" color=black ]
+"x3"-> "x4" [label="   0.461(   0.340)\n    28.7%" color=black ]
+"x5" [fillcolor="#FFDF79", style="filled"]
+"x5"[color=blue shape=note]
+"x6" [fillcolor="#FFDF79", style="filled"]
+"x6"[color=blue shape=note]
+"x5"-> "x6" [label="   0.551(   0.311)\n    97.3%" color=black ]
+"x7" [fillcolor="#FFDF79", style="filled"]
+"x7"[color=blue shape=note]
+"x2"-> "x7" [label="   0.582(   0.311)\n    59.1%" color=black ]
+"x6"-> "x7" [label="   0.473(   0.290)\n    92.9%" color=black ]
+"x8" [fillcolor="#FFDF79", style="filled"]
+"x8"[color=blue shape=note]
+"x7"-> "x8" [label="   0.554(   0.347)\n    63.4%" color=black ]
+"x9" [fillcolor="#FFDF79", style="filled"]
+"x9"[color=blue shape=note]
+"x5"-> "x9" [label="   0.377(   0.301)\n    92.1%" color=black ]
+"x8"-> "x9" [label="   0.381(   0.319)\n    26.1%" color=black ]
+}

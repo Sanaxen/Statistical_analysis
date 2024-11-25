@@ -1,4 +1,11 @@
-set bin=LiNGAM_cuda.exe
+set cur=%~dp0
+set bin=%cur%\bin\LiNGAM_cuda.exe
+copy ..\..\..\all_build\x64\Release_pytorch\LiNGAM_cuda.exe bin /v /y
+
+if not exist ".\bin\rnn6.dll"  (
+    echo rnn6.dll not found™ (https://github.com/Sanaxen/cpp_torch/tree/master/cpp_torch/test/rnn6)
+) 
+
 :set OMP_NUM_THREADS=5
 
 :set csv=nonlinear_LiNGAM_latest3a.csv
@@ -10,15 +17,15 @@ set bin=LiNGAM_cuda.exe
 :set csv=fMRI_sim1.csv
 set csv=fMRI_sim2.csv
 
-set learning_rate=0.001
+set learning_rate=0.01
 :default=0.1
 set distribution_rate=1
 set unit=40
-set layer=4
+set layer=3
 set epoch=60
 :set activation=leakyrelu
-:set activation=selu
-set activation=tanh
+set activation=selu
+:set activation=tanh
 :set activation=mish
 set use_gpu=0
 set use_pnl=1

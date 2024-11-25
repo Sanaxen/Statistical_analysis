@@ -4,7 +4,7 @@ if (exist("n")==0 || n<0) n=0 #•Ï”‚Ì‰Šú‰»
 
 if (n==0 ) set terminal png
 if (n==0 ) set output '../Causal_Search_Experiment/loss.png'
-cd '../../DDS2/Work'
+cd '../Work'
 
 set encoding utf8
 set border lc rgb "black"
