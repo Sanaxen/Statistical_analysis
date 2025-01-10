@@ -1,0 +1,43 @@
+\begin{thebibliography}{1}
+
+\bibitem{entner2010discovering}
+Doris Entner and Patrik~O Hoyer.
+\newblock Discovering unconfounded causal relationships using linear
+  non-gaussian models.
+\newblock In {\em JSAI International Symposium on Artificial Intelligence},
+  pages 181--195. Springer, 2010.
+
+\bibitem{hoyer2008estimation}
+Patrik~O Hoyer, Shohei Shimizu, Antti~J Kerminen, and Markus Palviainen.
+\newblock Estimation of causal effects using linear non-gaussian causal models
+  with hidden variables.
+\newblock {\em International Journal of Approximate Reasoning}, 49(2):362--378,
+  2008.
+
+\bibitem{shimizu2014bayesian}
+Shohei Shimizu and Kenneth Bollen.
+\newblock Bayesian estimation of causal direction in acyclic structural
+  equation models with individual-specific confounder variables and
+  non-gaussian distributions.
+\newblock {\em J. Mach. Learn. Res.}, 15(1):2629--2652, 2014.
+
+\bibitem{shimizu2006linear}
+Shohei Shimizu, Patrik~O Hoyer, Aapo Hyv{\"a}rinen, Antti Kerminen, and Michael
+  Jordan.
+\newblock A linear non-gaussian acyclic model for causal discovery.
+\newblock {\em Journal of Machine Learning Research}, 7(10), 2006.
+
+\bibitem{shimizu2011directlingam}
+Shohei Shimizu, Takanori Inazumi, Yasuhiro Sogawa, Aapo Hyv{\"a}rinen,
+  Yoshinobu Kawahara, Takashi Washio, Patrik~O Hoyer, and Kenneth Bollen.
+\newblock Directlingam: A direct method for learning a linear non-gaussian
+  structural equation model.
+\newblock {\em The Journal of Machine Learning Research}, 12:1225--1248, 2011.
+
+\bibitem{tashiro2014parcelingam}
+Tatsuya Tashiro, Shohei Shimizu, Aapo Hyv{\"a}rinen, and Takashi Washio.
+\newblock Parcelingam: a causal ordering method robust against latent
+  confounders.
+\newblock {\em Neural computation}, 26(1):57--83, 2014.
+
+\end{thebibliography}
