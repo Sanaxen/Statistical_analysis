@@ -112,9 +112,9 @@ public:
 	inline void fprintf(FILE* fp, char* format, ...)
 	{
 		va_list	argp;
-		char pszBuf[ 4096];
+		char pszBuf[ 4096*10];
 		va_start(argp, format);
-		vsnprintf( pszBuf, 4096, format, argp);
+		vsnprintf( pszBuf, 4096*10, format, argp);
 		va_end(argp);
 		//::fprintf(fp, "%s", pszBuf); fflush(fp);
 		//return;

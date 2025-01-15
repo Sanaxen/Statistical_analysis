@@ -4941,7 +4941,8 @@ public:
 		}
 
 		FILE* fp = fopen("b_importance.r", "w");
-		fprintf(fp, "%s\n",cmd.c_str());
+		utf8str utf8;
+		utf8.fprintf(fp, "%s\n",cmd.c_str());
 		fclose(fp);
 		printf("importance end\n"); fflush(stdout);
 
@@ -4976,9 +4977,10 @@ public:
 	void fit_state(std::vector<std::vector<int>>& name_id, std::vector<std::vector<double>>& predict_y, std::vector<std::vector<double>>& observed_y)
 	{
 		FILE* fp = fopen("fit.r", "w");
-		fprintf(fp, "library(ggplot2)\n");
-		fprintf(fp, "library(gridExtra)\n");
-		fprintf(fp, "n <- %d\n", predict_y[0].size());
+		utf8str utf8;
+		utf8.fprintf(fp, "library(ggplot2)\n");
+		utf8.fprintf(fp, "library(gridExtra)\n");
+		utf8.fprintf(fp, "n <- %d\n", predict_y[0].size());
 
 		int nn = predict_y[0].size() / 100;
 		if (nn < 1) nn = predict_y[0].size();
@@ -4988,33 +4990,33 @@ public:
 		{
 			if (j % nn == 0) num++;
 		}
-		fprintf(fp, "n <- %d\n", num);
+		utf8.fprintf(fp, "n <- %d\n", num);
 
 		for (int i = 0; i < predict_y.size(); i++)
 		{
-			fprintf(fp, "df%d<- data.frame(", name_id[i][0]);
-			fprintf(fp, "x=c(1:n), %s_obs=c(%.3f", std::regex_replace(this->colnames [name_id[i][0]], regex("\""), "").c_str(), observed_y[i][0]);
+			utf8.fprintf(fp, "df%d<- data.frame(", name_id[i][0]);
+			utf8.fprintf(fp, "x=c(1:n), %s_obs=c(%.3f", std::regex_replace(this->colnames [name_id[i][0]], regex("\""), "").c_str(), observed_y[i][0]);
 			for (int j = 1; j < observed_y[i].size(); j++)
 			{
-				if ( j % nn == 0 ) fprintf(fp, ",%.3f", observed_y[i][j]);
+				if ( j % nn == 0 ) utf8.fprintf(fp, ",%.3f", observed_y[i][j]);
 			}
-			fprintf(fp, "), %s_fit=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), predict_y[i][0]);
+			utf8.fprintf(fp, "), %s_fit=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), predict_y[i][0]);
 			for (int j = 1; j < predict_y[i].size(); j++)
 			{
-				if (j % nn == 0) fprintf(fp, ",%.3f", predict_y[i][j]);
+				if (j % nn == 0) utf8.fprintf(fp, ",%.3f", predict_y[i][j]);
 			}
-			fprintf(fp, "))\n");
-			fprintf(fp, "g%d <- ggplot(df%d)\n", i, name_id[i][0]);
-			fprintf(fp, "g%d <- g%d + geom_line(aes(x = x, y = %s_fit, colour =\"%s_fit\"))\n", i, i, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
-			fprintf(fp, "g%d <- g%d + geom_line(aes(x = x, y = %s_obs, colour =\"%s\"))\n", i, i, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+			utf8.fprintf(fp, "))\n");
+			utf8.fprintf(fp, "g%d <- ggplot(df%d)\n", i, name_id[i][0]);
+			utf8.fprintf(fp, "g%d <- g%d + geom_line(aes(x = x, y = %s_fit, colour =\"%s_fit\"))\n", i, i, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+			utf8.fprintf(fp, "g%d <- g%d + geom_line(aes(x = x, y = %s_obs, colour =\"%s\"))\n", i, i, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
 		}
-		fprintf(fp, "g <- grid.arrange(g%d", 0);
+		utf8.fprintf(fp, "g <- grid.arrange(g%d", 0);
 		for (int i = 1; i < predict_y.size(); i++)
 		{
-			fprintf(fp, ",g%d", i);
+			utf8.fprintf(fp, ",g%d", i);
 		}
-		fprintf(fp, ", nrow = %d)\n", predict_y.size());
-		fprintf(fp, "ggplot2::ggsave(\"fit.png\",g,width = 6.4*3.00, height = 4.8*%d, units = \"cm\", dpi = 100, limitsize=F)\n", predict_y.size());
+		utf8.fprintf(fp, ", nrow = %d)\n", predict_y.size());
+		utf8.fprintf(fp, "ggplot2::ggsave(\"fit.png\",g,width = 6.4*3.00, height = 4.8*%d, units = \"cm\", dpi = 100, limitsize=F)\n", predict_y.size());
 		fclose(fp);
 	}
 
@@ -5042,10 +5044,11 @@ public:
 			return;
 		}
 
+		utf8str utf8;
 		int plot = 1;
-		fprintf(fp, "library(ggplot2)\n");
-		fprintf(fp, "library(gridExtra)\n");
-		fprintf(fp, "library(RColorBrewer)\n");
+		utf8.fprintf(fp, "library(ggplot2)\n");
+		utf8.fprintf(fp, "library(gridExtra)\n");
+		utf8.fprintf(fp, "library(RColorBrewer)\n");
 		for (int i = 0; i < variableNum; i++)
 		{
 
@@ -5059,54 +5062,54 @@ public:
 			}
 			if (count <= 0) continue;
 
-			fprintf(fp, "x_ <- data.frame(\n");
+			utf8.fprintf(fp, "x_ <- data.frame(\n");
 			int s = 0;
 
-			fprintf(fp, "%s=c(\n", header_names2[i].c_str());
+			utf8.fprintf(fp, "%s=c(\n", header_names2[i].c_str());
 
 			for (int j = 0; j < variableNum; j++)
 			{
 				if (i == j) continue;
 				if (fabs(B(i, j)) < 0.001) continue;
 
-				if (s > 0)fprintf(fp, ",");
-				fprintf(fp, "\"%s\"", header_names2[j].c_str());
+				if (s > 0)utf8.fprintf(fp, ",");
+				utf8.fprintf(fp, "\"%s\"", header_names2[j].c_str());
 				s++;
 			}
-			fprintf(fp, "),\n");
+			utf8.fprintf(fp, "),\n");
 
 			s = 0;
-			fprintf(fp, "effect=c(\n");
+			utf8.fprintf(fp, "effect=c(\n");
 			for (int j = 0; j < variableNum; j++)
 			{
 				if (i == j) continue;
 				if (fabs(B(i, j)) < 0.001) continue;
 
-				if (s > 0)fprintf(fp, ",");
-				fprintf(fp, "%.2f", B(i, j));
+				if (s > 0)utf8.fprintf(fp, ",");
+				utf8.fprintf(fp, "%.2f", B(i, j));
 				s++;
 			}
-			fprintf(fp, ")\n");
-			fprintf(fp, ")\n");
+			utf8.fprintf(fp, ")\n");
+			utf8.fprintf(fp, ")\n");
 
-			fprintf(fp, "g%d <- ggplot(x_, aes(x = %s, y = effect, fill = effect))\n", plot, header_names2[i].c_str());
-			fprintf(fp, "g%d <- g%d + geom_bar(stat = \"identity\")\n", plot, plot);
-			fprintf(fp, "g%d <- g%d + labs(title = \"Causal_effect\")\n", plot, plot);
-			//fprintf(fp, "g%d <- g%d + scale_fill_gradientn( colours = rev( brewer.pal( 7, \'YlOrRd\')))\n", plot, plot);
-			fprintf(fp, "g%d <- g%d + scale_fill_gradientn( colours = rev( brewer.pal( 7, \'Spectral\')))\n", plot, plot);
-			fprintf(fp, "g%d <- g%d + theme(text = element_text(size = 12))\n", plot, plot);
-			fprintf(fp, "#plot(g%d)\n", plot);
+			utf8.fprintf(fp, "g%d <- ggplot(x_, aes(x = %s, y = effect, fill = effect))\n", plot, header_names2[i].c_str());
+			utf8.fprintf(fp, "g%d <- g%d + geom_bar(stat = \"identity\")\n", plot, plot);
+			utf8.fprintf(fp, "g%d <- g%d + labs(title = \"Causal_effect\")\n", plot, plot);
+			//utf8.fprintf(fp, "g%d <- g%d + scale_fill_gradientn( colours = rev( brewer.pal( 7, \'YlOrRd\')))\n", plot, plot);
+			utf8.fprintf(fp, "g%d <- g%d + scale_fill_gradientn( colours = rev( brewer.pal( 7, \'Spectral\')))\n", plot, plot);
+			utf8.fprintf(fp, "g%d <- g%d + theme(text = element_text(size = 12))\n", plot, plot);
+			utf8.fprintf(fp, "#plot(g%d)\n", plot);
 			plot++;
 		}
 
-		fprintf(fp, "g <- grid.arrange(");
+		utf8.fprintf(fp, "g <- grid.arrange(");
 		for (int i = 1; i < plot; i++)
 		{
-			fprintf(fp, "g%d", i);
-			if (i < plot - 1) fprintf(fp, ",");
+			utf8.fprintf(fp, "g%d", i);
+			if (i < plot - 1) utf8.fprintf(fp, ",");
 		}
-		fprintf(fp, ", nrow = %d)\n", plot);
-		fprintf(fp, "ggplot2::ggsave(\"Causal_effect.png\",g,width = 6.4*2*%.2f, height = 4.8*%.2f, units = \"cm\", dpi = 100, limitsize=F)\n", 1.0, (double)plot);
+		utf8.fprintf(fp, ", nrow = %d)\n", plot);
+		utf8.fprintf(fp, "ggplot2::ggsave(\"Causal_effect.png\",g,width = 6.4*2*%.2f, height = 4.8*%.2f, units = \"cm\", dpi = 100, limitsize=F)\n", 1.0, (double)plot);
 
 		fclose(fp);
 		printf("Causal_effect end\n");
@@ -5133,6 +5136,7 @@ public:
 			header_names2.push_back(buf);
 		}
 
+		utf8str utf8;
 		printf("b_probability_barplot\n");
 		FILE* fp = fopen("b_probability_barplot.r", "w");
 		if (fp == NULL)
@@ -5141,9 +5145,9 @@ public:
 		}
 
 		int plot = 1;
-		fprintf(fp, "library(ggplot2)\n");
-		fprintf(fp, "library(gridExtra)\n");
-		fprintf(fp, "library(RColorBrewer)\n");
+		utf8.fprintf(fp, "library(ggplot2)\n");
+		utf8.fprintf(fp, "library(gridExtra)\n");
+		utf8.fprintf(fp, "library(RColorBrewer)\n");
 		for (int i = 0; i < variableNum; i++)
 		{
 
@@ -5158,10 +5162,10 @@ public:
 			}
 			if (count < 1) continue;
 
-			fprintf(fp, "x_ <- data.frame(\n");
+			utf8.fprintf(fp, "x_ <- data.frame(\n");
 			int s = 0;
 
-			fprintf(fp, "%s=c(\n", header_names2[i].c_str());
+			utf8.fprintf(fp, "%s=c(\n", header_names2[i].c_str());
 
 			for (int j = 0; j < variableNum; j++)
 			{
@@ -5170,13 +5174,13 @@ public:
 				if (fabs(B(i, j)) < 0.001) continue;
 
 				if (s > 0)fprintf(fp, ",");
-				fprintf(fp, "\"%s\"", header_names2[j].c_str());
+				utf8.fprintf(fp, "\"%s\"", header_names2[j].c_str());
 				s++;
 			}
-			fprintf(fp, "),\n");
+			utf8.fprintf(fp, "),\n");
 
 			s = 0;
-			fprintf(fp, "probability=c(\n");
+			utf8.fprintf(fp, "probability=c(\n");
 			for (int j = 0; j < variableNum; j++)
 			{
 				if (i == j) continue;
@@ -5184,29 +5188,29 @@ public:
 				if (fabs(B(i, j)) < 0.001) continue;
 
 				if (s > 0)fprintf(fp, ",");
-				fprintf(fp, "%.2f", b_probability(i, j) * 100.0);
+				utf8.fprintf(fp, "%.2f", b_probability(i, j) * 100.0);
 				s++;
 			}
-			fprintf(fp, ")\n");
-			fprintf(fp, ")\n");
+			utf8.fprintf(fp, ")\n");
+			utf8.fprintf(fp, ")\n");
 
-			fprintf(fp, "g%d <- ggplot(x_, aes(x = %s, y = probability, fill = probability))\n", plot, header_names2[i].c_str());
-			fprintf(fp, "g%d <- g%d + geom_bar(stat = \"identity\")\n", plot, plot);
-			fprintf(fp, "g%d <- g%d + labs(title = \"probability\")\n", plot, plot);
-			fprintf(fp, "g%d <- g%d + theme(text = element_text(size = 12))\n", plot, plot);
-			fprintf(fp, "#g%d <- g%d + scale_fill_gradientn( colours = rev( brewer.pal( 7, \'Blues\')))\n", plot, plot);
-			fprintf(fp, "#plot(g%d)\n", plot);
+			utf8.fprintf(fp, "g%d <- ggplot(x_, aes(x = %s, y = probability, fill = probability))\n", plot, header_names2[i].c_str());
+			utf8.fprintf(fp, "g%d <- g%d + geom_bar(stat = \"identity\")\n", plot, plot);
+			utf8.fprintf(fp, "g%d <- g%d + labs(title = \"probability\")\n", plot, plot);
+			utf8.fprintf(fp, "g%d <- g%d + theme(text = element_text(size = 12))\n", plot, plot);
+			utf8.fprintf(fp, "#g%d <- g%d + scale_fill_gradientn( colours = rev( brewer.pal( 7, \'Blues\')))\n", plot, plot);
+			utf8.fprintf(fp, "#plot(g%d)\n", plot);
 			plot++;
 		}
 
-		fprintf(fp, "g <- grid.arrange(");
+		utf8.fprintf(fp, "g <- grid.arrange(");
 		for (int i = 1; i < plot; i++)
 		{
-			fprintf(fp, "g%d", i);
-			if (i < plot - 1) fprintf(fp, ",");
+			utf8.fprintf(fp, "g%d", i);
+			if (i < plot - 1) utf8.fprintf(fp, ",");
 		}
-		fprintf(fp, ", nrow = %d)\n", plot);
-		fprintf(fp, "ggplot2::ggsave(\"b_probability.png\",g,width = 6.4*2*%.2f, height = 4.8*%.2f, units = \"cm\", dpi = 100, limitsize=F)\n", 1.0, (double)plot);
+		utf8.fprintf(fp, ", nrow = %d)\n", plot);
+		utf8.fprintf(fp, "ggplot2::ggsave(\"b_probability.png\",g,width = 6.4*2*%.2f, height = 4.8*%.2f, units = \"cm\", dpi = 100, limitsize=F)\n", 1.0, (double)plot);
 
 		fclose(fp);
 		printf("b_probability_barplot end\n");
@@ -5214,13 +5218,14 @@ public:
 
 	void scatter(std::vector<std::vector<int>>& name_id, std::vector<std::vector<double>>& predict_y, std::vector<std::vector<double>>& observed_y)
 	{
+		utf8str utf8;
 		FILE* fp = fopen("scatter.r", "w");
 		if (fp == NULL)
 		{
 			return;
 		}
-		fprintf(fp, "library(ggplot2)\n");
-		fprintf(fp, "library(gridExtra)\n");
+		utf8.fprintf(fp, "library(ggplot2)\n");
+		utf8.fprintf(fp, "library(gridExtra)\n");
 
 		input_sample.print("input_sample");
 		int count = 0;
@@ -5228,37 +5233,37 @@ public:
 		{
 			for (int k = 1; k < name_id[i].size(); k++)
 			{
-				fprintf(fp, "df%d_%d<- data.frame(", name_id[i][0], name_id[i][k]);
-				fprintf(fp, "%s=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), input_sample(0, name_id[i][0]));
+				utf8.fprintf(fp, "df%d_%d<- data.frame(", name_id[i][0], name_id[i][k]);
+				utf8.fprintf(fp, "%s=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), input_sample(0, name_id[i][0]));
 				
 				int n = input.m / 300;
 				if (n <= 0) n = input_sample.m;
 				for (int j = 1; j < input_sample.m; j++)
 				{
-					if ( j % n == 0 ) fprintf(fp, ",%.3f", input_sample(j, name_id[i][0]));
+					if ( j % n == 0 ) utf8.fprintf(fp, ",%.3f", input_sample(j, name_id[i][0]));
 				}
-				fprintf(fp, ")");
-				fprintf(fp, ",%s=c(%.3f", std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), input_sample(0, name_id[i][k]));
+				utf8.fprintf(fp, ")");
+				utf8.fprintf(fp, ",%s=c(%.3f", std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), input_sample(0, name_id[i][k]));
 				for (int j = 1; j < input_sample.m; j++)
 				{
-					if (j % n == 0) fprintf(fp, ",%.3f", input_sample(j, name_id[i][k]));
+					if (j % n == 0) utf8.fprintf(fp, ",%.3f", input_sample(j, name_id[i][k]));
 				}
-				fprintf(fp, ")");
-				fprintf(fp, ", %s_fit=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), predict_y[i][0]);
+				utf8.fprintf(fp, ")");
+				utf8.fprintf(fp, ", %s_fit=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), predict_y[i][0]);
 				for (int j = 1; j < predict_y[i].size(); j++)
 				{
-					if (j % n == 0) fprintf(fp, ",%.3f", predict_y[i][j]);
+					if (j % n == 0) utf8.fprintf(fp, ",%.3f", predict_y[i][j]);
 				}
-				fprintf(fp, "))\n");
+				utf8.fprintf(fp, "))\n");
 
-				fprintf(fp, "g%d <- ggplot(df%d_%d,", count, name_id[i][0], name_id[i][k]);
-				fprintf(fp, " aes(x=%s, y=%s))\n", std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
-				fprintf(fp, "g%d <- g%d + geom_point(alpha=0.4)\n", count, count);
+				utf8.fprintf(fp, "g%d <- ggplot(df%d_%d,", count, name_id[i][0], name_id[i][k]);
+				utf8.fprintf(fp, " aes(x=%s, y=%s))\n", std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+				utf8.fprintf(fp, "g%d <- g%d + geom_point(alpha=0.4)\n", count, count);
 				//if (!use_pnl)
 				{
-					fprintf(fp, "g%d <- g%d + geom_point(aes(x=%s, y=%s_fit), color =\"#FF4B00\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+					utf8.fprintf(fp, "g%d <- g%d + geom_point(aes(x=%s, y=%s_fit), color =\"#FF4B00\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][k]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
 				}
-				fprintf(fp, "#g%d <- g%d + scale_color_brewer(palette = \"Set2\")\n", count, count);
+				utf8.fprintf(fp, "#g%d <- g%d + scale_color_brewer(palette = \"Set2\")\n", count, count);
 				count++;
 			}
 		}
@@ -5266,59 +5271,60 @@ public:
 		{
 			if (count == 1)
 			{
-				fprintf(fp, "g <- g0\n");
+				utf8.fprintf(fp, "g <- g0\n");
 			}
 			else
 			{
-				fprintf(fp, "g <- grid.arrange(g%d", 0);
+				utf8.fprintf(fp, "g <- grid.arrange(g%d", 0);
 				for (int i = 1; i < count; i++)
 				{
-					fprintf(fp, ",g%d", i);
+					utf8.fprintf(fp, ",g%d", i);
 				}
-				fprintf(fp, ", nrow = %d)\n", count);
+				utf8.fprintf(fp, ", nrow = %d)\n", count);
 			}
-			fprintf(fp, "ggplot2::ggsave(\"scatter.png\",g,width = 6.4, height = 4.8*%d, units = \"cm\", dpi = 100, limitsize=F)\n", count);
+			utf8.fprintf(fp, "ggplot2::ggsave(\"scatter.png\",g,width = 6.4, height = 4.8*%d, units = \"cm\", dpi = 100, limitsize=F)\n", count);
 		}
 		fclose(fp);
 	}
 
 	void scatter2(std::vector<std::vector<int>>& name_id, std::vector<std::vector<double>>& predict_y, std::vector<std::vector<double>>& observed_y)
 	{
+		utf8str utf8;
 		FILE* fp = fopen("scatter2.r", "w");
 		if (fp == NULL)
 		{
 			return;
 		}
-		fprintf(fp, "library(ggplot2)\n");
-		fprintf(fp, "library(gridExtra)\n");
+		utf8.fprintf(fp, "library(ggplot2)\n");
+		utf8.fprintf(fp, "library(gridExtra)\n");
 
 		input_sample.print("input_sample");
 		int count = 0;
 		for (int i = 0; i < name_id.size(); i++)
 		{
 			if (name_id[i].size() == 1) continue;
-			fprintf(fp, "df%d<- data.frame(", name_id[i][0]);
+			utf8.fprintf(fp, "df%d<- data.frame(", name_id[i][0]);
 
 			int n = input_sample.m / 300;
 			if (n <= 0) n = input_sample.m;
-			fprintf(fp, "%s_fit=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), predict_y[i][0]);
+			utf8.fprintf(fp, "%s_fit=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), predict_y[i][0]);
 			for (int j = 1; j < predict_y[i].size(); j++)
 			{
-				if (j % n == 0) fprintf(fp, ",%.3f", predict_y[i][j]);
+				if (j % n == 0) utf8.fprintf(fp, ",%.3f", predict_y[i][j]);
 			}
-			fprintf(fp, "),\n");
-			fprintf(fp, "%s_obs=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), observed_y[i][0]);
+			utf8.fprintf(fp, "),\n");
+			utf8.fprintf(fp, "%s_obs=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), observed_y[i][0]);
 			for (int j = 1; j < observed_y[i].size(); j++)
 			{
-				if (j % n == 0) fprintf(fp, ",%.3f", observed_y[i][j]);
+				if (j % n == 0) utf8.fprintf(fp, ",%.3f", observed_y[i][j]);
 			}
-			fprintf(fp, "))\n");
+			utf8.fprintf(fp, "))\n");
 
-			fprintf(fp, "g%d <- ggplot(df%d)\n", count, name_id[i][0]);
-			fprintf(fp, "g%d <- g%d + geom_point(aes(x=%s_obs, y=%s_fit), color =\"#FF4B00\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+			utf8.fprintf(fp, "g%d <- ggplot(df%d)\n", count, name_id[i][0]);
+			utf8.fprintf(fp, "g%d <- g%d + geom_point(aes(x=%s_obs, y=%s_fit), color =\"#FF4B00\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
 			//if (!use_pnl)
 			{
-				fprintf(fp, "g%d <- g%d + geom_line(aes(x=%s_obs, y=%s_obs), color =\"#005AFF\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+				utf8.fprintf(fp, "g%d <- g%d + geom_line(aes(x=%s_obs, y=%s_obs), color =\"#005AFF\", size=2, alpha=0.7)\n", count, count, std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
 			}
 			count++;
 		}
@@ -5326,67 +5332,68 @@ public:
 		{
 			if (count == 1)
 			{
-				fprintf(fp, "g <- g0\n");
+				utf8.fprintf(fp, "g <- g0\n");
 			}
 			else
 			{
-				fprintf(fp, "g <- grid.arrange(g%d", 0);
+				utf8.fprintf(fp, "g <- grid.arrange(g%d", 0);
 				for (int i = 1; i < count; i++)
 				{
-					fprintf(fp, ",g%d", i);
+					utf8.fprintf(fp, ",g%d", i);
 				}
-				fprintf(fp, ", nrow = %d)\n", count);
+				utf8.fprintf(fp, ", nrow = %d)\n", count);
 			}
-			fprintf(fp, "ggplot2::ggsave(\"scatter2.png\",g,width = 6.4, height = 6.4*%d, units = \"cm\", dpi = 100, limitsize=F)\n", count);
+			utf8.fprintf(fp, "ggplot2::ggsave(\"scatter2.png\",g,width = 6.4, height = 6.4*%d, units = \"cm\", dpi = 100, limitsize=F)\n", count);
 		}
 		fclose(fp);
 	}
 
 	void error_hist(std::vector<std::vector<int>>& name_id)
 	{
+		utf8str utf8;
 		FILE* fp = fopen("error_hist.r", "w");
 		if (fp == NULL)
 		{
 			return;
 		}
-		fprintf(fp, "library(ggplot2)\n");
-		fprintf(fp, "library(gridExtra)\n");
+		utf8.fprintf(fp, "library(ggplot2)\n");
+		utf8.fprintf(fp, "library(gridExtra)\n");
 
 		int count = 0;
 		for (int i = 0; i < name_id.size(); i++)
 		{
-			fprintf(fp, "df%d<- data.frame(", name_id[i][0]);
-			fprintf(fp, "%s=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), residual_error(0, name_id[i][0]));
+			utf8.fprintf(fp, "df%d<- data.frame(", name_id[i][0]);
+			utf8.fprintf(fp, "%s=c(%.3f", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str(), residual_error(0, name_id[i][0]));
 
 			int n = residual_error.m / 300;
 			if (n <= 0) n = residual_error.m;
 			for (int j = 1; j < residual_error.m; j++)
 			{
-				if (j % n == 0) fprintf(fp, ",%.3f", residual_error(j, name_id[i][0]));
+				if (j % n == 0) utf8.fprintf(fp, ",%.3f", residual_error(j, name_id[i][0]));
 			}
-			fprintf(fp, "))\n");
+			utf8.fprintf(fp, "))\n");
 
-			fprintf(fp, "g%d <- ggplot(df%d,", count, name_id[i][0]);
-			fprintf(fp, " aes(x=%s))\n", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
-			fprintf(fp, "g%d <- g%d + geom_histogram()\n", count, count);
+			utf8.fprintf(fp, "g%d <- ggplot(df%d,", count, name_id[i][0]);
+			utf8.fprintf(fp, " aes(x=%s))\n", std::regex_replace(this->colnames[name_id[i][0]], regex("\""), "").c_str());
+			utf8.fprintf(fp, "g%d <- g%d + geom_histogram()\n", count, count);
 			count++;
 		}
 		if (count >= 1)
 		{
 			if (count == 1)
 			{
-				fprintf(fp, "g <- g0\n");
+				utf8.fprintf(fp, "g <- g0\n");
 			}
 			else
 			{
-				fprintf(fp, "g <- grid.arrange(g%d", 0);
+				utf8.fprintf(fp, "g <- grid.arrange(g%d", 0);
 				for (int i = 1; i < count; i++)
 				{
-					fprintf(fp, ",g%d", i);
+					utf8.fprintf(fp, ",g%d", i);
 				}
-				fprintf(fp, ", nrow = %d)\n", count);
+				utf8.fprintf(fp, ", nrow = %d)\n", count);
 			}
-			fprintf(fp, "ggplot2::ggsave(\"err_histogram.png\",g,width = 6.4, height = 6.4*%d, units = \"cm\", dpi = 100, limitsize=F)\n", count);
+			utf8.fprintf(fp, "ggplot2::ggsave(\"err_histogram.png\",g,width = 6.4, height = 6.4*%d, units = \"cm\", dpi = 100, limitsize=F)\n", count);
 		}
 		fclose(fp);
 	}
