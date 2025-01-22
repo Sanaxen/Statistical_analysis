@@ -834,8 +834,25 @@ public:
 				if (fp)
 				{
 					fclose(fp);
-					CSVReader csv10((filename + ".importance_B.csv"), ',', false);
-					importance_B = csv10.toMat();
+					try
+					{
+						CSVReader csv10((filename + ".importance_B.csv"), ',', false);
+						if (!csv10.parser_error)
+						{
+							importance_B = csv10.toMat();
+						}
+						else
+						{
+							importance_B = Matrix<dnn_double>();
+						}
+
+						//importance_B.print("importance_B");
+					}
+					catch (std::exception& e)
+					{
+						printf("importance_B load exception:%s\n", e.what());
+					}
+					printf("load importance_B\n"); fflush(stdout);
 				}
 			}
 		}
@@ -1817,17 +1834,19 @@ public:
 	//double mu_max_value = 10.0;
 	int loss_function = 0;
 	
+	double plot_max_loss = 2.0;
+
 	inline void fput_loss(const char* loss, double best_residual, double best_independ, double best_min_value)
 	{
 		try
 		{
 			std::ofstream ofs(loss, std::ios::app);
 			if (
-				best_residual >= 2.0 ||
-				best_independ >= 2.0 ||
-				best_min_value >= 2.0)
+				best_residual >= plot_max_loss ||
+				best_independ >= plot_max_loss ||
+				best_min_value >= plot_max_loss)
 			{
-				ofs << 2 << "," << 2 << "," << 2 << std::endl;
+				ofs << plot_max_loss << "," << plot_max_loss << "," << plot_max_loss << std::endl;
 			}
 			else
 			{
@@ -4909,7 +4928,7 @@ public:
 			cmd += ",early_stopping_rounds = 100,params = l_params, watchlist = list(train = train_dmat, eval = train_dmat))\n";
 			cmd += "\n";
 			cmd += "explainer <-explain_xgboost(xgbmodel, data = train_mx, y_, label = \"Contribution of each variable\", type = \"regression\")\n";
-			cmd += "imp_<-feature_importance(explainer, label=\""+ std::regex_replace(this->colnames[this->colnames_id[i][0]], regex("\""), "") + "-[Šñ—^“x]\",loss_function = DALEX::loss_root_mean_square)\n";
+			cmd += "imp_<-feature_importance(explainer, label=\""+ std::regex_replace(this->colnames[this->colnames_id[i][0]], regex("\""), "") + "-[contribution]\",loss_function = DALEX::loss_root_mean_square)\n";
 			cmd += "#shap_values <- shap.values(xgb_model = xgbmodel, X_train = train_dmat)\n";
 			cmd += "#plot_data <- shap.prep.stack.data(shap_contrib = shap_values$shap_score,top_n = 6, n_groups = 1)\n";
 			cmd += "#shap.plot.force_plot(plot_data, zoom_in_location=1)\n";

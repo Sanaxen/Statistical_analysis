@@ -611,6 +611,7 @@ int main(int argc, char** argv)
 	std::string layout = "dot";
 	double independent_variable_skip = 0.0;
 	double unique_check_rate = 0.1;
+	double plot_max_loss = 2.0;
 
 	int pause = 0;
 	std::string load_model = "";
@@ -822,6 +823,9 @@ int main(int argc, char** argv)
 				}
 				else if (argname == "--unique_check_rate") {
 					unique_check_rate = atof(argv[count + 1]);
+				}
+				else if (argname == "--plot_max_loss") {
+					plot_max_loss = atof(argv[count + 1]);
 				}
 				//
 
@@ -1612,6 +1616,7 @@ int main(int argc, char** argv)
 			LiNGAM.confounding_factors_sampling = confounding_factors_sampling;
 			LiNGAM.confounding_factors_upper = confounding_factors_upper;
 			LiNGAM.rho = rho;
+			LiNGAM.plot_max_loss = plot_max_loss;
 
 			printf("view_confounding_factors:%d\n", view_confounding_factors ? 1 : 0);
 			if (!nonlinear)
@@ -1748,7 +1753,19 @@ int main(int argc, char** argv)
 
 	if (LiNGAM.R_cmd_path != "" && LiNGAM.nonlinear)
 	{
-		LiNGAM.B = LiNGAM.importance_B;
+		//LiNGAM.B = LiNGAM.importance_B;
+		//If B(i,j) is nonzero and importance_B(i,j) is zero, then B(i,j) is also replaced by zero and the causal structure changes.
+
+		for (int i = 0; i < LiNGAM.B.m; i++)
+		{
+			for (int j = 0; j < LiNGAM.B.n; j++)
+			{
+				if (fabs(LiNGAM.B(i, j)) > 0 && fabs(LiNGAM.importance_B(i, j)) > 0)
+				{
+					LiNGAM.B(i, j) = LiNGAM.importance_B(i, j);
+				}
+			}
+		}
 	}
 
 

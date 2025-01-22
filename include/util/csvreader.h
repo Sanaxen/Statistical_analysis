@@ -19,6 +19,8 @@ public:
 	std::vector<int> timeform_idx;
 	int time_form_type = XXXXXX;
 	char time_form_delimiter = '\0';
+
+	bool parser_error = false;
 	CSVReader(char* filename, char separator = ',', bool use_header = true)
 	{
 		try
@@ -27,6 +29,7 @@ public:
 		}
 		catch (csv::Error& e)
 		{
+			parser_error = true;
 			printf("CSVReader error:%s\n", e.what());
 		}
 	}
@@ -38,6 +41,7 @@ public:
 		}
 		catch (csv::Error& e)
 		{
+			parser_error = true;
 			printf("CSVReader error:%s\n", e.what());
 		}
 	}
